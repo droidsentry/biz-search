@@ -7,32 +7,56 @@ import logo from '@/public/logo.png'
 import Image from 'next/image'
 import AvatarMenu from './avatar-menu'
 import Link from 'next/link'
+import { useEffect, useRef, useState } from 'react'
+import { Button } from '../ui/button'
 
 export function Header() {
   const logoScale = useScrollRange(0, 50, 1, 0.8)
   const logoY = useScrollRange(0, 50, 0, -13) // スクロール時に8px上に移動
+  const [logoLeft, setLogoLeft] = useState(35)
+  const headerRef = useRef<HTMLElement>(null)
+
+  useEffect(() => {
+    const updateLogoPosition = () => {
+      if (headerRef.current) {
+        const rect = headerRef.current.getBoundingClientRect()
+        const containerLeft = rect.left
+        // モバイルでは8px、デスクトップでは24pxのpaddingを考慮
+        const padding = window.innerWidth >= 768 ? 15 : 8
+        setLogoLeft(containerLeft + padding) // 11px は元の位置調整分
+      }
+    }
+
+    updateLogoPosition()
+    window.addEventListener('resize', updateLogoPosition)
+
+    return () => window.removeEventListener('resize', updateLogoPosition)
+  }, [])
 
   return (
-    <header className={cn(
-      "flex h-16 min-h-[64px] items-center px-4 md:px-6 bg-muted",
+    <div className="mx-auto max-w-[1400px] w-full px-2 md:px-4 bg-muted">
+    <header ref={headerRef} className={cn(
+      "flex h-16 min-h-[64px] items-center w-full",
       "[&_a]:ease-[ease]",
       "[&_a]:no-underline",
       "[&_a]:transition-colors",
       "[&_a]:duration-200"
-    )}>      {/* ロゴ（fixed position） */}
+    )}>
+      {/* ロゴ（fixed position） */}
       <Link href="/" aria-label="BizSearch logo" className="relative">
-        <span 
-          className={cn("fixed left-[35px] top-[14px] z-[100] inline-flex size-10",
+        <span
+          className={cn(
+            "fixed top-[14px] z-[100] inline-flex size-10",
             "rounded-sm no-underline outline-offset-2 transition-transform duration-50 ease-linear origin-left",
           )}
           style={{
+            left: `${logoLeft}px`,
             transform: `scale(${logoScale}) translateY(${logoY}px)`,
           }}
         >
           <Image src={logo} alt="BizSearch Project" />
         </span>
       </Link>
-
       {/* メインナビゲーション */}
       <nav className="flex w-full items-center justify-between pl-16">
         {/* プロジェクトブレッドクラム */}
@@ -65,5 +89,6 @@ export function Header() {
         </div>
       </nav>
     </header>
+    </div>
   )
 }
