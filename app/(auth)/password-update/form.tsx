@@ -1,0 +1,177 @@
+"use client";
+
+import { updatePassword } from "@/lib/actions/auth/supabase";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { extendedSignUpSchema, passwordUpdateSchema } from "@/lib/schemas/auth";
+import { PasswordUpdate } from "@/lib/types/auth";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { User } from "@supabase/supabase-js";
+import Image from "next/image";
+import logo from "@/public/logo.png";
+
+export default function PasswordUpdateForm({ user }: { user: User | null }) {
+  const [isPending, startTransition] = useTransition();
+  const [showPassword, setShowPassword] = useState(false);
+  const searchParams = useSearchParams();
+  const fromPath = searchParams.get("from");
+  const router = useRouter();
+  const form = useForm<PasswordUpdate>({
+    mode: "onChange",
+    resolver: zodResolver(extendedSignUpSchema),
+    defaultValues: {
+      email: user?.email ?? "",
+      username: "",
+      password: "",
+    },
+  });
+  const { isSubmitting, isValid, isValidating } = form.formState;
+
+  const onSubmit = async (data: PasswordUpdate) => {
+    startTransition(async () => {
+      await updatePassword(data)
+        .then(() => {
+          toast.success("パスワードが更新されました");
+          if (fromPath) {
+            router.push(fromPath);
+          } else {
+            router.push("/dashboard");
+          }
+        })
+        .catch((error: Error) => {
+          toast.error(error.message);
+        });
+    });
+  };
+
+  return (
+    <div className="flex h-dvh items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-[400px] border-border bg-card">
+        <CardHeader className="space-y-1 text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center">
+            <Image src={logo} alt="BizSearch" width={48} height={48} />
+          </div>
+          <CardTitle className="text-2xl font-semibold tracking-tight">
+            パスワードの更新
+          </CardTitle>
+          <CardDescription className="text-muted-foreground">
+            新しいパスワードを設定してください
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>メールアドレス</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="email"
+                        placeholder="email@example.com"
+                        autoComplete="email"
+                        {...field}
+                        disabled
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>ユーザー名</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="text"
+                        placeholder="ユーザー名を入力"
+                        autoComplete="username"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>新しいパスワード</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          placeholder="パスワードを入力"
+                          autoComplete="new-password"
+                          {...field}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="size-4 text-muted-foreground" />
+                          ) : (
+                            <Eye className="size-4 text-muted-foreground" />
+                          )}
+                        </Button>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={!isValid || isSubmitting || isPending}
+              >
+                {isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    更新中...
+                  </>
+                ) : (
+                  "パスワードを更新"
+                )}
+              </Button>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

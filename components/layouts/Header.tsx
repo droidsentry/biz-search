@@ -5,6 +5,8 @@ import { useScrollRange } from '@/hooks/use-scroll-range'
 import { cn } from '@/lib/utils'
 import logo from '@/public/logo.png'
 import Image from 'next/image'
+import AvatarMenu from './avatar-menu'
+import Link from 'next/link'
 
 export function Header() {
   const logoScale = useScrollRange(0, 50, 1, 0.8)
@@ -18,7 +20,7 @@ export function Header() {
       "[&_a]:transition-colors",
       "[&_a]:duration-200"
     )}>      {/* ロゴ（fixed position） */}
-      <a href="/dashboard" aria-label="BizSearch logo" className="relative">
+      <Link href="/" aria-label="BizSearch logo" className="relative">
         <span 
           className={cn("fixed left-[35px] top-[14px] z-[100] inline-flex size-10",
             "rounded-sm no-underline outline-offset-2 transition-transform duration-50 ease-linear origin-left",
@@ -29,7 +31,7 @@ export function Header() {
         >
           <Image src={logo} alt="BizSearch Project" />
         </span>
-      </a>
+      </Link>
 
       {/* メインナビゲーション */}
       <nav className="flex w-full items-center justify-between pl-16">
@@ -55,10 +57,11 @@ export function Header() {
             </span>
           </button>
 
-          <Avatar className="h-8 w-8">
+          {/* <Avatar className="h-8 w-8">
             <AvatarImage src="/avatar.png" alt="User" />
             <AvatarFallback>U</AvatarFallback>
-          </Avatar>
+          </Avatar> */}
+          <AvatarMenu />
         </div>
       </nav>
     </header>
