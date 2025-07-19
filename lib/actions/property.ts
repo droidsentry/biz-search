@@ -5,12 +5,12 @@ import {
   createProjectSchema, 
   savePropertiesSchema,
   importLogSchema 
-} from "@/lib/schemas/property.schema";
+} from "@/lib/schemas/property";
 import { 
   CreateProjectFormData, 
   SavePropertiesData,
   SavePropertiesResponse 
-} from "@/lib/types/property.types";
+} from "@/lib/types/property";
 import { revalidatePath } from "next/cache";
 
 /**

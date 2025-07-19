@@ -23,7 +23,7 @@ import { batchGeocodeAddresses } from '@/lib/actions/location/batch-geocoding'
 import Link from 'next/link'
 import { CopyCell } from '@/components/ui/copy-cell'
 import { SavePropertiesDialog } from './save-properties-dialog'
-import { PropertyData as PropertyDataType } from '@/lib/types/property.types'
+import { PropertyData as PropertyDataType } from '@/lib/types/property'
 import { Database } from 'lucide-react'
 
 

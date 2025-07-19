@@ -20,17 +20,17 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { 
   createProjectSchema,
   projectNameWithUniquenessCheckSchema 
-} from '@/lib/schemas/property.schema'
+} from '@/lib/schemas/property'
 import { 
   CreateProjectFormData,
   PropertyData,
   SavePropertiesResponse 
-} from '@/lib/types/property.types'
+} from '@/lib/types/property'
 import {
   createProjectAction,
   savePropertiesAction,
   checkProjectName
-} from '@/app/actions/property.actions'
+} from '@/lib/actions/property'
 import { toast } from 'sonner'
 import AwesomeDebouncePromise from "awesome-debounce-promise"
 

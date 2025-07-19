@@ -6,7 +6,7 @@ import {
   importLogSchema,
   ownerCompanySchema,
   addMemberSchema,
-} from "@/lib/schemas/property.schema";
+} from "@/lib/schemas/property";
 
 // プロジェクト作成フォームデータ型
 export type CreateProjectFormData = z.infer<typeof createProjectSchema>;
