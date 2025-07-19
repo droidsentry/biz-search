@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -14,14 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Loader2, Save, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Loader2, Save, AlertCircle } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { 
@@ -36,11 +29,9 @@ import {
 import {
   createProjectAction,
   savePropertiesAction,
-  getUserProjects,
   checkProjectName
 } from '@/app/actions/property.actions'
 import { toast } from 'sonner'
-import { z } from 'zod'
 import AwesomeDebouncePromise from "awesome-debounce-promise"
 
 interface SavePropertiesDialogProps {
@@ -72,9 +63,6 @@ export function SavePropertiesDialog({
   onSaveComplete,
 }: SavePropertiesDialogProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [saveMode, setSaveMode] = useState<'new' | 'existing'>('new')
-  const [existingProjects, setExistingProjects] = useState<any[]>([])
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('')
   const [saveProgress, setSaveProgress] = useState<number>(0)
   
   const form = useForm<CreateProjectFormData>({
@@ -85,65 +73,36 @@ export function SavePropertiesDialog({
     },
   })
   
-  // 既存のプロジェクト一覧を取得
-  useEffect(() => {
-    if (open) {
-      loadExistingProjects()
-    }
-  }, [open])
-  
-  const loadExistingProjects = async () => {
-    const result = await getUserProjects()
-    if (result.success && result.data) {
-      setExistingProjects(result.data)
-      if (result.data.length > 0) {
-        setSelectedProjectId(result.data[0].id)
-      }
-    }
-  }
-  
   const handleSave = async () => {
     setIsLoading(true)
     setSaveProgress(0)
     
     try {
-      let projectId: string
-      
-      if (saveMode === 'new') {
-        // フォームのバリデーション
-        const isValid = await form.trigger()
-        if (!isValid) {
-          setIsLoading(false)
-          return
-        }
-        
-        const formData = form.getValues()
-        
-        // 新規プロジェクト作成
-        const createResult = await createProjectAction(formData)
-        if (createResult.error) {
-          toast.error(createResult.error)
-          setIsLoading(false)
-          return
-        }
-        
-        if (!createResult.success || !createResult.data) {
-          toast.error('プロジェクトの作成に失敗しました')
-          setIsLoading(false)
-          return
-        }
-        
-        projectId = createResult.data.id
-        toast.success(`プロジェクト「${formData.name}」を作成しました`)
-      } else {
-        // 既存プロジェクトを使用
-        if (!selectedProjectId) {
-          toast.error('プロジェクトを選択してください')
-          setIsLoading(false)
-          return
-        }
-        projectId = selectedProjectId
+      // フォームのバリデーション
+      const isValid = await form.trigger()
+      if (!isValid) {
+        setIsLoading(false)
+        return
       }
+      
+      const formData = form.getValues()
+      
+      // 新規プロジェクト作成
+      const createResult = await createProjectAction(formData)
+      if (createResult.error) {
+        toast.error(createResult.error)
+        setIsLoading(false)
+        return
+      }
+      
+      if (!createResult.success || !createResult.data) {
+        toast.error('プロジェクトの作成に失敗しました')
+        setIsLoading(false)
+        return
+      }
+      
+      const projectId = createResult.data.id
+      toast.success(`プロジェクト「${formData.name}」を作成しました`)
       
       // 物件データの保存
       setSaveProgress(10)
@@ -199,88 +158,48 @@ export function SavePropertiesDialog({
         <DialogHeader>
           <DialogTitle>物件情報をデータベースに保存</DialogTitle>
           <DialogDescription>
-            {properties.length}件の物件情報を保存します
+            {properties.length}件の物件情報を新規プロジェクトに保存します
           </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4">
-          {/* 保存モード選択 */}
+          {/* 新規プロジェクト作成フォーム */}
           <div className="space-y-2">
-            <Label>保存先</Label>
-            <Select value={saveMode} onValueChange={(v) => setSaveMode(v as 'new' | 'existing')}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="new">新規プロジェクトを作成</SelectItem>
-                <SelectItem value="existing" disabled={existingProjects.length === 0}>
-                  既存のプロジェクトに追加
-                  {existingProjects.length === 0 && ' (利用可能なプロジェクトがありません)'}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <Label htmlFor="name">プロジェクト名 *</Label>
+            <Input
+              id="name"
+              {...form.register('name')}
+              placeholder="例: 渋谷区物件調査2025"
+              disabled={isLoading}
+            />
+            {form.formState.errors.name && (
+              <Alert variant="destructive" className="py-2">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  {form.formState.errors.name.message}
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
           
-          {/* 新規プロジェクト作成フォーム */}
-          {saveMode === 'new' && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="name">プロジェクト名 *</Label>
-                <Input
-                  id="name"
-                  {...form.register('name')}
-                  placeholder="例: 渋谷区物件調査2025"
-                  disabled={isLoading}
-                />
-                {form.formState.errors.name && (
-                  <Alert variant="destructive" className="py-2">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      {form.formState.errors.name.message}
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="description">説明（任意）</Label>
-                <Textarea
-                  id="description"
-                  {...form.register('description')}
-                  placeholder="プロジェクトの説明を入力"
-                  rows={3}
-                  disabled={isLoading}
-                />
-                {form.formState.errors.description && (
-                  <Alert variant="destructive" className="py-2">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      {form.formState.errors.description.message}
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </div>
-            </>
-          )}
-          
-          {/* 既存プロジェクト選択 */}
-          {saveMode === 'existing' && existingProjects.length > 0 && (
-            <div className="space-y-2">
-              <Label>プロジェクトを選択</Label>
-              <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {existingProjects.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          <div className="space-y-2">
+            <Label htmlFor="description">説明（任意）</Label>
+            <Textarea
+              id="description"
+              {...form.register('description')}
+              placeholder="プロジェクトの説明を入力"
+              rows={3}
+              disabled={isLoading}
+            />
+            {form.formState.errors.description && (
+              <Alert variant="destructive" className="py-2">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  {form.formState.errors.description.message}
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
           
           {/* 保存進捗 */}
           {isLoading && saveProgress > 0 && (
@@ -309,7 +228,7 @@ export function SavePropertiesDialog({
           </Button>
           <Button
             onClick={handleSave}
-            disabled={isLoading || (saveMode === 'existing' && !selectedProjectId)}
+            disabled={isLoading}
           >
             {isLoading ? (
               <>

@@ -32,6 +32,9 @@ export async function updatePassword(formData: PasswordUpdate) {
   if (!user) {
     throw new Error("ユーザーが見つかりません");
   }
+  // console.log("user", user);
+  // console.log("user.user_metadata", user.user_metadata);
+  // console.log("user.user_metadata.pending_role", user.user_metadata.pending_role);
   //バリデーションチェック
   const result = await passwordUpdateSchema.safeParseAsync(formData);
   if (result.success === false) {
@@ -65,6 +68,7 @@ export async function updatePassword(formData: PasswordUpdate) {
   });
   // ユーザーのメタデータからpending_roleを取得（デフォルトは'user'）
   const pendingRole = user.user_metadata?.pending_role || 'user';
+  // console.log("pendingRole", pendingRole);
   
   //profilesテーブルを作成
   await supabase.from("profiles").insert({

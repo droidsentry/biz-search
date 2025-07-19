@@ -51,7 +51,7 @@ export default function PasswordUpdateForm({ user }: { user: User | null }) {
     startTransition(async () => {
       await updatePassword(data)
         .then(() => {
-          toast.success("パスワードが更新されました");
+          toast.success("パスワードを設定しました。");
           if (fromPath) {
             router.push(fromPath);
           } else {

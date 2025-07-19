@@ -17,7 +17,7 @@ import AwesomeDebouncePromise from "awesome-debounce-promise";
       "英字と数字を含む6文字以上で設定してください"
     );
 
-  const emailSchema = z
+  export const emailSchema = z
   .email({
     message: "メールアドレスの形式で入力してください。",
   })

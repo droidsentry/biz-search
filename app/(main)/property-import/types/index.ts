@@ -29,12 +29,6 @@ export interface ParseResult {
 // フォームの状態
 export type ImportStep = 'upload' | 'confirm' | 'processing' | 'complete'
 
-// 内部処理用の型
-export interface ProcessingEvent {
-  type: 'init' | 'progress' | 'result' | 'error' | 'complete'
-  data: any
-}
-
 // ジオコーディング結果
 export interface GeocodingResult {
   lat?: number

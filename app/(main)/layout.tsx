@@ -10,7 +10,7 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
-      <div className="flex-1 flex flex-col bg-background dark:bg-zinc-950 text-foreground">
+      <div className="flex-1 flex flex-col bg-background text-foreground">
         <SubNavigation />
         <main className="flex-1">
           {children}

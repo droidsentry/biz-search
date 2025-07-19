@@ -54,6 +54,9 @@ export async function createProjectAction(formData: CreateProjectFormData) {
       details: result.error.flatten() 
     };
   }
+
+  // console.log("result.data", result.data)
+  // return null
   
   try {
     // 重複チェック
@@ -260,38 +263,3 @@ export async function savePropertiesAction(
   }
 }
 
-/**
- * ユーザーがアクセス可能なプロジェクト一覧を取得
- */
-export async function getUserProjects() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) {
-    return { error: '認証が必要です' };
-  }
-  
-  try {
-    // user_project_ids()関数を使用してアクセス可能なプロジェクトを取得
-    const { data: projects, error } = await supabase
-      .from('projects')
-      .select(`
-        *,
-        project_members!inner (
-          role
-        )
-      `)
-      .or(`created_by.eq.${user.id},project_members.user_id.eq.${user.id}`)
-      .order('created_at', { ascending: false });
-    
-    if (error) {
-      console.error('プロジェクト取得エラー:', error);
-      return { error: 'プロジェクトの取得に失敗しました' };
-    }
-    
-    return { success: true, data: projects };
-  } catch (error) {
-    console.error('プロジェクト取得エラー:', error);
-    return { error: '予期せぬエラーが発生しました' };
-  }
-}

@@ -6,7 +6,7 @@ import { FileDropzone } from './file-dropzone'
 import { FileConfirm } from './file-confirm'
 import { ImportProgress } from './import-progress'
 import { ResultsTable } from './results-table'
-import type { ImportStep, ParseResult, ProcessingEvent } from '../types'
+import type { ImportStep, ParseResult } from '../types'
 
 export function PropertyImportForm() {
   const [step, setStep] = useState<ImportStep>('upload')
@@ -15,7 +15,6 @@ export function PropertyImportForm() {
 
   const processFiles = useCallback(async () => {
     setStep('processing')
-    const parseResults: ParseResult[] = []
 
     try {
       // FormDataを作成
@@ -25,64 +24,42 @@ export function PropertyImportForm() {
       })
 
       // APIエンドポイントに送信
-      const response = await fetch('/api/pdf', {
+      const response = await fetch('/api/parse-documents', {
         method: 'POST',
         body: formData
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'PDFの解析に失敗しました')
-      }
-
-      // NDJSONストリーミングレスポンスを処理
-      const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
-
-      if (!reader) {
-        throw new Error('レスポンスの読み取りに失敗しました')
-      }
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value)
-        const lines = chunk.split('\n').filter(line => line.trim())
-
-        for (const line of lines) {
-          try {
-            const event: ProcessingEvent = JSON.parse(line)
-            
-            if (event.type === 'result') {
-              const data = event.data
-              parseResults.push({
-                fileName: data.fileName,
-                fileSize: data.fileSize,
-                status: data.status,
-                pageCount: data.pageCount,
-                textLength: data.textLength,
-                processingTime: data.processingTime,
-                propertyData: data.propertyData,
-                error: data.error
-              })
-            } else if (event.type === 'error') {
-              toast.error(event.data.message || 'エラーが発生しました')
-            }
-          } catch (e) {
-            console.error('Parse error:', e)
-          }
+        // サジェスチョンがある場合は追加で表示
+        if (data.suggestion) {
+          toast.error(data.suggestion)
         }
+        throw new Error(data.error || 'PDFの解析に失敗しました')
       }
+
+      // 通常のJSONレスポンスを処理
+      const parseResults: ParseResult[] = data.results.map((result: any) => ({
+        fileName: result.fileName,
+        fileSize: result.fileSize,
+        status: result.status,
+        pageCount: result.pageCount,
+        textLength: result.textLength,
+        processingTime: 0, // APIレスポンスに含まれないため0を設定
+        propertyData: result.propertyData,
+        error: result.error
+      }))
 
       setResults(parseResults)
       setStep('complete')
       
-      const successCount = parseResults.filter(r => r.status === 'success').length
-      if (successCount === parseResults.length) {
-        toast.success(`${successCount}件のPDFを解析しました`)
+      // サマリー情報を使用
+      const { successful, failed, total } = data.summary
+      if (failed === 0) {
+        toast.success(`${successful}件のPDFを解析しました`)
       } else {
-        toast.warning(`${successCount}/${parseResults.length}件の解析に成功しました`)
+        toast.warning(`${successful}/${total}件の解析に成功しました`)
       }
     } catch (error) {
       console.error('Processing error:', error)
