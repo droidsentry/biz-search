@@ -11,6 +11,7 @@ import {
   SavePropertiesData,
   SavePropertiesResponse 
 } from "@/lib/types/property";
+import { Tables } from "@/lib/types/database";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -23,12 +24,14 @@ export async function checkProjectName(name: string): Promise<boolean> {
     .from('projects')
     .select('id')
     .eq('name', name)
-    .maybeSingle();
+    .maybeSingle(); // データがなければnullを返す
   
   if (error) {
     console.error('プロジェクト名チェックエラー:', error);
     return false;
   }
+  // console.log("data", data)
+  // console.log("error", error)
   
   // データがなければ利用可能（true）
   return !data;
@@ -77,13 +80,13 @@ export async function createProjectAction(formData: CreateProjectFormData) {
       .single();
     
     if (projectError) {
-      console.error('プロジェクト作成エラー:', projectError);
+      console.error('プロジェクト作成エラー1:', projectError);
       return { error: 'プロジェクトの作成に失敗しました' };
     }
     
     return { success: true, data: project };
   } catch (error) {
-    console.error('プロジェクト作成エラー:', error);
+    console.error('プロジェクト作成エラー2:', error);
     return { error: '予期せぬエラーが発生しました' };
   }
 }
@@ -148,71 +151,161 @@ export async function savePropertiesAction(
   let savedCount = 0;
   
   try {
-    // トランザクション的な処理
-    for (let i = 0; i < result.data.properties.length; i++) {
-      const property = result.data.properties[i];
-      
-      try {
-        // 所有者の登録または取得
-        let ownerId: string | null = null;
+    // Step 1: 重複しない所有者情報を収集
+    const ownerMap = new Map<string, { name: string; address: string }>();
+    result.data.properties.forEach(property => {
+      const key = `${property.ownerName}_${property.ownerAddress}`;
+      ownerMap.set(key, {
+        name: property.ownerName,
+        address: property.ownerAddress,
+      });
+    });
+    const uniqueOwners = Array.from(ownerMap.values());
+    
+    // Step 2: 既存の所有者を一括で取得
+    
+    // Supabaseのor条件を使用して既存の所有者を検索
+    let existingOwners: Pick<Tables<'owners'>, 'id' | 'name' | 'address'>[] = [];
+    if (uniqueOwners.length > 0) {
+      // バッチ処理（Supabaseのデフォルトlimit:1000を考慮）
+      const batchSize = 500;
+      for (let i = 0; i < uniqueOwners.length; i += batchSize) {
+        const batch = uniqueOwners.slice(i, i + batchSize);
         
-        // 既存の所有者をチェック
-        const { data: existingOwner } = await supabase
+        // 各所有者の条件を作成（適切にエスケープ）
+        const orConditions = batch.map(o => {
+          // 値を適切にエスケープ
+          const escapedName = o.name.replace(/'/g, "''").replace(/"/g, '""');
+          const escapedAddress = o.address.replace(/'/g, "''").replace(/"/g, '""');
+          return `and(name.eq."${escapedName}",address.eq."${escapedAddress}")`;
+        }).join(',');
+        
+      const { data } = await supabase
           .from('owners')
-          .select('id')
-          .eq('name', property.ownerName)
-          .eq('address', property.ownerAddress)
-          .maybeSingle();
+          .select('id, name, address')
+          .or(orConditions);
         
-        if (existingOwner) {
-          ownerId = existingOwner.id;
-        } else {
-          // 新規所有者を作成
-          const { data: newOwner, error: ownerError } = await supabase
+        
+        if (data) {
+          existingOwners = existingOwners.concat(data);
+        }
+      }
+    }
+    
+    // Step 3: 新規所有者を特定して一括作成
+    const existingOwnerKeys = new Set(
+      existingOwners.map(o => `${o.name}_${o.address}`)
+    );
+    
+    const newOwners = uniqueOwners.filter(owner => 
+      !existingOwnerKeys.has(`${owner.name}_${owner.address}`)
+    );
+    
+    let createdOwners: Pick<Tables<'owners'>, 'id' | 'name' | 'address'>[] = [];
+    if (newOwners.length > 0) {
+      const { data, error: createError } = await supabase
+        .from('owners')
+        .insert(newOwners)
+        .select();
+      
+      if (createError) {
+        console.error('所有者一括作成エラー:', createError);
+        // 個別に作成を試みる
+        for (const owner of newOwners) {
+          const { data: singleOwner } = await supabase
             .from('owners')
-            .insert({
-              name: property.ownerName,
-              address: property.ownerAddress,
-            })
+            .insert(owner)
             .select()
             .single();
-          
-          if (ownerError) {
-            throw new Error('所有者の登録に失敗しました');
+          if (singleOwner) {
+            createdOwners.push(singleOwner);
           }
-          
-          ownerId = newOwner.id;
         }
-        
-        // 物件情報の登録
-        const { error: propertyError } = await supabase
-          .from('properties')
-          .insert({
-            project_id: result.data.projectId,
-            property_address: property.propertyAddress,
-            owner_id: ownerId,
-            source_file_name: property.sourceFileName,
-            lat: property.lat,
-            lng: property.lng,
-            street_view_available: property.streetViewAvailable,
-            imported_by: user.id,
-          });
-        
-        if (propertyError) {
-          // 重複エラーの場合は特別なメッセージ
-          if (propertyError.code === '23505') {
-            throw new Error('この物件は既に登録されています');
-          }
-          throw new Error('物件の登録に失敗しました');
-        }
-        
-        savedCount++;
-      } catch (error) {
-        errors?.push({
-          index: i,
+      } else if (data) {
+        createdOwners = data;
+      }
+    }
+    
+    // Step 4: 所有者IDマップを作成
+    const allOwners = [...existingOwners, ...createdOwners];
+    const ownerIdMap = new Map(
+      allOwners.map(o => [`${o.name}_${o.address}`, o.id])
+    );
+    
+    // Step 5: 物件データを準備して一括挿入
+    const propertiesToInsert = result.data.properties.map((property, index) => {
+      const ownerKey = `${property.ownerName}_${property.ownerAddress}`;
+      const ownerId = ownerIdMap.get(ownerKey);
+      
+      if (!ownerId) {
+        errors.push({
+          index,
           propertyAddress: property.propertyAddress,
-          error: error instanceof Error ? error.message : '不明なエラー',
+          error: '所有者の登録に失敗しました',
         });
+        return null;
+      }
+      
+      return {
+        project_id: result.data.projectId,
+        property_address: property.propertyAddress,
+        owner_id: ownerId,
+        source_file_name: property.sourceFileName || null,
+        lat: property.lat || null,
+        lng: property.lng || null,
+        street_view_available: property.streetViewAvailable || null,
+        imported_by: user.id,
+      };
+    }).filter(p => p !== null);
+    
+    // Step 6: 物件を一括で挿入（upsertで重複を回避）
+    if (propertiesToInsert.length > 0) {
+      // チャンク処理（大量データ対応、Supabaseのデフォルトlimit:1000を考慮）
+      const chunkSize = 500;
+      for (let i = 0; i < propertiesToInsert.length; i += chunkSize) {
+        const chunk = propertiesToInsert.slice(i, i + chunkSize);
+        
+        const { data: insertedData, error: insertError } = await supabase
+          .from('properties')
+          .upsert(chunk, {
+            onConflict: 'project_id,property_address',
+            ignoreDuplicates: false,
+          })
+          .select();
+        
+        if (insertError) {
+          console.error('物件一括挿入エラー:', insertError);
+          
+          // エラーが発生した場合、個別に処理して詳細なエラーを取得
+          for (let j = 0; j < chunk.length; j++) {
+            const property = chunk[j];
+            const originalIndex = i + j;
+            
+            const { error: singleError } = await supabase
+              .from('properties')
+              .insert(property);
+            
+            if (singleError) {
+              if (singleError.code === '23505') {
+                errors.push({
+                  index: originalIndex,
+                  propertyAddress: property.property_address,
+                  error: 'この物件住所は既にこのプロジェクトに登録されています',
+                });
+              } else {
+                errors.push({
+                  index: originalIndex,
+                  propertyAddress: property.property_address,
+                  error: '物件の登録に失敗しました',
+                });
+              }
+            } else {
+              savedCount++;
+            }
+          }
+        } else {
+          savedCount += insertedData?.length || 0;
+        }
       }
     }
     
@@ -253,11 +346,11 @@ export async function savePropertiesAction(
     return {
       success: false,
       projectId: result.data.projectId,
-      savedCount: 0,
-      errors: [{ 
+      savedCount,
+      errors: errors?.length > 0 ? errors : [{ 
         index: -1, 
         propertyAddress: '', 
-        error: '予期せぬエラーが発生しました' 
+        error: error instanceof Error ? error.message : '予期せぬエラーが発生しました' 
       }],
     };
   }

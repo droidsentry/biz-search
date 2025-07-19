@@ -24,6 +24,16 @@ ALTER TABLE import_logs ENABLE ROW LEVEL SECURITY;
 -- 2. 効率的なRLS関数の作成
 -- =============================================
 
+-- profilesのroleを取得する専用関数（RLSを完全にバイパス）
+CREATE OR REPLACE FUNCTION get_user_role()
+RETURNS text
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT role FROM profiles WHERE id = auth.uid();
+$$;
+
 -- ユーザーがアクセス可能なプロジェクトIDを返す関数
 CREATE OR REPLACE FUNCTION user_project_ids()
 RETURNS SETOF uuid
@@ -31,11 +41,9 @@ LANGUAGE sql
 SECURITY DEFINER
 STABLE
 AS $$
-  SELECT CASE 
-    -- system_ownerの場合は全プロジェクトを返す
-    WHEN (SELECT role FROM profiles WHERE id = auth.uid()) = 'system_owner' THEN
+  SELECT CASE
+    WHEN get_user_role() = 'system_owner' THEN
       (SELECT id FROM projects)
-    -- 通常ユーザーの場合はproject_membersベース
     ELSE
       (SELECT project_id FROM project_members WHERE user_id = auth.uid())
   END
@@ -49,8 +57,8 @@ SECURITY DEFINER
 STABLE
 AS $$
   SELECT CASE
-    -- system_ownerは常にowner権限
-    WHEN (SELECT role FROM profiles WHERE id = auth.uid()) = 'system_owner' THEN 'owner'
+    -- system_ownerは常にowner権限（get_user_role()を使用）
+    WHEN get_user_role() = 'system_owner' THEN 'owner'
     -- project_membersから役割を取得
     ELSE (SELECT role FROM project_members WHERE project_id = project_uuid AND user_id = auth.uid())
   END
@@ -73,7 +81,7 @@ CREATE POLICY "System owners can view all profiles"
   FOR SELECT 
   TO authenticated
   USING (
-    (SELECT role FROM profiles WHERE id = auth.uid()) = 'system_owner'
+    get_user_role() = 'system_owner'
     OR (SELECT auth.uid()) = id  -- 自分のプロファイルは常に閲覧可能
   );
 
@@ -92,7 +100,7 @@ CREATE POLICY "Users can update own profile"
   USING ((SELECT auth.uid()) = id)
   WITH CHECK (
     (SELECT auth.uid()) = id 
-    AND role = (SELECT role FROM profiles WHERE id = auth.uid())
+    AND role = get_user_role()
   );
 
 -- プロファイルの直接削除は不可（auth.usersの削除でカスケード削除）
@@ -106,7 +114,12 @@ CREATE POLICY "Users can view their projects"
   ON projects FOR SELECT 
   TO authenticated 
   USING (
-    id IN (SELECT user_project_ids())
+    -- id IN (SELECT user_project_ids())
+    get_user_role() = 'system_owner'
+    OR
+    (created_by = auth.uid())
+    OR
+    (id IN ( SELECT user_project_ids() AS user_project_ids))
   );
 
 -- 認証済みユーザーは新規作成可能

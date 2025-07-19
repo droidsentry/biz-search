@@ -46,7 +46,12 @@ const createDynamicProjectSchema = () => {
   return createProjectSchema.extend({
     name: projectNameWithUniquenessCheckSchema.refine(
       AwesomeDebouncePromise(
-        async (name) => await checkProjectName(name),
+        async (name) => {
+          // checkProjectNameは「利用可能ならtrue」を返すが、
+          // refineは「検証成功ならtrue」を期待するので反転が必要
+          const isAvailable = await checkProjectName(name);
+          return isAvailable;
+        },
         500
       ),
       {
@@ -103,6 +108,9 @@ export function SavePropertiesDialog({
       
       const projectId = createResult.data.id
       toast.success(`プロジェクト「${formData.name}」を作成しました`)
+
+      // console.log("createResult", createResult)
+      // return null
       
       // 物件データの保存
       setSaveProgress(10)

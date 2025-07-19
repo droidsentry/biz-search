@@ -58,13 +58,13 @@ export const propertyDataSchema = z.object({
 
 // 物件一括保存スキーマ
 export const savePropertiesSchema = z.object({
-  projectId: z.string().uuid("不正なプロジェクトIDです"),
+  projectId: z.uuid("不正なプロジェクトIDです"),
   properties: z.array(propertyDataSchema).min(1, "保存する物件データがありません"),
 });
 
 // インポートログスキーマ
 export const importLogSchema = z.object({
-  projectId: z.string().uuid(),
+  projectId: z.uuid(),
   fileCount: z.number().int().min(0),
   propertyCount: z.number().int().min(0),
   successCount: z.number().int().min(0),
@@ -73,7 +73,7 @@ export const importLogSchema = z.object({
 
 // 会社情報スキーマ
 export const ownerCompanySchema = z.object({
-  ownerId: z.string().uuid(),
+  ownerId: z.uuid(),
   companyName: z.string().min(1, "会社名は必須です"),
   companyNumber: z.string().optional(),
   position: z.string().optional(),
@@ -83,7 +83,7 @@ export const ownerCompanySchema = z.object({
 
 // メンバー追加スキーマ
 export const addMemberSchema = z.object({
-  projectId: z.string().uuid(),
+  projectId: z.uuid(),
   userId: z.string().uuid(),
   role: z.enum(["owner", "editor", "viewer"]),
 });

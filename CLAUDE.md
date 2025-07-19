@@ -61,23 +61,23 @@ components/
     └── Footer.tsx
 
 lib/
+├── actions/              # サーバーアクション
+│   ├── auth.ts
+│   └── product.ts
 ├── supabase/
 │   ├── client.ts         # クライアントサイド用
 │   └── server.ts         # サーバーサイド用
 ├── schemas/              # Zodスキーマ
-│   ├── auth.schema.ts    # kebab-case + .schema.ts
-│   └── product.schema.ts
+│   ├── auth.ts    # kebab-case + .schema.ts
+│   └── product.ts
 ├── types/                # 型定義（z.infer<>で生成される型）
-│   ├── auth.types.ts     # kebab-case + .types.ts
-│   └── product.types.ts
+│   ├── auth.ts     # kebab-case + .types.ts
+│   └── product.ts
 └── hooks/                # カスタムフック
     ├── use-auth.ts       # use- プレフィックス
     └── use-products.ts
 
 app/
-├── actions/              # サーバーアクション
-│   ├── auth.actions.ts
-│   └── product.actions.ts
 └── api/                  # ルートハンドラー
 ```
 
@@ -303,6 +303,59 @@ export async function createClient() {
 }
 ```
 
+## 型定義のベストプラクティス
+
+### Supabaseデータベース型の使用
+
+Supabaseから取得するデータの型は、`@/lib/types/database.ts`から提供される型ヘルパーを使用すること。
+
+```typescript
+import { Tables, TablesInsert, TablesUpdate } from '@/lib/types/database'
+
+// Row型（データ取得時）
+type Owner = Tables<'owners'>
+type Property = Tables<'properties'>
+type Project = Tables<'projects'>
+
+// Insert型（データ挿入時）
+type OwnerInsert = TablesInsert<'owners'>
+type PropertyInsert = TablesInsert<'properties'>
+type ProjectInsert = TablesInsert<'projects'>
+
+// Update型（データ更新時）
+type OwnerUpdate = TablesUpdate<'owners'>
+type PropertyUpdate = TablesUpdate<'properties'>
+type ProjectUpdate = TablesUpdate<'projects'>
+
+// 配列型
+type OwnerArray = Tables<'owners'>[]
+type PropertyArray = Tables<'properties'>[]
+type ProjectArray = Tables<'projects'>[]
+```
+
+### 型定義の配置ルール
+
+1. **データベーステーブルの型**: 直接`Tables<'テーブル名'>`を使用
+2. **カスタム型定義**: `lib/types/`ディレクトリに配置
+3. **Zodスキーマから生成される型**: `z.infer<typeof schema>`を使用
+
+### 実装例
+
+```typescript
+// ❌ 悪い例
+let owners: any[] = [];
+const result: any = await supabase.from('owners').select();
+
+// ✅ 良い例
+import { Tables } from '@/lib/types/database'
+
+let owners: Tables<'owners'>[] = [];
+const { data, error } = await supabase
+  .from('owners')
+  .select()
+  .returns<Tables<'owners'>[]>();
+```
+
 ## エラーハンドリング
 
 ```tsx
@@ -365,7 +418,7 @@ pnpm test
 5. **セキュリティ**: サーバーアクション・ルートハンドラーでは必ず認証確認とsafeParse実行
 
 ### 避けるべきこと
-- `any`型の使用
+- **`any`型の使用は厳禁** - 必ず適切な型を指定すること
 - コメントなしの複雑なロジック
 - 直接的なDOM操作
 - グローバル変数の使用

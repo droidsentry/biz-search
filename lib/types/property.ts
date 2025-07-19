@@ -7,6 +7,7 @@ import {
   ownerCompanySchema,
   addMemberSchema,
 } from "@/lib/schemas/property";
+import { Database, Tables } from "./database";
 
 // プロジェクト作成フォームデータ型
 export type CreateProjectFormData = z.infer<typeof createProjectSchema>;
@@ -41,11 +42,11 @@ export interface Property {
   id: string;
   project_id: string;
   property_address: string;
-  owner_id?: string;
-  source_file_name?: string;
-  lat?: number;
-  lng?: number;
-  street_view_available?: boolean;
+  owner_id: string | null;
+  source_file_name: string | null;
+  lat: number | null;
+  lng: number | null;
+  street_view_available: boolean | null;
   imported_at: string;
   imported_by: string;
   created_at: string;
@@ -72,3 +73,5 @@ export interface SavePropertiesResponse {
     error: string;
   }>;
 }
+
+// export type OwnerType = Database['public']['Tables']['owners']['Row'] メモ
