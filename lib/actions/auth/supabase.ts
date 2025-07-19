@@ -49,11 +49,12 @@ export async function updatePassword(formData: PasswordUpdate) {
       throw new Error(await getSupabaseAuthErrorMessage(errorCode));
     }
   });
-  // パスワード更新後、パスワード設定フラグをtrueにする
+  // パスワード更新後、パスワード設定フラグをtrueにし、pending_roleをクリア
   const supabaseAdmin = createAdminClient();
   await supabaseAdmin.auth.admin.updateUserById(user.id, {
     user_metadata: {
       is_password_set: true,
+      pending_role: null, // pending_roleをクリア
     },
   }).then(async (response) => {
     if (response.error) {
@@ -62,11 +63,15 @@ export async function updatePassword(formData: PasswordUpdate) {
       throw new Error(await getSupabaseAuthErrorMessage(errorCode));
     }
   });
-  //userテーブルを作成
+  // ユーザーのメタデータからpending_roleを取得（デフォルトは'user'）
+  const pendingRole = user.user_metadata?.pending_role || 'user';
+  
+  //profilesテーブルを作成
   await supabase.from("profiles").insert({
     id: user.id,
     email: user.email ?? "",
     username: username,
+    role: pendingRole, // roleを設定
   }).then(async (response) => {
     if (response.error) {
       console.error(response.error.message);

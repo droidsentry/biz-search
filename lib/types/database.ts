@@ -14,11 +14,121 @@ export type Database = {
   }
   public: {
     Tables: {
+      import_logs: {
+        Row: {
+          error_count: number
+          file_count: number
+          id: string
+          imported_at: string
+          imported_by: string
+          project_id: string
+          property_count: number
+          success_count: number
+        }
+        Insert: {
+          error_count: number
+          file_count: number
+          id?: string
+          imported_at?: string
+          imported_by?: string
+          project_id: string
+          property_count: number
+          success_count: number
+        }
+        Update: {
+          error_count?: number
+          file_count?: number
+          id?: string
+          imported_at?: string
+          imported_by?: string
+          project_id?: string
+          property_count?: number
+          success_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_logs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      owner_companies: {
+        Row: {
+          company_name: string
+          company_number: string | null
+          id: string
+          owner_id: string
+          position: string | null
+          rank: number
+          researched_at: string
+          researched_by: string
+          source_url: string
+        }
+        Insert: {
+          company_name: string
+          company_number?: string | null
+          id?: string
+          owner_id: string
+          position?: string | null
+          rank: number
+          researched_at?: string
+          researched_by?: string
+          source_url: string
+        }
+        Update: {
+          company_name?: string
+          company_number?: string | null
+          id?: string
+          owner_id?: string
+          position?: string | null
+          rank?: number
+          researched_at?: string
+          researched_by?: string
+          source_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_companies_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "owners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      owners: {
+        Row: {
+          address: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
           email: string
           id: string
+          role: string
           updated_at: string
           username: string
         }
@@ -26,6 +136,7 @@ export type Database = {
           created_at?: string
           email: string
           id?: string
+          role?: string
           updated_at?: string
           username: string
         }
@@ -33,17 +144,147 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+          role?: string
           updated_at?: string
           username?: string
         }
         Relationships: []
+      }
+      project_members: {
+        Row: {
+          added_at: string
+          added_by: string
+          id: string
+          project_id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string
+          id?: string
+          project_id: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string
+          id?: string
+          project_id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_members_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      properties: {
+        Row: {
+          created_at: string
+          id: string
+          imported_at: string
+          imported_by: string
+          lat: number | null
+          lng: number | null
+          owner_id: string | null
+          project_id: string
+          property_address: string
+          source_file_name: string | null
+          street_view_available: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          imported_at?: string
+          imported_by?: string
+          lat?: number | null
+          lng?: number | null
+          owner_id?: string | null
+          project_id: string
+          property_address: string
+          source_file_name?: string | null
+          street_view_available?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          imported_at?: string
+          imported_by?: string
+          lat?: number | null
+          lng?: number | null
+          owner_id?: string | null
+          project_id?: string
+          property_address?: string
+          source_file_name?: string | null
+          street_view_available?: boolean | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "properties_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "owners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "properties_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      user_project_ids: {
+        Args: Record<PropertyKey, never>
+        Returns: string[]
+      }
+      user_project_role: {
+        Args: { project_uuid: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

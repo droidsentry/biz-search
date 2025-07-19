@@ -1,6 +1,6 @@
-import { Header } from '@/components/layouts/Header'
-import { SubNavigation } from '@/components/layouts/SubNavigation'
-import { Footer } from '@/components/layouts/Footer'
+import { Header } from '@/components/layouts/header'
+import { SubNavigation } from '@/components/layouts/sub-navigation'
+import { Footer } from '@/components/layouts/footer'
 
 export default function DashboardLayout({
   children,
