@@ -157,7 +157,7 @@ export default function PasswordUpdateForm({ user }: { user: User | null }) {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={!isValid || isSubmitting || isPending}
+                disabled={!isValid || isValidating || isSubmitting || isPending}
               >
                 {isPending ? (
                   <>
