@@ -1,9 +1,8 @@
 'use client'
-import { useCallback, useEffect, useState } from 'react'
+import { signOut } from '@/lib/actions/auth/supabase'
 import { createClient } from '@/lib/supabase/client'
 import { type User } from '@supabase/supabase-js'
-import Avatar from './avatar'
-import { signOut } from '@/lib/actions/auth/supabase'
+import { useState } from 'react'
 
 // ...
 

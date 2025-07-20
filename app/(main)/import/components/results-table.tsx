@@ -406,10 +406,10 @@ export function ResultsTable({ results, onReset, onDelete }: ResultsTableProps) 
       </div>
 
       {/* デスクトップ表示 */}
-      <div className="hidden md:block rounded-lg border border-zinc-800 bg-zinc-900/50 overflow-x-auto">
+      <div className="hidden md:block rounded-lg border border-muted-foreground/20 bg-muted-foreground/5 overflow-x-auto">
         <Table className="table-fixed">
           <TableHeader>
-            <TableRow className="border-zinc-800 hover:bg-transparent">
+            <TableRow className="bg-muted-foreground/5 hover:bg-muted-foreground/10">
               <TableHead className="text-foreground/80 font-semibold min-w-[200px]">ファイル名</TableHead>
               <TableHead className="text-foreground/80 font-semibold text-center w-12">状態</TableHead>
               <TableHead className="text-foreground/80 font-semibold text-right w-18">サイズ</TableHead>
@@ -436,9 +436,9 @@ export function ResultsTable({ results, onReset, onDelete }: ResultsTableProps) 
               return (
               <TableRow 
                 key={index}
-                className="border-zinc-800 hover:bg-zinc-800/30"
+                className="border-muted-foreground/20 hover:bg-muted-foreground/10"
               >
-                <TableCell className="font-medium text-white min-w-[200px] truncate">
+                <TableCell className="font-medium text-foreground min-w-[200px] truncate">
                   <span className="block truncate" title={row.fileName}>
                     {row.fileName}
                   </span>
@@ -447,10 +447,10 @@ export function ResultsTable({ results, onReset, onDelete }: ResultsTableProps) 
                   {row.status === 'success' ? (
                     <Check className="size-4 text-green-500 mx-auto" />
                   ) : (
-                    <X className="size-4 text-red-500 mx-auto" />
+                    <X className="size-4 text-destructive mx-auto" />
                   )}
                 </TableCell>
-                <TableCell className="text-right text-zinc-400">
+                <TableCell className="text-right text-muted-foreground">
                   {formatFileSize(row.fileSize)}
                 </TableCell>
                 <TableCell className="text-foreground/80 p-0">
@@ -493,7 +493,7 @@ export function ResultsTable({ results, onReset, onDelete }: ResultsTableProps) 
                     ) : geocoding?.error ? (
                       <X className="size-4 text-red-500 mx-auto" />
                     ) : (
-                      <span className="text-zinc-500">-</span>
+                      <span className="text-muted-foreground">-</span>
                     )
                   )}
                 </TableCell>

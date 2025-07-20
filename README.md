@@ -67,11 +67,15 @@ pnpm dev
 biz-search/
 ├── app/                    # Next.js App Router
 │   ├── (auth)/            # 認証関連ページ（ログイン、サインアップ等）
+│   │    └── page.tsx      # ページ
+│   │    └── form.tsx      # 簡易的なフォーム
+│   │    └── action.ts     # 簡易的なサーバーアクション
 │   ├── (main)/dashboard   # ダッシュボード（認証済みユーザー用）
 │   ├── (public)/          # 公開ページ
 │   ├── api/               # API Routes
 │   ├── layout.tsx         # ルートレイアウト
 │   └── page.tsx           # トップページ
+│                     
 ├── components/            # Reactコンポーネント
 │   ├── ui/               # shadcn/uiコンポーネント
 │   ├── forms/            # フォームコンポーネント

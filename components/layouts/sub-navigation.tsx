@@ -8,8 +8,8 @@ import { useScrollRange } from '@/hooks/use-scroll-range'
 
 const navItems = [
   { href: '/dashboard', label: 'ダッシュボード' },
-  { href: '/property-import', label: 'インポート' },
-  { href: '/property-list', label: '物件一覧' },
+  { href: '/import', label: 'インポート' },
+  { href: '/projects',label: '物件一覧' },
   { href: '/search', label: 'カスタム検索' },
   { href: '/logs', label: 'ログ' },
   { href: '/settings', label: '設定' },
