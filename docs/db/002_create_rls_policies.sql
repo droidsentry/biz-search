@@ -203,6 +203,12 @@ CREATE POLICY "Editors can create owners"
   TO authenticated 
   WITH CHECK (true); -- 実際の権限チェックはpropertiesテーブルで行う
 
+CREATE POLICY "Editors can update owners"
+  ON owners FOR UPDATE
+  TO authenticated
+  USING (true)  -- 実際の権限チェックはpropertiesテーブルで行う
+  WITH CHECK (true);
+
 -- =============================================
 -- 7. propertiesテーブルのRLSポリシー
 -- =============================================

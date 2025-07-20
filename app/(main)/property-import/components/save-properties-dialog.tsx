@@ -18,8 +18,7 @@ import { Loader2, Save, AlertCircle } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { 
-  createProjectSchema,
-  projectNameWithUniquenessCheckSchema 
+  extendedCreateProjectSchema
 } from '@/lib/schemas/property'
 import { 
   CreateProjectFormData,
@@ -28,38 +27,15 @@ import {
 } from '@/lib/types/property'
 import {
   createProjectAction,
-  savePropertiesAction,
-  checkProjectName
+  savePropertiesAction
 } from '@/lib/actions/property'
 import { toast } from 'sonner'
-import AwesomeDebouncePromise from "awesome-debounce-promise"
-
 interface SavePropertiesDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   properties: PropertyData[]
   onSaveComplete?: (response: SavePropertiesResponse) => void
 }
-
-// 動的なスキーマを作成
-const createDynamicProjectSchema = () => {
-  return createProjectSchema.extend({
-    name: projectNameWithUniquenessCheckSchema.refine(
-      AwesomeDebouncePromise(
-        async (name) => {
-          // checkProjectNameは「利用可能ならtrue」を返すが、
-          // refineは「検証成功ならtrue」を期待するので反転が必要
-          const isAvailable = await checkProjectName(name);
-          return isAvailable;
-        },
-        500
-      ),
-      {
-        message: "このプロジェクト名は既に使用されています",
-      }
-    ),
-  });
-};
 
 export function SavePropertiesDialog({
   open,
@@ -71,7 +47,8 @@ export function SavePropertiesDialog({
   const [saveProgress, setSaveProgress] = useState<number>(0)
   
   const form = useForm<CreateProjectFormData>({
-    resolver: zodResolver(createDynamicProjectSchema()),
+    mode: "onChange",
+    resolver: zodResolver(extendedCreateProjectSchema),
     defaultValues: {
       name: '',
       description: '',

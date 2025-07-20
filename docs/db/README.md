@@ -168,21 +168,30 @@ erDiagram
 
 ## データベースセットアップ
 
-### 実行順序
+### SQLファイル一覧
 
-以下の順序でSQLファイルを実行してください：
+#### 実装済み（必須）
+
+以下のSQLファイルは実際にデータベースに適用されています：
 
 1. **001_create_tables.sql** - 基本テーブルの作成（profilesテーブル含む）
 2. **002_create_rls_policies.sql** - RLSポリシーの設定（全テーブル対応）
-3. **003_sample_queries.sql** - サンプルクエリ（参考用、実行は任意）
-4. **004_create_audit_tables.sql** - 監査ログテーブルの作成
-5. **005_create_api_tracking.sql** - API追跡テーブルの作成
+
+#### 参考用（未実装）
+
+以下のSQLファイルは将来の拡張時の参考として提供されています：
+
+3. **003_sample_queries.sql** - サンプルクエリ
+4. **004_create_audit_tables.sql** - 監査ログテーブルの設計
+5. **005_create_api_tracking.sql** - API追跡テーブルの設計
+
+> **注記**: 監査ログとAPI追跡機能は、現在の実装では意図的に含まれていません。これらのSQLファイルは将来の拡張時の参考として提供されています。
 
 ### Supabaseでの実行方法
 
 1. Supabaseダッシュボードにログイン
 2. SQL Editorを開く
-3. 各SQLファイルの内容をコピー＆ペースト
+3. 実装済みSQLファイル（001, 002）の内容をコピー＆ペースト
 4. 実行ボタンをクリック
 
 ### ローカル開発環境
@@ -191,7 +200,7 @@ erDiagram
 # Supabase CLIを使用する場合
 supabase db push
 
-# または直接実行
+# または直接実行（実装済みファイルのみ）
 psql -h localhost -p 54322 -U postgres -d postgres -f docs/db/001_create_tables.sql
 psql -h localhost -p 54322 -U postgres -d postgres -f docs/db/002_create_rls_policies.sql
 ```

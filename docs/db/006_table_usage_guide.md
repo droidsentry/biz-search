@@ -2,11 +2,13 @@
 
 このドキュメントでは、Biz Searchアプリケーションの主要テーブルの詳細な使用方法を説明します。
 
+> **注記**: このガイドは現在実装されているテーブルのみを対象としています。監査ログ（audit_logs）やAPI追跡（api_usage_logs）などの機能は、将来の実装計画として別途SQLファイルに記載されています。
+
 ## 目次
 
 1. [project_membersテーブル](#project_membersテーブル)
 2. [権限管理の実装](#権限管理の実装)
-3. [監査証跡の活用](#監査証跡の活用)
+3. [プロジェクトとメンバー管理](#プロジェクトとメンバー管理)
 4. [よくある質問](#よくある質問)
 
 ## project_membersテーブル
@@ -240,9 +242,11 @@ async function checkUserPermission(
 }
 ```
 
-## 監査証跡の活用
+## プロジェクトとメンバー管理
 
 ### メンバー追加履歴の追跡
+
+project_membersテーブルの`added_by`と`added_at`フィールドを使用して、簡易的な監査証跡を実現できます：
 
 ```sql
 -- 最近のメンバー追加履歴
@@ -276,6 +280,8 @@ WHERE pm.added_by = $1  -- 特定ユーザーのID
 ORDER BY pm.added_at DESC;
 ```
 
+> **将来の拡張**: より詳細な監査証跡が必要な場合は、`004_create_audit_tables.sql`に定義されている`audit_logs`テーブルの実装を検討してください。
+
 ## 実践的な使用シナリオ
 
 ### シナリオ1: アルバイトの追加
@@ -306,19 +312,8 @@ async function addPartTimeResearcher(
       role: 'viewer'  // 閲覧のみ
     });
 
-  // 3. 監査ログに記録
-  await supabase
-    .from('audit_logs')
-    .insert({
-      action: 'add_member',
-      resource_type: 'project_member',
-      resource_id: projectId,
-      metadata: {
-        member_email: researcherEmail,
-        role: 'viewer',
-        purpose: 'part_time_researcher'
-      }
-    });
+  // 3. 成功通知（監査ログは未実装のため、通知やconsole.logで代替）
+  console.log(`メンバー追加完了: ${researcherEmail} をプロジェクト ${projectId} に viewer として追加`);
 }
 ```
 
@@ -389,4 +384,5 @@ async function setupTeamProject(
 - [データベース設計全体](./README.md)
 - [テーブル作成スクリプト](./001_create_tables.sql)
 - [RLSポリシー詳細](./002_create_rls_policies.sql)
-- [監査ログシステム](../audit-logs/README.md)
+- [監査ログ設計（参考）](./004_create_audit_tables.sql)
+- [API追跡設計（参考）](./005_create_api_tracking.sql)
