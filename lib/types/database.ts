@@ -251,37 +251,40 @@ export type Database = {
       }
       property_ownerships: {
         Row: {
+          created_at: string
           id: string
           is_current: boolean | null
           owner_id: string
           ownership_end: string | null
           ownership_start: string
           property_id: string
-          recorded_at: string
           recorded_by: string
           source: string | null
+          updated_at: string
         }
         Insert: {
+          created_at?: string
           id?: string
           is_current?: boolean | null
           owner_id: string
           ownership_end?: string | null
-          ownership_start: string
+          ownership_start?: string
           property_id: string
-          recorded_at?: string
           recorded_by: string
           source?: string | null
+          updated_at?: string
         }
         Update: {
+          created_at?: string
           id?: string
           is_current?: boolean | null
           owner_id?: string
           ownership_end?: string | null
           ownership_start?: string
           property_id?: string
-          recorded_at?: string
           recorded_by?: string
           source?: string | null
+          updated_at?: string
         }
         Relationships: [
           {

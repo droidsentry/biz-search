@@ -53,25 +53,28 @@ CREATE TABLE owners (
   UNIQUE(name, address)  -- 同姓同名で同住所は同一人物とみなす
 );
 
--- 3. 物件所有履歴テーブル（時系列管理）
+-- 3. 物件所有履歴テーブル（シンプルな中間テーブル）
 CREATE TABLE property_ownerships (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   property_id uuid REFERENCES properties(id) ON DELETE CASCADE NOT NULL,
   owner_id uuid REFERENCES owners(id) ON DELETE CASCADE NOT NULL,
-  ownership_start date NOT NULL,  -- インポート実行日または手動登録日を記録
-  ownership_end date,
-  is_current boolean DEFAULT true,  -- 現在の所有者フラグ
-  source text,  -- 'pdf_import', 'manual_update'等
+  ownership_start timestamptz DEFAULT now() NOT NULL,  -- 所有開始時刻
+  ownership_end timestamptz,                           -- 所有終了時刻（NULL = 現在の所有者）
+  is_current boolean DEFAULT true,                     -- 現在の所有者フラグ
+  source text,                                         -- 'pdf_import', 'manual_update'等
   recorded_by uuid REFERENCES auth.users(id) NOT NULL,
-  recorded_at timestamptz DEFAULT now() NOT NULL,
-  UNIQUE(property_id, owner_id, ownership_start),  -- 重複防止
+  created_at timestamptz DEFAULT now() NOT NULL,      -- レコード作成時刻
+  updated_at timestamptz DEFAULT now() NOT NULL,      -- レコード更新時刻
+  UNIQUE(property_id, owner_id),  -- シンプルな一意制約
   CHECK (ownership_end IS NULL OR ownership_end >= ownership_start)
 );
 
--- ownership_startの仕様：
--- - PDFインポート時：インポート実行日を記録（PDFに記載の日付ではない）
--- - 手動登録時：ユーザーが指定した日付を記録
--- - 同じ物件・所有者・開始日の組み合わせは重複不可（UNIQUE制約で実現）
+-- 設計の特徴：
+-- - property_idとowner_idの組み合わせで一意性を保証（シンプルな中間テーブル）
+-- - 同じ物件・所有者の組み合わせは1レコードのみ存在
+-- - ownership_start: 実際の所有開始時刻を記録
+-- - created_at: システムへの初回登録時刻
+-- - updated_at: レコードの最終更新時刻（ownership_end設定時など）
 
 -- ON DELETE CASCADEの仕様：
 -- - propertiesが削除されると、関連する所有履歴も自動削除
@@ -152,7 +155,7 @@ CREATE INDEX idx_property_ownerships_current ON property_ownerships(property_id)
 CREATE INDEX idx_property_ownerships_property ON property_ownerships(property_id);
 CREATE INDEX idx_property_ownerships_owner ON property_ownerships(owner_id);
 -- UNIQUE制約により自動的に以下のインデックスが作成される
--- CREATE UNIQUE INDEX ON property_ownerships(property_id, owner_id, ownership_start);
+-- CREATE UNIQUE INDEX ON property_ownerships(property_id, owner_id);
 CREATE INDEX idx_project_properties_project ON project_properties(project_id);
 CREATE INDEX idx_project_properties_property ON project_properties(property_id);
 CREATE INDEX idx_owner_companies_owner ON owner_companies(owner_id);
@@ -190,20 +193,25 @@ CREATE INDEX idx_owner_companies_owner ON owner_companies(owner_id);
 CREATE OR REPLACE FUNCTION update_property_ownership() 
 RETURNS TRIGGER AS $$
 BEGIN
-  -- 新しい所有者が設定されたら、以前の所有者のis_currentをfalseに
-  IF NEW.is_current = true THEN
+  -- INSERT時のみ処理（UPDATEは既存レコードの更新なので何もしない）
+  IF TG_OP = 'INSERT' THEN
+    -- 同じproperty_idで異なるowner_idの既存レコードを終了
     UPDATE property_ownerships 
-    SET is_current = false, ownership_end = COALESCE(NEW.ownership_start, CURRENT_DATE)
-    WHERE property_id = NEW.property_id 
-    AND id != NEW.id 
-    AND is_current = true;
+    SET 
+      is_current = false, 
+      ownership_end = NEW.ownership_start
+    WHERE 
+      property_id = NEW.property_id 
+      AND owner_id != NEW.owner_id
+      AND is_current = true;
   END IF;
+  
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER ensure_single_current_owner
-BEFORE INSERT OR UPDATE ON property_ownerships
+BEFORE INSERT ON property_ownerships
 FOR EACH ROW EXECUTE FUNCTION update_property_ownership();
 
 -- updated_atの自動更新
@@ -224,6 +232,8 @@ CREATE TRIGGER update_owner_companies_updated_at BEFORE UPDATE ON owner_companie
 CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON profiles
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_projects_updated_at BEFORE UPDATE ON projects
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_property_ownerships_updated_at BEFORE UPDATE ON property_ownerships
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 ```
 
@@ -409,8 +419,7 @@ function buildOwnershipRecords(
   userId: string
 ): TablesInsert<'property_ownerships'>[] {
   const records: TablesInsert<'property_ownerships'>[] = [];
-  // ownership_startにはインポート実行日を記録（PDFの記載日付ではない）
-  const currentDate = new Date().toISOString().split('T')[0];
+  const currentTimestamp = new Date().toISOString();
   
   batch.forEach(item => {
     const propertyId = propertyIdMap.get(item.propertyAddress);
@@ -420,7 +429,7 @@ function buildOwnershipRecords(
       records.push({
         property_id: propertyId,
         owner_id: ownerId,
-        ownership_start: currentDate,  // インポート実行日
+        ownership_start: currentTimestamp,
         is_current: true,
         source: 'pdf_import',
         recorded_by: userId
@@ -431,23 +440,30 @@ function buildOwnershipRecords(
   return records;
 }
 
-// 所有履歴の挿入（UNIQUE制約で重複を防ぐ）
+// 所有履歴の挿入（シンプルな処理）
 async function insertOwnershipRecords(
   supabase: any,
   records: TablesInsert<'property_ownerships'>[]
 ) {
   if (records.length === 0) return;
   
-  // UNIQUE制約により重複を防止：upsertで適切に処理
+  // UNIQUE制約により重複を防止
   const { error } = await supabase
     .from('property_ownerships')
     .upsert(records, {
-      onConflict: 'property_id,owner_id,ownership_start',
-      ignoreDuplicates: true  // 既存レコードは無視
+      onConflict: 'property_id,owner_id',
+      ignoreDuplicates: true  // 既存レコードは無視（同じ物件・所有者の組み合わせはスキップ）
     });
   
   if (error) throw error;
 }
+
+// プロジェクト物件関連の処理（補足）
+// buildProjectPropertyRecordsとupsertProjectPropertiesの実装は
+// 設計書の範囲外ですが、以下の処理を行います：
+// 1. プロジェクトと物件の関連付け
+// 2. UNIQUE(project_id, property_id)により重複を防止
+// 3. ignoreDuplicates: falseで既存レコードを更新
 ```
 
 ### 所有者変更の記録
@@ -457,7 +473,6 @@ async function insertOwnershipRecords(
 export async function updatePropertyOwner(
   propertyId: string,
   newOwnerId: string,
-  changeDate: string,
   userId: string
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient();
@@ -469,13 +484,22 @@ export async function updatePropertyOwner(
       .insert({
         property_id: propertyId,
         owner_id: newOwnerId,
-        ownership_start: changeDate,
+        ownership_start: new Date().toISOString(),
         is_current: true,
         source: 'manual_update',
         recorded_by: userId
       });
     
-    if (error) throw error;
+    if (error) {
+      // UNIQUE制約違反の場合は、既に同じ所有者
+      if (error.code === '23505') {
+        return { 
+          success: false, 
+          error: 'この物件は既に指定された所有者のものです' 
+        };
+      }
+      throw error;
+    }
     
     return { success: true };
   } catch (error) {
@@ -667,7 +691,7 @@ RETURNS TABLE (
   company_3_name text,
   company_3_number text,
   company_3_position text,
-  ownership_start date,
+  ownership_start timestamptz,
   import_date timestamptz,
   researched_date timestamptz
 ) AS $$
@@ -1176,45 +1200,102 @@ USING (
    - `project_members.role`：プロジェクト単位の権限
    - 理由：柔軟性と管理の簡素化の両立
 
-3. **ownership_startの仕様**
-   - PDFインポート時：インポート実行日を自動記録
-   - 手動登録時：ユーザー指定の日付を記録
-   - 理由：データの追跡可能性と監査証跡の確保
+3. **中間テーブル設計の採用**
+   - property_idとowner_idの組み合わせで一意性を保証
+   - 同じ物件・所有者の組み合わせは1レコードのみ
+   - ownership_start: 実際の所有開始時刻
+   - created_at: システムへの初回登録時刻
+   - updated_at: レコードの最終更新時刻
+   - 理由：シンプルで理解しやすい設計、重複データの防止、監査証跡の強化
 
 ## property_ownershipsテーブルの設計詳細
 
-### 現在の設計：UUID主キー + UNIQUE制約
+### 新設計：シンプルな中間テーブル
 
-現在のテーブル設計は以下の特徴を持ちます：
+新しいテーブル設計は以下の特徴を持ちます：
 
 1. **UUID主キー**: `id`フィールドを主キーとして使用
-2. **UNIQUE制約**: `(property_id, owner_id, ownership_start)`の組み合わせで重複防止
+2. **UNIQUE制約**: `(property_id, owner_id)`のシンプルな組み合わせで重複防止
 3. **ON DELETE CASCADE**: 親レコードの削除時に自動的に履歴も削除
+4. **時刻管理の明確化**: 
+   - `ownership_start`: 実際の所有開始時刻
+   - `created_at`: システムへの初回登録時刻
+   - `updated_at`: レコードの最終更新時刻
 
 ### 設計のメリット
 
-1. **重複防止**: UNIQUE制約により、同じ物件・所有者・開始日の組み合わせが自動的に拒否される
-2. **データ整合性**: 
-   - 外部キー制約により参照整合性を保証
-   - ON DELETE CASCADEにより孤立データを防止
-3. **柔軟性**: 
-   - `id`フィールドにより、他のテーブルからの参照が容易
-   - トリガーやクエリでの処理がシンプル
-4. **自動クリーンアップ**: 物件や所有者が削除されたら、関連履歴も自動削除
+1. **シンプルな設計**: 
+   - 理解しやすい中間テーブル構造
+   - 同じ物件・所有者の組み合わせは1レコードのみ
+
+2. **効率的なデータ管理**: 
+   - 重複データの心配がない
+   - UPSERTで簡単に処理可能
+
+3. **履歴の明確化**: 
+   - 所有者変更は新しいレコードの挿入で実現
+   - トリガーが自動的に既存レコードを終了
+
+4. **監査証跡の強化**: 
+   - created_atとupdated_atで完全な履歴管理
+   - recorded_byで操作者を追跡
 
 ### 実装上の注意点
 
-インポート処理では`upsert`を使用することで、重複を適切に処理：
+インポート処理では`upsert`を使用し、既存レコードは更新しない：
 
 ```typescript
 const { error } = await supabase
   .from('property_ownerships')
   .upsert(records, {
-    onConflict: 'property_id,owner_id,ownership_start',
-    ignoreDuplicates: true  // 既存レコードは無視
+    onConflict: 'property_id,owner_id',
+    ignoreDuplicates: true  // 既存レコードは無視（同じ物件・所有者の組み合わせはスキップ）
   });
 ```
 
-この設計により、履歴データの整合性を保ちながら、重複インポートの問題も解決できます。
+### トリガーの動作
+
+1. **INSERT時のみ動作**: 新しい所有者が追加されたとき
+2. **既存レコードの終了**: 同じproperty_idで異なるowner_idのレコードを終了
+3. **UPDATE時は動作しない**: 既存レコードの更新時は何もしない
+
+### エラーハンドリング
+
+```typescript
+if (error.code === '23505') {
+  // UNIQUE制約違反 = 既に同じ所有者
+  return { 
+    success: false, 
+    error: 'この物件は既に指定された所有者のものです' 
+  };
+}
+```
+
+この設計により、履歴データの整合性を保ちながら、シンプルで理解しやすいデータモデルを実現できます。
+
+### 新設計による改善点
+
+1. **データモデルの簡素化**
+   - 中間テーブルとしてのシンプルな構造
+   - 重複データの完全な排除
+
+2. **保守性の向上**
+   - 理解しやすいUNIQUE制約
+   - 明確なトリガー動作
+
+3. **パフォーマンスの向上**
+   - インデックスの効率的な利用
+   - シンプルなクエリ構造
+
+### 注意事項
+
+1. **ignoreDuplicatesの設定**
+   - property_ownershipsのupsert時は`ignoreDuplicates: true`を使用
+   - これにより、既存レコードは無視され、エラーも発生しない
+   - 同じ物件・所有者の組み合わせはスキップされる
+
+2. **トリガーの動作範囲**
+   - INSERT時のみ動作するように変更
+   - UPDATE時の不要な処理を防止
 
 実装時は、トランザクション管理とエラーハンドリングに注意し、段階的な移行を検討してください。

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, Save, AlertCircle, Plus } from 'lucide-react'
+import { Loader2, Save, AlertCircle } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { 
@@ -23,23 +23,13 @@ import {
 import { 
   CreateProjectFormData,
   PropertyData,
-  SavePropertiesResponse,
-  Project 
+  SavePropertiesResponse 
 } from '@/lib/types/property'
 import {
   createProjectAction,
   savePropertiesAction
 } from '@/lib/actions/property'
 import { toast } from 'sonner'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { createClient } from '@/lib/supabase/client'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 interface SavePropertiesDialogProps {
   open: boolean
@@ -56,9 +46,6 @@ export function SavePropertiesDialog({
 }: SavePropertiesDialogProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [saveProgress, setSaveProgress] = useState<number>(0)
-  const [existingProjects, setExistingProjects] = useState<Project[]>([])
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('')
-  const [saveMode, setSaveMode] = useState<'new' | 'existing'>('new')
   
   const form = useForm<CreateProjectFormData>({
     mode: "onChange",
@@ -71,84 +58,28 @@ export function SavePropertiesDialog({
   
   const { isSubmitting, isValid, isValidating } = form.formState;
   
-  // 既存プロジェクトの取得
-  useEffect(() => {
-    const fetchProjects = async () => {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) return;
-      
-      // ユーザーが編集権限を持つプロジェクトを取得
-      const { data: userProjects } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('created_by', user.id)
-        .order('created_at', { ascending: false });
-
-      const { data: memberProjects } = await supabase
-        .from('project_members')
-        .select(`
-          project:projects (*)
-        `)
-        .eq('user_id', user.id)
-        .in('role', ['owner', 'editor'])
-        .order('added_at', { ascending: false });
-
-      const allProjects = [
-        ...(userProjects || []),
-        ...(memberProjects?.map(m => m.project).filter(Boolean) || [])
-      ];
-
-      // 重複を除去
-      const uniqueProjects = Array.from(
-        new Map(allProjects.map(p => [p.id, p])).values()
-      );
-      
-      setExistingProjects(uniqueProjects);
-    };
-    
-    if (open) {
-      fetchProjects();
-    }
-  }, [open]);
-  
   const onSubmit = async (data: CreateProjectFormData) => {
     setIsLoading(true)
     setSaveProgress(0)
     
     try {
-      let projectId: string;
-      
-      if (saveMode === 'new') {
-        // 新規プロジェクト作成
-        const createResult = await createProjectAction(data)
-        if (createResult.error) {
-          toast.error(createResult.error)
-          setIsLoading(false)
-          return
-        }
-        
-        if (!createResult.success || !createResult.data) {
-          toast.error('プロジェクトの作成に失敗しました')
-          setIsLoading(false)
-          return
-        }
-        
-        projectId = createResult.data.id
-        toast.success(`プロジェクト「${data.name}」を作成しました`)
-      } else {
-        // 既存プロジェクトを使用
-        if (!selectedProjectId) {
-          toast.error('プロジェクトを選択してください')
-          setIsLoading(false)
-          return
-        }
-        projectId = selectedProjectId
-        const selectedProject = existingProjects.find(p => p.id === projectId)
-        toast.success(`プロジェクト「${selectedProject?.name}」に保存します`)
+      // 新規プロジェクト作成
+      const createResult = await createProjectAction(data)
+      if (createResult.error) {
+        toast.error(createResult.error)
+        setIsLoading(false)
+        return
       }
       
+      if (!createResult.success || !createResult.data) {
+        toast.error('プロジェクトの作成に失敗しました')
+        setIsLoading(false)
+        return
+      }
+      
+      const projectId = createResult.data.id
+      toast.success(`プロジェクト「${data.name}」を作成しました`)
+
       // 物件データの保存
       setSaveProgress(10)
       
@@ -204,92 +135,48 @@ export function SavePropertiesDialog({
           <DialogHeader>
             <DialogTitle>物件情報をデータベースに保存</DialogTitle>
             <DialogDescription>
-              {properties.length}件の物件情報を保存します
+              {properties.length}件の物件情報を新規プロジェクトに保存します
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
-            <Tabs value={saveMode} onValueChange={(value) => setSaveMode(value as 'new' | 'existing')}>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="new">
-                  <Plus className="h-4 w-4 mr-2" />
-                  新規プロジェクト
-                </TabsTrigger>
-                <TabsTrigger value="existing">既存プロジェクト</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="new" className="space-y-4">
-                {/* 新規プロジェクト作成フォーム */}
-                <div className="space-y-2">
-                  <Label htmlFor="name">プロジェクト名 *</Label>
-                  <Input
-                    id="name"
-                    {...form.register('name')}
-                    placeholder="例: 渋谷区物件調査2025"
-                    disabled={isLoading}
-                  />
-                  {form.formState.errors.name && (
-                    <Alert variant="destructive" className="py-2">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        {form.formState.errors.name.message}
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="description">説明（任意）</Label>
-                  <Textarea
-                    id="description"
-                    {...form.register('description')}
-                    placeholder="プロジェクトの説明を入力"
-                    rows={3}
-                    disabled={isLoading}
-                  />
-                  {form.formState.errors.description && (
-                    <Alert variant="destructive" className="py-2">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        {form.formState.errors.description.message}
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="existing" className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="existing-project">プロジェクトを選択 *</Label>
-                  <Select
-                    value={selectedProjectId}
-                    onValueChange={setSelectedProjectId}
-                    disabled={isLoading}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="プロジェクトを選択してください" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {existingProjects.map((project) => (
-                        <SelectItem key={project.id} value={project.id}>
-                          {project.name}
-                          {project.description && (
-                            <span className="text-sm text-muted-foreground ml-2">
-                              ({project.description})
-                            </span>
-                          )}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {saveMode === 'existing' && existingProjects.length === 0 && (
-                    <p className="text-sm text-muted-foreground">
-                      編集権限を持つプロジェクトがありません
-                    </p>
-                  )}
-                </div>
-              </TabsContent>
-            </Tabs>
+            {/* 新規プロジェクト作成フォーム */}
+            <div className="space-y-2">
+              <Label htmlFor="name">プロジェクト名 *</Label>
+              <Input
+                id="name"
+                {...form.register('name')}
+                placeholder="例: 渋谷区物件調査2025"
+                disabled={isLoading}
+              />
+              {form.formState.errors.name && (
+                <Alert variant="destructive" className="py-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    {form.formState.errors.name.message}
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="description">説明（任意）</Label>
+              <Textarea
+                id="description"
+                {...form.register('description')}
+                placeholder="プロジェクトの説明を入力"
+                rows={3}
+                disabled={isLoading}
+              />
+              {form.formState.errors.description && (
+                <Alert variant="destructive" className="py-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    {form.formState.errors.description.message}
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
             
             {/* 保存進捗 */}
             {isLoading && saveProgress > 0 && (
@@ -319,11 +206,7 @@ export function SavePropertiesDialog({
             </Button>
             <Button
               type="submit"
-              disabled={
-                isLoading || 
-                (saveMode === 'new' && (!isValid || isValidating || isSubmitting)) ||
-                (saveMode === 'existing' && !selectedProjectId)
-              }
+              disabled={!isValid || isValidating || isSubmitting || isLoading}
             >
               {isLoading ? (
                 <>

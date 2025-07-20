@@ -83,32 +83,6 @@ export async function createProjectAction(formData: CreateProjectFormData) {
   }
 }
 
-/**
- * 権限チェック
- */
-async function checkEditPermission(
-  supabase: SupabaseClient,
-  projectId: string,
-  userId: string
-): Promise<boolean> {
-  const { data: member } = await supabase
-    .from('project_members')
-    .select('role')
-    .eq('project_id', projectId)
-    .eq('user_id', userId)
-    .maybeSingle();
-  
-  const { data: project } = await supabase
-    .from('projects')
-    .select('created_by')
-    .eq('id', projectId)
-    .single();
-  
-  const isOwner = project?.created_by === userId;
-  const hasEditPermission = isOwner || member?.role === 'editor' || member?.role === 'owner';
-  
-  return hasEditPermission;
-}
 
 /**
  * ヘルパー関数：ユニークな所有者を抽出
@@ -209,8 +183,8 @@ function buildOwnershipRecords(
   userId: string
 ): TablesInsert<'property_ownerships'>[] {
   const records: TablesInsert<'property_ownerships'>[] = [];
-  // ownership_startにはインポート実行日を記録（PDFの記載日付ではない）
-  const currentDate = new Date().toISOString().split('T')[0];
+  // ownership_startにはインポート実行日時を記録（PDFの記載日付ではない）
+  const currentTimestamp = new Date().toISOString();
   
   batch.forEach(item => {
     const propertyId = propertyIdMap.get(item.propertyAddress);
@@ -220,7 +194,7 @@ function buildOwnershipRecords(
       records.push({
         property_id: propertyId,
         owner_id: ownerId,
-        ownership_start: currentDate,
+        ownership_start: currentTimestamp,
         is_current: true,
         source: 'pdf_import',
         recorded_by: userId
@@ -244,7 +218,7 @@ async function insertOwnershipRecords(
   const { error } = await supabase
     .from('property_ownerships')
     .upsert(records, {
-      onConflict: 'property_id,owner_id,ownership_start',
+      onConflict: 'property_id,owner_id',
       ignoreDuplicates: true  // 既存レコードは無視
     });
   
@@ -394,16 +368,6 @@ export async function savePropertiesAction(
     };
   }
   
-  // 権限チェック
-  const hasPermission = await checkEditPermission(supabase, result.data.projectId, user.id);
-  if (!hasPermission) {
-    return { 
-      success: false, 
-      projectId: data.projectId,
-      savedCount: 0,
-      errors: [{ index: -1, propertyAddress: '', error: '編集権限がありません' }]
-    };
-  }
   
   try {
     // PDFPropertyData形式に変換
@@ -456,166 +420,3 @@ export async function savePropertiesAction(
   }
 }
 
-/**
- * 手動での所有者変更
- */
-export async function updatePropertyOwner(
-  propertyId: string,
-  newOwnerId: string,
-  changeDate: string
-): Promise<{ success: boolean; error?: string }> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) {
-    return { success: false, error: '認証が必要です' };
-  }
-  
-  try {
-    // 新しい所有履歴を追加（トリガーが自動的に既存の履歴を更新）
-    const { error } = await supabase
-      .from('property_ownerships')
-      .insert({
-        property_id: propertyId,
-        owner_id: newOwnerId,
-        ownership_start: changeDate,
-        is_current: true,
-        source: 'manual_update',
-        recorded_by: user.id
-      });
-    
-    if (error) throw error;
-    
-    revalidatePath('/property-list');
-    return { success: true };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : '所有者変更に失敗しました'
-    };
-  }
-}
-
-/**
- * 会社情報の追加・更新
- */
-export async function upsertOwnerCompany(
-  ownerId: string,
-  companyData: {
-    companyName: string;
-    companyNumber?: string;
-    position?: string;
-    sourceUrl: string;
-    rank: 1 | 2 | 3;
-  }
-): Promise<{ success: boolean; error?: string }> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) {
-    return { success: false, error: '認証が必要です' };
-  }
-  
-  try {
-    const { error } = await supabase
-      .from('owner_companies')
-      .upsert({
-        owner_id: ownerId,
-        company_name: companyData.companyName,
-        company_number: companyData.companyNumber,
-        position: companyData.position,
-        source_url: companyData.sourceUrl,
-        rank: companyData.rank,
-        researched_by: user.id
-      }, {
-        onConflict: 'owner_id,rank'
-      });
-    
-    if (error) throw error;
-    
-    revalidatePath('/property-list');
-    return { success: true };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : '会社情報の登録に失敗しました'
-    };
-  }
-}
-
-/**
- * プロジェクト物件一覧の取得
- */
-export async function getProjectProperties(projectId: string) {
-  const supabase = await createClient();
-  
-  const { data, error } = await supabase
-    .from('project_properties')
-    .select(`
-      id,
-      added_at,
-      import_source_file,
-      property:properties!inner (
-        id,
-        address,
-        current_ownership:property_ownerships!inner (
-          id,
-          ownership_start,
-          ownership_end,
-          owner:owners!inner (
-            id,
-            name,
-            address,
-            lat,
-            lng,
-            street_view_available,
-            companies:owner_companies (
-              id,
-              company_name,
-              company_number,
-              position,
-              source_url,
-              rank,
-              is_verified,
-              researched_at
-            )
-          )
-        )
-      )
-    `)
-    .eq('project_id', projectId)
-    .eq('property.current_ownership.is_current', true)
-    .order('added_at', { ascending: false });
-  
-  return { data, error };
-}
-
-/**
- * CSVエクスポート
- */
-export async function exportProjectToCSV(projectId: string) {
-  const supabase = await createClient();
-  
-  const { data, error } = await supabase.rpc('get_project_export_data', {
-    p_project_id: projectId
-  });
-  
-  if (error) throw error;
-  
-  // CSVフォーマットに変換
-  const headers = [
-    '物件住所',
-    '所有者名', '所有者住所', '所有者緯度', '所有者経度',
-    '会社名1', '法人番号1', '役職',
-    '会社名2', '法人番号2', '役職',
-    '会社名3', '法人番号3', '役職',
-    '所有開始日', 'インポート日時', '調査日時'
-  ];
-  
-  const csv = [
-    headers.join(','),
-    ...data.map(row => Object.values(row).map(v => `"${v || ''}"`).join(','))
-  ].join('\n');
-  
-  return csv;
-}

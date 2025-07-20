@@ -75,19 +75,3 @@ export const savePropertiesSchema = z.object({
 });
 
 
-// 会社情報スキーマ
-export const ownerCompanySchema = z.object({
-  ownerId: z.uuid(),
-  companyName: z.string().min(1, "会社名は必須です"),
-  companyNumber: z.string().optional(),
-  position: z.string().optional(),
-  sourceUrl: z.string().url("有効なURLを入力してください"),
-  rank: z.number().int().min(1).max(3),
-});
-
-// メンバー追加スキーマ
-export const addMemberSchema = z.object({
-  projectId: z.uuid(),
-  userId: z.string().uuid(),
-  role: z.enum(["owner", "editor", "viewer"]),
-});
