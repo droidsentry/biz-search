@@ -74,14 +74,6 @@ export const savePropertiesSchema = z.object({
   properties: z.array(propertyDataSchema).min(1, "保存する物件データがありません"),
 });
 
-// インポートログスキーマ
-export const importLogSchema = z.object({
-  projectId: z.uuid(),
-  fileCount: z.number().int().min(0),
-  propertyCount: z.number().int().min(0),
-  successCount: z.number().int().min(0),
-  errorCount: z.number().int().min(0),
-});
 
 // 会社情報スキーマ
 export const ownerCompanySchema = z.object({

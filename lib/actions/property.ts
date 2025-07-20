@@ -3,14 +3,16 @@
 import { createClient } from "@/lib/supabase/server";
 import { 
   createProjectSchema, 
-  savePropertiesSchema,
-  importLogSchema 
+  savePropertiesSchema
 } from "@/lib/schemas/property";
 import { 
   CreateProjectFormData, 
   SavePropertiesData,
-  SavePropertiesResponse 
+  SavePropertiesResponse,
+  PDFPropertyData,
+  ImportResult
 } from "@/lib/types/property";
+import { Tables, TablesInsert } from '@/lib/types/database';
 import { revalidatePath } from "next/cache";
 import { SupabaseClient } from "@supabase/supabase-js";
 
@@ -24,16 +26,13 @@ export async function checkProjectName(name: string): Promise<boolean> {
     .from('projects')
     .select('id')
     .eq('name', name)
-    .maybeSingle(); // データがなければnullを返す
+    .maybeSingle();
   
   if (error) {
     console.error('プロジェクト名チェックエラー:', error);
     return false;
   }
-  // console.log("data", data)
-  // console.log("error", error)
   
-  // データがなければ利用可能（true）
   return !data;
 }
 
@@ -41,7 +40,6 @@ export async function checkProjectName(name: string): Promise<boolean> {
  * 新規プロジェクトの作成
  */
 export async function createProjectAction(formData: CreateProjectFormData) {
-  // 認証確認
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   
@@ -49,7 +47,6 @@ export async function createProjectAction(formData: CreateProjectFormData) {
     return { error: '認証が必要です' };
   }
   
-  // バリデーション
   const result = createProjectSchema.safeParse(formData);
   if (!result.success) {
     return { 
@@ -57,18 +54,13 @@ export async function createProjectAction(formData: CreateProjectFormData) {
       details: result.error.flatten() 
     };
   }
-
-  // console.log("result.data", result.data)
-  // return null
   
   try {
-    // 重複チェック
     const isUnique = await checkProjectName(result.data.name);
     if (!isUnique) {
       return { error: 'このプロジェクト名は既に使用されています' };
     }
     
-    // プロジェクト作成
     const { data: project, error: projectError } = await supabase
       .from('projects')
       .insert({
@@ -80,13 +72,13 @@ export async function createProjectAction(formData: CreateProjectFormData) {
       .single();
     
     if (projectError) {
-      console.error('プロジェクト作成エラー1:', projectError);
+      console.error('プロジェクト作成エラー:', projectError);
       return { error: 'プロジェクトの作成に失敗しました' };
     }
     
     return { success: true, data: project };
   } catch (error) {
-    console.error('プロジェクト作成エラー2:', error);
+    console.error('プロジェクト作成エラー:', error);
     return { error: '予期せぬエラーが発生しました' };
   }
 }
@@ -113,135 +105,267 @@ async function checkEditPermission(
     .single();
   
   const isOwner = project?.created_by === userId;
-  const hasEditPermission = isOwner || member?.role === 'editor';
+  const hasEditPermission = isOwner || member?.role === 'editor' || member?.role === 'owner';
   
   return hasEditPermission;
 }
 
 /**
- * 所有者処理（RLS対応）
+ * ヘルパー関数：ユニークな所有者を抽出
  */
-async function processOwners(
-  supabase: SupabaseClient,
-  uniqueOwners: Array<{name: string, address: string}>
-): Promise<Map<string, string>> {
-  const ownerIdMap = new Map<string, string>();
+function getUniqueOwners(data: PDFPropertyData[]): TablesInsert<'owners'>[] {
+  const ownerMap = new Map<string, TablesInsert<'owners'>>();
   
-  if (uniqueOwners.length === 0) {
-    return ownerIdMap;
-  }
-  
-  // バッチサイズ
-  const batchSize = 200;
-  
-  // upsert で一括作成/更新し、結果を取得
-  for (let i = 0; i < uniqueOwners.length; i += batchSize) {
-    const batch = uniqueOwners.slice(i, i + batchSize);
-    console.log("batch", batch)
-    
-    const { data, error } = await supabase
-      .from('owners')
-      .upsert(batch, { onConflict: 'name,address' })
-      .select('id, name, address');
-    
-    if (error) {
-      console.error('所有者upsertエラー:', error);
-      // エラーがあっても処理を継続
-    } else if (data) {
-      // 取得したデータをマップに追加
-      data.forEach(owner => {
-        ownerIdMap.set(`${owner.name}_${owner.address}`, owner.id);
+  data.forEach(item => {
+    const key = `${item.ownerName}_${item.ownerAddress}`;
+    if (!ownerMap.has(key)) {
+      ownerMap.set(key, {
+        name: item.ownerName,
+        address: item.ownerAddress,
+        lat: item.lat,
+        lng: item.lng,
+        street_view_available: item.streetViewAvailable || false
       });
     }
-  }
+  });
   
-  return ownerIdMap;
+  return Array.from(ownerMap.values());
 }
 
 /**
- * 物件保存処理
+ * ヘルパー関数：ユニークな物件を抽出
  */
-type PropertyInsert = {
-  project_id: string;
-  property_address: string;
-  owner_id: string;
-  source_file_name: string | null;
-  lat: number | null;
-  lng: number | null;
-  street_view_available: boolean | null;
-  imported_by: string;
-};
-
-type PropertyError = {
-  index: number;
-  propertyAddress: string;
-  error: string;
-};
-
-async function saveProperties(
-  supabase: SupabaseClient,
-  properties: PropertyInsert[]
-): Promise<{savedCount: number, errors: PropertyError[]}> {
-  const errors: PropertyError[] = [];
-  let savedCount = 0;
+function getUniqueProperties(data: PDFPropertyData[]): TablesInsert<'properties'>[] {
+  const propertyMap = new Map<string, TablesInsert<'properties'>>();
   
-  if (properties.length === 0) {
-    return { savedCount, errors };
-  }
-  
-  // チャンク処理（大量データ対応）
-  const chunkSize = 500;
-  for (let i = 0; i < properties.length; i += chunkSize) {
-    const chunk = properties.slice(i, i + chunkSize);
-    
-    const { data: insertedData, error: insertError } = await supabase
-      .from('properties')
-      .upsert(chunk, {
-        onConflict: 'project_id,property_address',
-        ignoreDuplicates: false,
-      })
-      .select();
-    
-    if (insertError) {
-      console.error('物件一括挿入エラー:', insertError);
-      
-      // エラーが発生した場合、個別に処理して詳細なエラーを取得
-      for (let j = 0; j < chunk.length; j++) {
-        const property = chunk[j];
-        const originalIndex = i + j;
-        
-        const { error: singleError } = await supabase
-          .from('properties')
-          .insert(property);
-        
-        if (singleError) {
-          if (singleError.code === '23505') {
-            errors.push({
-              index: originalIndex,
-              propertyAddress: property.property_address,
-              error: 'この物件住所は既にこのプロジェクトに登録されています',
-            });
-          } else {
-            errors.push({
-              index: originalIndex,
-              propertyAddress: property.property_address,
-              error: '物件の登録に失敗しました',
-            });
-          }
-        } else {
-          savedCount++;
-        }
-      }
-    } else {
-      savedCount += insertedData?.length || 0;
+  data.forEach(item => {
+    if (!propertyMap.has(item.propertyAddress)) {
+      propertyMap.set(item.propertyAddress, {
+        address: item.propertyAddress
+      });
     }
-  }
+  });
   
-  return { savedCount, errors };
+  return Array.from(propertyMap.values());
 }
 
 /**
- * 物件データの一括保存
+ * 所有者のupsert処理
+ */
+async function upsertOwners(
+  supabase: SupabaseClient,
+  owners: TablesInsert<'owners'>[]
+): Promise<Map<string, string>> {
+  const { data, error } = await supabase
+    .from('owners')
+    .upsert(owners, { 
+      onConflict: 'name,address',
+      ignoreDuplicates: false 
+    })
+    .select();
+  
+  if (error) throw error;
+  
+  const idMap = new Map<string, string>();
+  data.forEach((owner: Tables<'owners'>) => {
+    idMap.set(`${owner.name}_${owner.address}`, owner.id);
+  });
+  
+  return idMap;
+}
+
+/**
+ * 物件のupsert処理
+ */
+async function upsertProperties(
+  supabase: SupabaseClient,
+  properties: TablesInsert<'properties'>[]
+): Promise<Map<string, string>> {
+  const { data, error } = await supabase
+    .from('properties')
+    .upsert(properties, { 
+      onConflict: 'address',
+      ignoreDuplicates: false 
+    })
+    .select();
+  
+  if (error) throw error;
+  
+  const idMap = new Map<string, string>();
+  data.forEach((property: Tables<'properties'>) => {
+    idMap.set(property.address, property.id);
+  });
+  
+  return idMap;
+}
+
+/**
+ * 所有履歴レコードの構築
+ */
+function buildOwnershipRecords(
+  batch: PDFPropertyData[],
+  propertyIdMap: Map<string, string>,
+  ownerIdMap: Map<string, string>,
+  userId: string
+): TablesInsert<'property_ownerships'>[] {
+  const records: TablesInsert<'property_ownerships'>[] = [];
+  // ownership_startにはインポート実行日を記録（PDFの記載日付ではない）
+  const currentDate = new Date().toISOString().split('T')[0];
+  
+  batch.forEach(item => {
+    const propertyId = propertyIdMap.get(item.propertyAddress);
+    const ownerId = ownerIdMap.get(`${item.ownerName}_${item.ownerAddress}`);
+    
+    if (propertyId && ownerId) {
+      records.push({
+        property_id: propertyId,
+        owner_id: ownerId,
+        ownership_start: currentDate,
+        is_current: true,
+        source: 'pdf_import',
+        recorded_by: userId
+      });
+    }
+  });
+  
+  return records;
+}
+
+/**
+ * 所有履歴の挿入（UNIQUE制約で重複を防ぐ）
+ */
+async function insertOwnershipRecords(
+  supabase: SupabaseClient,
+  records: TablesInsert<'property_ownerships'>[]
+) {
+  if (records.length === 0) return;
+  
+  // UNIQUE制約により重複を防止：upsertで適切に処理
+  const { error } = await supabase
+    .from('property_ownerships')
+    .upsert(records, {
+      onConflict: 'property_id,owner_id,ownership_start',
+      ignoreDuplicates: true  // 既存レコードは無視
+    });
+  
+  if (error) throw error;
+}
+
+/**
+ * プロジェクト物件レコードの構築
+ */
+function buildProjectPropertyRecords(
+  projectId: string,
+  batch: PDFPropertyData[],
+  propertyIdMap: Map<string, string>,
+  userId: string
+): TablesInsert<'project_properties'>[] {
+  const records: TablesInsert<'project_properties'>[] = [];
+  
+  batch.forEach(item => {
+    const propertyId = propertyIdMap.get(item.propertyAddress);
+    
+    if (propertyId) {
+      records.push({
+        project_id: projectId,
+        property_id: propertyId,
+        added_by: userId,
+        import_source_file: item.sourceFileName
+      });
+    }
+  });
+  
+  return records;
+}
+
+/**
+ * プロジェクト物件のupsert処理
+ */
+async function upsertProjectProperties(
+  supabase: SupabaseClient,
+  records: TablesInsert<'project_properties'>[]
+) {
+  if (records.length === 0) return;
+  
+  const { error } = await supabase
+    .from('project_properties')
+    .upsert(records, {
+      onConflict: 'project_id,property_id',
+      ignoreDuplicates: true
+    });
+  
+  if (error) throw error;
+}
+
+/**
+ * メイン関数：PDFデータをインポート
+ */
+export async function importPropertiesFromPDF(
+  projectId: string,
+  pdfData: PDFPropertyData[],
+  userId: string
+): Promise<ImportResult> {
+  const supabase = await createClient();
+  const errors: ImportResult['errors'] = [];
+  let importedCount = 0;
+
+  try {
+    // トランザクション的な処理のため、バッチで実行
+    const BATCH_SIZE = 100;
+    
+    for (let i = 0; i < pdfData.length; i += BATCH_SIZE) {
+      const batch = pdfData.slice(i, i + BATCH_SIZE);
+      
+      // Step 1: 所有者マスターの処理
+      const uniqueOwners = getUniqueOwners(batch);
+      const ownerIdMap = await upsertOwners(supabase, uniqueOwners);
+      
+      // Step 2: 物件マスターの処理
+      const uniqueProperties = getUniqueProperties(batch);
+      const propertyIdMap = await upsertProperties(supabase, uniqueProperties);
+      
+      // Step 3: 物件所有履歴の記録
+      const ownershipRecords = buildOwnershipRecords(
+        batch,
+        propertyIdMap,
+        ownerIdMap,
+        userId
+      );
+      await insertOwnershipRecords(supabase, ownershipRecords);
+      
+      // Step 4: プロジェクトとの関連付け
+      const projectPropertyRecords = buildProjectPropertyRecords(
+        projectId,
+        batch,
+        propertyIdMap,
+        userId
+      );
+      await upsertProjectProperties(supabase, projectPropertyRecords);
+      
+      importedCount += batch.length;
+    }
+    
+    return {
+      success: true,
+      importedCount,
+      errors
+    };
+    
+  } catch (error) {
+    console.error('インポートエラー:', error);
+    return {
+      success: false,
+      importedCount,
+      errors: [{
+        propertyAddress: '',
+        error: error instanceof Error ? error.message : '予期せぬエラーが発生しました'
+      }]
+    };
+  }
+}
+
+/**
+ * 物件データの一括保存（新DB設計対応）
  */
 export async function savePropertiesAction(
   data: SavePropertiesData
@@ -249,9 +373,6 @@ export async function savePropertiesAction(
   // 認証確認
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  
-  // デバッグ用：認証状態を確認
-  console.log('Current user:', user?.id, user?.email);
   
   if (!user) {
     return { 
@@ -284,109 +405,217 @@ export async function savePropertiesAction(
     };
   }
   
-  let savedCount = 0;
-  const errors: PropertyError[] = [];
-  
   try {
-    // Step 1: 重複しない所有者情報を収集
-    const ownerMap = new Map<string, { name: string; address: string }>();
-    result.data.properties.forEach(property => {
-      const key = `${property.ownerName}_${property.ownerAddress}`;
-      ownerMap.set(key, {
-        name: property.ownerName,
-        address: property.ownerAddress,
-      });
-    });
-    const uniqueOwners = Array.from(ownerMap.values());
-    console.log("uniqueOwners", uniqueOwners)
+    // PDFPropertyData形式に変換
+    const pdfData: PDFPropertyData[] = result.data.properties.map(prop => ({
+      propertyAddress: prop.propertyAddress,
+      ownerName: prop.ownerName,
+      ownerAddress: prop.ownerAddress,
+      lat: prop.lat,
+      lng: prop.lng,
+      streetViewAvailable: prop.streetViewAvailable,
+      sourceFileName: prop.sourceFileName || ''
+    }));
     
-    // Step 2: 所有者の処理
-    const ownerIdMap = await processOwners(supabase, uniqueOwners);
-    console.log("ownerIdMap", ownerIdMap)
-    
-    // 所有者が正しく処理されなかった場合のエラーチェック
-    if (ownerIdMap.size === 0 && uniqueOwners.length > 0) {
-      console.error('所有者の処理に失敗しました。全ての所有者がマップされませんでした。');
-    }
-    
-    // Step 3: 物件データを準備
-    const propertiesToInsert: PropertyInsert[] = [];
-    
-    result.data.properties.forEach((property, index) => {
-      const ownerKey = `${property.ownerName}_${property.ownerAddress}`;
-      const ownerId = ownerIdMap.get(ownerKey);
-      
-      if (!ownerId) {
-        errors.push({
-          index,
-          propertyAddress: property.propertyAddress,
-          error: '所有者の登録に失敗しました',
-        });
-      } else {
-        propertiesToInsert.push({
-          project_id: result.data.projectId,
-          property_address: property.propertyAddress,
-          owner_id: ownerId,
-          source_file_name: property.sourceFileName || null,
-          lat: property.lat || null,
-          lng: property.lng || null,
-          street_view_available: property.streetViewAvailable || null,
-          imported_by: user.id,
-        });
-      }
-    });
-    
-    // Step 4: 物件の保存
-    const saveResult = await saveProperties(supabase, propertiesToInsert);
-    savedCount = saveResult.savedCount;
-    
-    // エラーをマージ
-    errors.push(...saveResult.errors);
-    
-    // インポートログの記録
-    const importLogData = {
-      projectId: result.data.projectId,
-      fileCount: 1, // TODO: 実際のファイル数を渡す
-      propertyCount: result.data.properties.length,
-      successCount: savedCount,
-      errorCount: errors?.length || 0,
-    };
-    
-    const logResult = importLogSchema.safeParse(importLogData);
-    if (logResult.success) {
-      await supabase
-        .from('import_logs')
-        .insert({
-          project_id: logResult.data.projectId,
-          file_count: logResult.data.fileCount,
-          property_count: logResult.data.propertyCount,
-          success_count: logResult.data.successCount,
-          error_count: logResult.data.errorCount,
-          imported_by: user.id,
-        });
-    }
+    // 新しいインポート関数を使用
+    const importResult = await importPropertiesFromPDF(
+      result.data.projectId,
+      pdfData,
+      user.id
+    );
     
     // キャッシュの再検証
     revalidatePath('/property-list');
+    revalidatePath('/property-import');
+    
+    // ImportResult型をSavePropertiesResponse型に変換
+    const errors = importResult.errors.map((err, index) => ({
+      index,
+      propertyAddress: err.propertyAddress,
+      error: err.error
+    }));
     
     return {
-      success: savedCount > 0,
+      success: importResult.success,
       projectId: result.data.projectId,
-      savedCount,
-      errors: errors?.length > 0 ? errors : undefined,
+      savedCount: importResult.importedCount,
+      errors: errors.length > 0 ? errors : undefined
     };
   } catch (error) {
     console.error('物件保存エラー:', error);
     return {
       success: false,
       projectId: result.data.projectId,
-      savedCount,
-      errors: errors?.length > 0 ? errors : [{ 
+      savedCount: 0,
+      errors: [{ 
         index: -1, 
         propertyAddress: '', 
         error: error instanceof Error ? error.message : '予期せぬエラーが発生しました' 
-      }],
+      }]
     };
   }
 }
 
+/**
+ * 手動での所有者変更
+ */
+export async function updatePropertyOwner(
+  propertyId: string,
+  newOwnerId: string,
+  changeDate: string
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return { success: false, error: '認証が必要です' };
+  }
+  
+  try {
+    // 新しい所有履歴を追加（トリガーが自動的に既存の履歴を更新）
+    const { error } = await supabase
+      .from('property_ownerships')
+      .insert({
+        property_id: propertyId,
+        owner_id: newOwnerId,
+        ownership_start: changeDate,
+        is_current: true,
+        source: 'manual_update',
+        recorded_by: user.id
+      });
+    
+    if (error) throw error;
+    
+    revalidatePath('/property-list');
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '所有者変更に失敗しました'
+    };
+  }
+}
+
+/**
+ * 会社情報の追加・更新
+ */
+export async function upsertOwnerCompany(
+  ownerId: string,
+  companyData: {
+    companyName: string;
+    companyNumber?: string;
+    position?: string;
+    sourceUrl: string;
+    rank: 1 | 2 | 3;
+  }
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return { success: false, error: '認証が必要です' };
+  }
+  
+  try {
+    const { error } = await supabase
+      .from('owner_companies')
+      .upsert({
+        owner_id: ownerId,
+        company_name: companyData.companyName,
+        company_number: companyData.companyNumber,
+        position: companyData.position,
+        source_url: companyData.sourceUrl,
+        rank: companyData.rank,
+        researched_by: user.id
+      }, {
+        onConflict: 'owner_id,rank'
+      });
+    
+    if (error) throw error;
+    
+    revalidatePath('/property-list');
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '会社情報の登録に失敗しました'
+    };
+  }
+}
+
+/**
+ * プロジェクト物件一覧の取得
+ */
+export async function getProjectProperties(projectId: string) {
+  const supabase = await createClient();
+  
+  const { data, error } = await supabase
+    .from('project_properties')
+    .select(`
+      id,
+      added_at,
+      import_source_file,
+      property:properties!inner (
+        id,
+        address,
+        current_ownership:property_ownerships!inner (
+          id,
+          ownership_start,
+          ownership_end,
+          owner:owners!inner (
+            id,
+            name,
+            address,
+            lat,
+            lng,
+            street_view_available,
+            companies:owner_companies (
+              id,
+              company_name,
+              company_number,
+              position,
+              source_url,
+              rank,
+              is_verified,
+              researched_at
+            )
+          )
+        )
+      )
+    `)
+    .eq('project_id', projectId)
+    .eq('property.current_ownership.is_current', true)
+    .order('added_at', { ascending: false });
+  
+  return { data, error };
+}
+
+/**
+ * CSVエクスポート
+ */
+export async function exportProjectToCSV(projectId: string) {
+  const supabase = await createClient();
+  
+  const { data, error } = await supabase.rpc('get_project_export_data', {
+    p_project_id: projectId
+  });
+  
+  if (error) throw error;
+  
+  // CSVフォーマットに変換
+  const headers = [
+    '物件住所',
+    '所有者名', '所有者住所', '所有者緯度', '所有者経度',
+    '会社名1', '法人番号1', '役職',
+    '会社名2', '法人番号2', '役職',
+    '会社名3', '法人番号3', '役職',
+    '所有開始日', 'インポート日時', '調査日時'
+  ];
+  
+  const csv = [
+    headers.join(','),
+    ...data.map(row => Object.values(row).map(v => `"${v || ''}"`).join(','))
+  ].join('\n');
+  
+  return csv;
+}

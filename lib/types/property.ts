@@ -3,23 +3,19 @@ import {
   createProjectSchema,
   propertyDataSchema,
   savePropertiesSchema,
-  importLogSchema,
   ownerCompanySchema,
   addMemberSchema,
 } from "@/lib/schemas/property";
-import { Database, Tables } from "./database";
+import { Tables, TablesInsert, TablesUpdate } from "./database";
 
 // プロジェクト作成フォームデータ型
 export type CreateProjectFormData = z.infer<typeof createProjectSchema>;
 
-// 物件データ型
+// 物件データ型（UIからの入力用）
 export type PropertyData = z.infer<typeof propertyDataSchema>;
 
 // 物件一括保存データ型
 export type SavePropertiesData = z.infer<typeof savePropertiesSchema>;
-
-// インポートログ型
-export type ImportLogData = z.infer<typeof importLogSchema>;
 
 // 会社情報型
 export type OwnerCompanyData = z.infer<typeof ownerCompanySchema>;
@@ -27,39 +23,51 @@ export type OwnerCompanyData = z.infer<typeof ownerCompanySchema>;
 // メンバー追加データ型
 export type AddMemberData = z.infer<typeof addMemberSchema>;
 
-// データベースのプロジェクト型
-export interface Project {
-  id: string;
-  name: string;
-  description?: string;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
+// データベーステーブルの型定義（Row型）
+export type Property = Tables<'properties'>;
+export type Owner = Tables<'owners'>;
+export type Project = Tables<'projects'>;
+export type PropertyOwnership = Tables<'property_ownerships'>;
+export type ProjectProperty = Tables<'project_properties'>;
+export type OwnerCompany = Tables<'owner_companies'>;
+export type Profile = Tables<'profiles'>;
+export type ProjectMember = Tables<'project_members'>;
+
+// データベーステーブルの型定義（Insert型）
+export type PropertyInsert = TablesInsert<'properties'>;
+export type OwnerInsert = TablesInsert<'owners'>;
+export type ProjectInsert = TablesInsert<'projects'>;
+export type PropertyOwnershipInsert = TablesInsert<'property_ownerships'>;
+export type ProjectPropertyInsert = TablesInsert<'project_properties'>;
+export type OwnerCompanyInsert = TablesInsert<'owner_companies'>;
+
+// データベーステーブルの型定義（Update型）
+export type PropertyUpdate = TablesUpdate<'properties'>;
+export type OwnerUpdate = TablesUpdate<'owners'>;
+export type ProjectUpdate = TablesUpdate<'projects'>;
+export type PropertyOwnershipUpdate = TablesUpdate<'property_ownerships'>;
+export type ProjectPropertyUpdate = TablesUpdate<'project_properties'>;
+export type OwnerCompanyUpdate = TablesUpdate<'owner_companies'>;
+
+// PDFインポート用の型定義
+export interface PDFPropertyData {
+  propertyAddress: string;
+  ownerName: string;
+  ownerAddress: string;
+  lat?: number | null;
+  lng?: number | null;
+  streetViewAvailable?: boolean;
+  sourceFileName: string;
 }
 
-// データベースのプロパティ型
-export interface Property {
-  id: string;
-  project_id: string;
-  property_address: string;
-  owner_id: string | null;
-  source_file_name: string | null;
-  lat: number | null;
-  lng: number | null;
-  street_view_available: boolean | null;
-  imported_at: string;
-  imported_by: string;
-  created_at: string;
-  updated_at: string;
-}
-
-// データベースの所有者型
-export interface Owner {
-  id: string;
-  name: string;
-  address: string;
-  created_at: string;
-  updated_at: string;
+// インポート結果の型定義
+export interface ImportResult {
+  success: boolean;
+  importedCount: number;
+  errors: Array<{
+    propertyAddress: string;
+    error: string;
+  }>;
 }
 
 // 保存レスポンス型
@@ -73,5 +81,3 @@ export interface SavePropertiesResponse {
     error: string;
   }>;
 }
-
-// export type OwnerType = Database['public']['Tables']['owners']['Row'] メモ

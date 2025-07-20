@@ -36,9 +36,6 @@
 CREATE TABLE properties (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   address text NOT NULL UNIQUE,  -- 物件住所は完全に一意
-  lat numeric(10, 8),
-  lng numeric(11, 8),
-  street_view_available boolean DEFAULT false,
   created_at timestamptz DEFAULT now() NOT NULL,
   updated_at timestamptz DEFAULT now() NOT NULL
 );
@@ -48,6 +45,9 @@ CREATE TABLE owners (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL,
   address text NOT NULL,
+  lat numeric(10, 8),  -- 所有者住所の緯度
+  lng numeric(11, 8),  -- 所有者住所の経度
+  street_view_available boolean DEFAULT false,  -- 所有者住所のストリートビュー可用性
   created_at timestamptz DEFAULT now() NOT NULL,
   updated_at timestamptz DEFAULT now() NOT NULL,
   UNIQUE(name, address)  -- 同姓同名で同住所は同一人物とみなす
@@ -56,22 +56,33 @@ CREATE TABLE owners (
 -- 3. 物件所有履歴テーブル（時系列管理）
 CREATE TABLE property_ownerships (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  property_id uuid REFERENCES properties(id) NOT NULL,
-  owner_id uuid REFERENCES owners(id) NOT NULL,
-  ownership_start date,
+  property_id uuid REFERENCES properties(id) ON DELETE CASCADE NOT NULL,
+  owner_id uuid REFERENCES owners(id) ON DELETE CASCADE NOT NULL,
+  ownership_start date NOT NULL,  -- インポート実行日または手動登録日を記録
   ownership_end date,
   is_current boolean DEFAULT true,  -- 現在の所有者フラグ
   source text,  -- 'pdf_import', 'manual_update'等
   recorded_by uuid REFERENCES auth.users(id) NOT NULL,
   recorded_at timestamptz DEFAULT now() NOT NULL,
+  UNIQUE(property_id, owner_id, ownership_start),  -- 重複防止
   CHECK (ownership_end IS NULL OR ownership_end >= ownership_start)
 );
+
+-- ownership_startの仕様：
+-- - PDFインポート時：インポート実行日を記録（PDFに記載の日付ではない）
+-- - 手動登録時：ユーザーが指定した日付を記録
+-- - 同じ物件・所有者・開始日の組み合わせは重複不可（UNIQUE制約で実現）
+
+-- ON DELETE CASCADEの仕様：
+-- - propertiesが削除されると、関連する所有履歴も自動削除
+-- - ownersが削除されると、関連する所有履歴も自動削除
+-- - 履歴データの整合性を自動的に維持
 
 -- 4. プロジェクト物件関連テーブル
 CREATE TABLE project_properties (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id uuid REFERENCES projects(id) ON DELETE CASCADE NOT NULL,
-  property_id uuid REFERENCES properties(id) NOT NULL,
+  property_id uuid REFERENCES properties(id) ON DELETE CASCADE NOT NULL,
   added_by uuid REFERENCES auth.users(id) NOT NULL,  -- 監査証跡：誰が追加したか
   added_at timestamptz DEFAULT now() NOT NULL,
   import_source_file text,  -- インポート元ファイル名
@@ -140,6 +151,8 @@ CREATE INDEX idx_owners_address ON owners(address);
 CREATE INDEX idx_property_ownerships_current ON property_ownerships(property_id) WHERE is_current = true;
 CREATE INDEX idx_property_ownerships_property ON property_ownerships(property_id);
 CREATE INDEX idx_property_ownerships_owner ON property_ownerships(owner_id);
+-- UNIQUE制約により自動的に以下のインデックスが作成される
+-- CREATE UNIQUE INDEX ON property_ownerships(property_id, owner_id, ownership_start);
 CREATE INDEX idx_project_properties_project ON project_properties(project_id);
 CREATE INDEX idx_project_properties_property ON project_properties(property_id);
 CREATE INDEX idx_owner_companies_owner ON owner_companies(owner_id);
@@ -316,7 +329,10 @@ function getUniqueOwners(data: PDFPropertyData[]): TablesInsert<'owners'>[] {
     if (!ownerMap.has(key)) {
       ownerMap.set(key, {
         name: item.ownerName,
-        address: item.ownerAddress
+        address: item.ownerAddress,
+        lat: item.lat,
+        lng: item.lng,
+        street_view_available: item.streetViewAvailable || false
       });
     }
   });
@@ -331,10 +347,7 @@ function getUniqueProperties(data: PDFPropertyData[]): TablesInsert<'properties'
   data.forEach(item => {
     if (!propertyMap.has(item.propertyAddress)) {
       propertyMap.set(item.propertyAddress, {
-        address: item.propertyAddress,
-        lat: item.lat,
-        lng: item.lng,
-        street_view_available: item.streetViewAvailable || false
+        address: item.propertyAddress
       });
     }
   });
@@ -396,6 +409,7 @@ function buildOwnershipRecords(
   userId: string
 ): TablesInsert<'property_ownerships'>[] {
   const records: TablesInsert<'property_ownerships'>[] = [];
+  // ownership_startにはインポート実行日を記録（PDFの記載日付ではない）
   const currentDate = new Date().toISOString().split('T')[0];
   
   batch.forEach(item => {
@@ -406,7 +420,7 @@ function buildOwnershipRecords(
       records.push({
         property_id: propertyId,
         owner_id: ownerId,
-        ownership_start: currentDate,
+        ownership_start: currentDate,  // インポート実行日
         is_current: true,
         source: 'pdf_import',
         recorded_by: userId
@@ -417,18 +431,20 @@ function buildOwnershipRecords(
   return records;
 }
 
-// 所有履歴の挿入（既存の履歴を更新してから）
+// 所有履歴の挿入（UNIQUE制約で重複を防ぐ）
 async function insertOwnershipRecords(
   supabase: any,
   records: TablesInsert<'property_ownerships'>[]
 ) {
   if (records.length === 0) return;
   
-  // トリガーが自動的に既存のis_currentをfalseに更新するため、
-  // 新しいレコードを挿入するだけでよい
+  // UNIQUE制約により重複を防止：upsertで適切に処理
   const { error } = await supabase
     .from('property_ownerships')
-    .insert(records);
+    .upsert(records, {
+      onConflict: 'property_id,owner_id,ownership_start',
+      ignoreDuplicates: true  // 既存レコードは無視
+    });
   
   if (error) throw error;
 }
@@ -533,16 +549,17 @@ export async function getProjectProperties(projectId: string) {
       property:properties!inner (
         id,
         address,
-        lat,
-        lng,
-        street_view_available,
         current_ownership:property_ownerships!inner (
           id,
           ownership_start,
+          ownership_end,
           owner:owners!inner (
             id,
             name,
             address,
+            lat,
+            lng,
+            street_view_available,
             companies:owner_companies (
               id,
               company_name,
@@ -586,8 +603,6 @@ export async function searchProjectProperties(params: SearchParams) {
       property:properties!inner (
         id,
         address,
-        lat,
-        lng,
         current_ownership:property_ownerships!inner (
           owner:owners!inner (
             id,
@@ -639,10 +654,10 @@ export async function searchProjectProperties(params: SearchParams) {
 CREATE OR REPLACE FUNCTION get_project_export_data(p_project_id uuid)
 RETURNS TABLE (
   property_address text,
-  property_lat numeric,
-  property_lng numeric,
   owner_name text,
   owner_address text,
+  owner_lat numeric,
+  owner_lng numeric,
   company_1_name text,
   company_1_number text,
   company_1_position text,
@@ -660,10 +675,10 @@ BEGIN
   RETURN QUERY
   SELECT 
     p.address,
-    p.lat,
-    p.lng,
     o.name,
     o.address,
+    o.lat,
+    o.lng,
     MAX(CASE WHEN oc.rank = 1 THEN oc.company_name END),
     MAX(CASE WHEN oc.rank = 1 THEN oc.company_number END),
     MAX(CASE WHEN oc.rank = 1 THEN oc.position END),
@@ -682,7 +697,7 @@ BEGIN
   LEFT JOIN owners o ON po.owner_id = o.id
   LEFT JOIN owner_companies oc ON o.id = oc.owner_id
   WHERE pp.project_id = p_project_id
-  GROUP BY p.id, p.address, p.lat, p.lng, po.ownership_start, o.id, o.name, o.address, pp.added_at
+  GROUP BY p.id, p.address, po.ownership_start, o.id, o.name, o.address, o.lat, o.lng, pp.added_at
   ORDER BY pp.added_at DESC;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -701,8 +716,8 @@ export async function exportProjectToCSV(projectId: string) {
   
   // CSVフォーマットに変換
   const headers = [
-    '物件住所', '緯度', '経度',
-    '所有者名', '所有者住所',
+    '物件住所',
+    '所有者名', '所有者住所', '所有者緯度', '所有者経度',
     '会社名1', '法人番号1', '役職1',
     '会社名2', '法人番号2', '役職2',
     '会社名3', '法人番号3', '役職3',
@@ -1160,5 +1175,46 @@ USING (
    - `profiles.role`：システム全体の権限
    - `project_members.role`：プロジェクト単位の権限
    - 理由：柔軟性と管理の簡素化の両立
+
+3. **ownership_startの仕様**
+   - PDFインポート時：インポート実行日を自動記録
+   - 手動登録時：ユーザー指定の日付を記録
+   - 理由：データの追跡可能性と監査証跡の確保
+
+## property_ownershipsテーブルの設計詳細
+
+### 現在の設計：UUID主キー + UNIQUE制約
+
+現在のテーブル設計は以下の特徴を持ちます：
+
+1. **UUID主キー**: `id`フィールドを主キーとして使用
+2. **UNIQUE制約**: `(property_id, owner_id, ownership_start)`の組み合わせで重複防止
+3. **ON DELETE CASCADE**: 親レコードの削除時に自動的に履歴も削除
+
+### 設計のメリット
+
+1. **重複防止**: UNIQUE制約により、同じ物件・所有者・開始日の組み合わせが自動的に拒否される
+2. **データ整合性**: 
+   - 外部キー制約により参照整合性を保証
+   - ON DELETE CASCADEにより孤立データを防止
+3. **柔軟性**: 
+   - `id`フィールドにより、他のテーブルからの参照が容易
+   - トリガーやクエリでの処理がシンプル
+4. **自動クリーンアップ**: 物件や所有者が削除されたら、関連履歴も自動削除
+
+### 実装上の注意点
+
+インポート処理では`upsert`を使用することで、重複を適切に処理：
+
+```typescript
+const { error } = await supabase
+  .from('property_ownerships')
+  .upsert(records, {
+    onConflict: 'property_id,owner_id,ownership_start',
+    ignoreDuplicates: true  // 既存レコードは無視
+  });
+```
+
+この設計により、履歴データの整合性を保ちながら、重複インポートの問題も解決できます。
 
 実装時は、トランザクション管理とエラーハンドリングに注意し、段階的な移行を検討してください。

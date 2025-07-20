@@ -69,21 +69,30 @@ export type Database = {
           address: string
           created_at: string
           id: string
+          lat: number | null
+          lng: number | null
           name: string
+          street_view_available: boolean | null
           updated_at: string
         }
         Insert: {
           address: string
           created_at?: string
           id?: string
+          lat?: number | null
+          lng?: number | null
           name: string
+          street_view_available?: boolean | null
           updated_at?: string
         }
         Update: {
           address?: string
           created_at?: string
           id?: string
+          lat?: number | null
+          lng?: number | null
           name?: string
+          street_view_available?: boolean | null
           updated_at?: string
         }
         Relationships: []
@@ -224,27 +233,18 @@ export type Database = {
           address: string
           created_at: string
           id: string
-          lat: number | null
-          lng: number | null
-          street_view_available: boolean | null
           updated_at: string
         }
         Insert: {
           address: string
           created_at?: string
           id?: string
-          lat?: number | null
-          lng?: number | null
-          street_view_available?: boolean | null
           updated_at?: string
         }
         Update: {
           address?: string
           created_at?: string
           id?: string
-          lat?: number | null
-          lng?: number | null
-          street_view_available?: boolean | null
           updated_at?: string
         }
         Relationships: []
@@ -255,7 +255,7 @@ export type Database = {
           is_current: boolean | null
           owner_id: string
           ownership_end: string | null
-          ownership_start: string | null
+          ownership_start: string
           property_id: string
           recorded_at: string
           recorded_by: string
@@ -266,7 +266,7 @@ export type Database = {
           is_current?: boolean | null
           owner_id: string
           ownership_end?: string | null
-          ownership_start?: string | null
+          ownership_start: string
           property_id: string
           recorded_at?: string
           recorded_by: string
@@ -277,7 +277,7 @@ export type Database = {
           is_current?: boolean | null
           owner_id?: string
           ownership_end?: string | null
-          ownership_start?: string | null
+          ownership_start?: string
           property_id?: string
           recorded_at?: string
           recorded_by?: string
@@ -313,10 +313,10 @@ export type Database = {
         Args: { p_project_id: string }
         Returns: {
           property_address: string
-          property_lat: number
-          property_lng: number
           owner_name: string
           owner_address: string
+          owner_lat: number
+          owner_lng: number
           company_1_name: string
           company_1_number: string
           company_1_position: string
