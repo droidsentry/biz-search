@@ -14,80 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
-      import_logs: {
-        Row: {
-          error_count: number
-          file_count: number
-          id: string
-          imported_at: string
-          imported_by: string
-          project_id: string
-          property_count: number
-          success_count: number
-        }
-        Insert: {
-          error_count: number
-          file_count: number
-          id?: string
-          imported_at?: string
-          imported_by?: string
-          project_id: string
-          property_count: number
-          success_count: number
-        }
-        Update: {
-          error_count?: number
-          file_count?: number
-          id?: string
-          imported_at?: string
-          imported_by?: string
-          project_id?: string
-          property_count?: number
-          success_count?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "import_logs_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       owner_companies: {
         Row: {
           company_name: string
           company_number: string | null
           id: string
+          is_verified: boolean | null
           owner_id: string
           position: string | null
           rank: number
           researched_at: string
           researched_by: string
           source_url: string
+          updated_at: string
         }
         Insert: {
           company_name: string
           company_number?: string | null
           id?: string
+          is_verified?: boolean | null
           owner_id: string
           position?: string | null
           rank: number
           researched_at?: string
-          researched_by?: string
+          researched_by: string
           source_url: string
+          updated_at?: string
         }
         Update: {
           company_name?: string
           company_number?: string | null
           id?: string
+          is_verified?: boolean | null
           owner_id?: string
           position?: string | null
           rank?: number
           researched_at?: string
           researched_by?: string
           source_url?: string
+          updated_at?: string
         }
         Relationships: [
           {
@@ -161,7 +126,7 @@ export type Database = {
         }
         Insert: {
           added_at?: string
-          added_by?: string
+          added_by: string
           id?: string
           project_id: string
           role: string
@@ -185,6 +150,48 @@ export type Database = {
           },
         ]
       }
+      project_properties: {
+        Row: {
+          added_at: string
+          added_by: string
+          id: string
+          import_source_file: string | null
+          project_id: string
+          property_id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by: string
+          id?: string
+          import_source_file?: string | null
+          project_id: string
+          property_id: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string
+          id?: string
+          import_source_file?: string | null
+          project_id?: string
+          property_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_properties_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_properties_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           created_at: string
@@ -196,7 +203,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          created_by?: string
+          created_by: string
           description?: string | null
           id?: string
           name: string
@@ -214,60 +221,81 @@ export type Database = {
       }
       properties: {
         Row: {
+          address: string
           created_at: string
           id: string
-          imported_at: string
-          imported_by: string
           lat: number | null
           lng: number | null
-          owner_id: string | null
-          project_id: string
-          property_address: string
-          source_file_name: string | null
           street_view_available: boolean | null
           updated_at: string
         }
         Insert: {
+          address: string
           created_at?: string
           id?: string
-          imported_at?: string
-          imported_by?: string
           lat?: number | null
           lng?: number | null
-          owner_id?: string | null
-          project_id: string
-          property_address: string
-          source_file_name?: string | null
           street_view_available?: boolean | null
           updated_at?: string
         }
         Update: {
+          address?: string
           created_at?: string
           id?: string
-          imported_at?: string
-          imported_by?: string
           lat?: number | null
           lng?: number | null
-          owner_id?: string | null
-          project_id?: string
-          property_address?: string
-          source_file_name?: string | null
           street_view_available?: boolean | null
           updated_at?: string
         }
+        Relationships: []
+      }
+      property_ownerships: {
+        Row: {
+          id: string
+          is_current: boolean | null
+          owner_id: string
+          ownership_end: string | null
+          ownership_start: string | null
+          property_id: string
+          recorded_at: string
+          recorded_by: string
+          source: string | null
+        }
+        Insert: {
+          id?: string
+          is_current?: boolean | null
+          owner_id: string
+          ownership_end?: string | null
+          ownership_start?: string | null
+          property_id: string
+          recorded_at?: string
+          recorded_by: string
+          source?: string | null
+        }
+        Update: {
+          id?: string
+          is_current?: boolean | null
+          owner_id?: string
+          ownership_end?: string | null
+          ownership_start?: string | null
+          property_id?: string
+          recorded_at?: string
+          recorded_by?: string
+          source?: string | null
+        }
         Relationships: [
           {
-            foreignKeyName: "properties_owner_id_fkey"
+            foreignKeyName: "property_ownerships_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "owners"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "properties_project_id_fkey"
-            columns: ["project_id"]
+            foreignKeyName: "property_ownerships_property_id_fkey"
+            columns: ["property_id"]
             isOneToOne: false
-            referencedRelation: "projects"
+            referencedRelation: "properties"
             referencedColumns: ["id"]
           },
         ]
@@ -277,13 +305,43 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      user_project_ids: {
+      cached_uid: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_project_export_data: {
+        Args: { p_project_id: string }
+        Returns: {
+          property_address: string
+          property_lat: number
+          property_lng: number
+          owner_name: string
+          owner_address: string
+          company_1_name: string
+          company_1_number: string
+          company_1_position: string
+          company_2_name: string
+          company_2_number: string
+          company_2_position: string
+          company_3_name: string
+          company_3_number: string
+          company_3_position: string
+          ownership_start: string
+          import_date: string
+          researched_date: string
+        }[]
+      }
+      is_system_owner: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      user_accessible_projects: {
         Args: Record<PropertyKey, never>
         Returns: string[]
       }
-      user_project_role: {
-        Args: { project_uuid: string }
-        Returns: string
+      user_editable_projects: {
+        Args: Record<PropertyKey, never>
+        Returns: string[]
       }
     }
     Enums: {

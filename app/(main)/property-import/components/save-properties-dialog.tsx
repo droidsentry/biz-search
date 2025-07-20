@@ -55,22 +55,16 @@ export function SavePropertiesDialog({
     },
   })
   
-  const handleSave = async () => {
+  const { isSubmitting, isValid, isValidating } = form.formState;
+  
+  const onSubmit = async (data: CreateProjectFormData) => {
     setIsLoading(true)
     setSaveProgress(0)
     
     try {
-      // フォームのバリデーション
-      const isValid = await form.trigger()
-      if (!isValid) {
-        setIsLoading(false)
-        return
-      }
-      
-      const formData = form.getValues()
       
       // 新規プロジェクト作成
-      const createResult = await createProjectAction(formData)
+      const createResult = await createProjectAction(data)
       if (createResult.error) {
         toast.error(createResult.error)
         setIsLoading(false)
@@ -84,7 +78,7 @@ export function SavePropertiesDialog({
       }
       
       const projectId = createResult.data.id
-      toast.success(`プロジェクト「${formData.name}」を作成しました`)
+      toast.success(`プロジェクト「${data.name}」を作成しました`)
 
       // console.log("createResult", createResult)
       // return null
@@ -140,94 +134,97 @@ export function SavePropertiesDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>物件情報をデータベースに保存</DialogTitle>
-          <DialogDescription>
-            {properties.length}件の物件情報を新規プロジェクトに保存します
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="space-y-4">
-          {/* 新規プロジェクト作成フォーム */}
-          <div className="space-y-2">
-            <Label htmlFor="name">プロジェクト名 *</Label>
-            <Input
-              id="name"
-              {...form.register('name')}
-              placeholder="例: 渋谷区物件調査2025"
-              disabled={isLoading}
-            />
-            {form.formState.errors.name && (
-              <Alert variant="destructive" className="py-2">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  {form.formState.errors.name.message}
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <DialogHeader>
+            <DialogTitle>物件情報をデータベースに保存</DialogTitle>
+            <DialogDescription>
+              {properties.length}件の物件情報を新規プロジェクトに保存します
+            </DialogDescription>
+          </DialogHeader>
           
-          <div className="space-y-2">
-            <Label htmlFor="description">説明（任意）</Label>
-            <Textarea
-              id="description"
-              {...form.register('description')}
-              placeholder="プロジェクトの説明を入力"
-              rows={3}
-              disabled={isLoading}
-            />
-            {form.formState.errors.description && (
-              <Alert variant="destructive" className="py-2">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  {form.formState.errors.description.message}
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
-          
-          {/* 保存進捗 */}
-          {isLoading && saveProgress > 0 && (
+          <div className="space-y-4 py-4">
+            {/* 新規プロジェクト作成フォーム */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span>保存中...</span>
-                <span>{Math.round(saveProgress)}%</span>
-              </div>
-              <div className="w-full bg-zinc-200 rounded-full h-2">
-                <div 
-                  className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${saveProgress}%` }}
-                />
-              </div>
+              <Label htmlFor="name">プロジェクト名 *</Label>
+              <Input
+                id="name"
+                {...form.register('name')}
+                placeholder="例: 渋谷区物件調査2025"
+                disabled={isLoading}
+              />
+              {form.formState.errors.name && (
+                <Alert variant="destructive" className="py-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    {form.formState.errors.name.message}
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
-          )}
-        </div>
-        
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isLoading}
-          >
-            キャンセル
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                保存中...
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                保存
-              </>
+            
+            <div className="space-y-2">
+              <Label htmlFor="description">説明（任意）</Label>
+              <Textarea
+                id="description"
+                {...form.register('description')}
+                placeholder="プロジェクトの説明を入力"
+                rows={3}
+                disabled={isLoading}
+              />
+              {form.formState.errors.description && (
+                <Alert variant="destructive" className="py-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    {form.formState.errors.description.message}
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+            
+            {/* 保存進捗 */}
+            {isLoading && saveProgress > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span>保存中...</span>
+                  <span>{Math.round(saveProgress)}%</span>
+                </div>
+                <div className="w-full bg-zinc-200 rounded-full h-2">
+                  <div 
+                    className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${saveProgress}%` }}
+                  />
+                </div>
+              </div>
             )}
-          </Button>
-        </DialogFooter>
+          </div>
+          
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isLoading}
+            >
+              キャンセル
+            </Button>
+            <Button
+              type="submit"
+              disabled={!isValid || isValidating || isSubmitting || isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  保存中...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  保存
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   )
