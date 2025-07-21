@@ -7,6 +7,11 @@
 1. **search_patterns**: ユーザーが作成・保存する検索パターン
 2. **search_api_logs**: Google Custom Search APIの使用履歴（監視・分析用）
 
+### 設計の特徴
+- **柔軟性重視**: 検索パラメータをJSONB型で保存し、Zodスキーマで管理
+- **仕様変更対応**: DBスキーマの変更なしに、アプリケーション層での対応が可能
+- **型安全性**: Zodによる実行時バリデーションで、型の整合性を保証
+
 ## 2. テーブル設計
 
 ### 2.1 search_patterns（検索パターン）
@@ -20,7 +25,7 @@ CREATE TABLE search_patterns (
   user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   
   -- パターン情報
-  name varchar(256) NOT NULL,
+  name text NOT NULL,
   description text,
   
   -- 検索パラメータ（GoogleCustomSearchPatternのparams部分をJSON形式で保存）
@@ -42,6 +47,9 @@ CREATE TABLE search_patterns (
 CREATE INDEX idx_search_patterns_user_id ON search_patterns(user_id);
 CREATE INDEX idx_search_patterns_last_used ON search_patterns(user_id, last_used_at DESC);
 CREATE INDEX idx_search_patterns_usage ON search_patterns(user_id, usage_count DESC);
+
+-- JSONB用のGINインデックス（検索性能向上）
+CREATE INDEX idx_search_patterns_params ON search_patterns USING GIN (search_params);
 ```
 
 #### search_paramsの構造例
@@ -50,23 +58,26 @@ CREATE INDEX idx_search_patterns_usage ON search_patterns(user_id, usage_count D
 {
   "customerName": "山田太郎",
   "customerNameExactMatch": "exact",
-  "prefecture": "東京都",
-  "prefectureExactMatch": "exact",
-  "address": "港区赤坂",
+  "address": "東京都港区赤坂",
   "addressExactMatch": "partial",
+  "dateRestrict": "y1",
   "isAdvancedSearchEnabled": true,
   "additionalKeywords": [
     {"value": "代表取締役", "matchType": "exact"},
     {"value": "CEO", "matchType": "partial"}
   ],
-  "additionalKeywordsSearchMode": "or",
-  "excludeKeywords": [
-    {"value": "求人", "matchType": "exact"}
-  ],
   "searchSites": ["linkedin.com", "facebook.com"],
   "siteSearchMode": "specific"
 }
 ```
+
+**注意**: 以下のフィールドは簡素化のため廃止されました：
+- `prefecture`と`prefectureExactMatch` - 住所フィールドに統合
+- `additionalKeywordsSearchMode` - 常にOR検索で固定
+- `excludeKeywords` - 除外キーワード機能全体を廃止
+
+**新規追加フィールド**:
+- `dateRestrict` - 検索期間の指定（空文字、y1、y3、y5、y10）
 
 ### 2.2 search_api_logs（API使用履歴）
 
@@ -110,44 +121,100 @@ CREATE INDEX idx_api_logs_created_at ON search_api_logs(created_at DESC);
 
 ## 3. Row Level Security (RLS) ポリシー
 
-### 3.1 search_patterns
+### 3.1 RLSベストプラクティスに基づく設計
+
+#### パフォーマンス最適化のポイント（Supabase公式推奨）
+1. **インデックスの活用**: RLSポリシーで使用するカラムには必ずインデックスを作成
+2. **select文でのラップ**: 関数呼び出しは`(select auth.uid())`のようにラップする
+3. **明示的なフィルタ追加**: RLSポリシーに加えてクエリでも明示的にフィルタを指定
+4. **結合の最小化**: JOINの代わりに配列とIN/ANY演算子を使用
+5. **ロールの明示**: ポリシーでは`TO`演算子で対象ロールを指定
+
+### 3.2 search_patterns
 
 ```sql
 -- RLSを有効化
 ALTER TABLE search_patterns ENABLE ROW LEVEL SECURITY;
 
--- ユーザーは自分のパターンのみ参照可能
-CREATE POLICY "Users can view own patterns" ON search_patterns
-  FOR SELECT USING (auth.uid() = user_id);
+-- インデックスがあることを確認（RLSパフォーマンス向上）
+-- CREATE INDEX idx_search_patterns_user_id ON search_patterns(user_id); -- 既に作成済み
 
--- ユーザーは自分のパターンを作成可能
-CREATE POLICY "Users can create own patterns" ON search_patterns
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
-
--- ユーザーは自分のパターンを更新可能
-CREATE POLICY "Users can update own patterns" ON search_patterns
-  FOR UPDATE USING (auth.uid() = user_id);
-
--- ユーザーは自分のパターンを削除可能
-CREATE POLICY "Users can delete own patterns" ON search_patterns
-  FOR DELETE USING (auth.uid() = user_id);
+-- RLSポリシー（公式推奨パターン）
+-- FOR ALLを使用した統合ポリシー（個別のSELECT/INSERT/UPDATE/DELETEより効率的）
+CREATE POLICY "Enable access to own patterns" ON search_patterns
+  FOR ALL 
+  TO authenticated
+  USING (user_id = (select auth.uid()))
+  WITH CHECK (user_id = (select auth.uid()));
 ```
 
-### 3.2 search_api_logs
+### 3.3 search_api_logs
 
 ```sql
 -- RLSを有効化
 ALTER TABLE search_api_logs ENABLE ROW LEVEL SECURITY;
 
--- ユーザーは自分のログのみ参照可能
+-- 読み取り専用ポリシー（ログは変更不可）
 CREATE POLICY "Users can view own logs" ON search_api_logs
-  FOR SELECT USING (auth.uid() = user_id);
+  FOR SELECT 
+  TO authenticated
+  USING (user_id = (select auth.uid()));
 
--- ユーザーは自分のログを作成可能
-CREATE POLICY "Users can create own logs" ON search_api_logs
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+-- 挿入のみ許可（更新・削除は不可）
+CREATE POLICY "Users can insert own logs" ON search_api_logs
+  FOR INSERT 
+  TO authenticated
+  WITH CHECK (user_id = (select auth.uid()));
+```
 
--- ログの更新・削除は不可（監査目的）
+### 3.4 クエリの最適化
+
+```sql
+-- ❌ 避けるべきパターン（RLSのみに依存）
+const { data } = await supabase
+  .from('search_patterns')
+  .select('*');
+
+-- ✅ 推奨パターン（明示的なフィルタを追加）
+const { data } = await supabase
+  .from('search_patterns')
+  .select('*')
+  .eq('user_id', userId); // RLSに加えて明示的にフィルタ
+
+-- パフォーマンステスト用クエリ
+EXPLAIN (ANALYZE, BUFFERS) 
+SELECT * FROM search_patterns 
+WHERE user_id = (select auth.uid())
+LIMIT 10;
+```
+
+### 3.5 SECURITY DEFINER関数の使用（複雑なロジックの場合）
+
+```sql
+-- 複雑なビジネスロジックをカプセル化する場合のみ使用
+CREATE OR REPLACE FUNCTION get_user_patterns_with_stats(p_user_id uuid)
+RETURNS TABLE (
+  pattern_id uuid,
+  pattern_name text,
+  usage_count integer,
+  last_30_days_count bigint
+)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT 
+    sp.id,
+    sp.name,
+    sp.usage_count,
+    COUNT(sal.id) as last_30_days_count
+  FROM search_patterns sp
+  LEFT JOIN search_api_logs sal 
+    ON sp.id = sal.pattern_id 
+    AND sal.created_at >= CURRENT_DATE - INTERVAL '30 days'
+  WHERE sp.user_id = p_user_id
+  GROUP BY sp.id, sp.name, sp.usage_count;
+$$;
 ```
 
 ## 4. トリガーとファンクション
@@ -270,18 +337,50 @@ LIMIT 10;
 
 ## 6. 実装時の注意事項
 
-### 6.1 パフォーマンス考慮
+### 6.1 JSONBとZodによる柔軟な設計
 
-- `search_params`のJSONB型により、柔軟な検索条件の保存が可能
+#### 設計方針
+- **データベース**: `search_params`をJSONB型で保存
+- **バリデーション**: Zodスキーマでアプリケーション層での型検証
+- **利点**: DBスキーマ変更なしに仕様変更に対応可能
+
+#### 実装例
+```typescript
+// lib/schemas/custom-search.ts
+export const googleCustomSearchParamsSchema = z.object({
+  customerName: z.string(),
+  customerNameExactMatch: z.enum(['exact', 'partial']),
+  address: z.string().optional(),
+  addressExactMatch: z.enum(['exact', 'partial']),
+  dateRestrict: z.enum(['', 'y1', 'y3', 'y5', 'y10']).optional(),
+  isAdvancedSearchEnabled: z.boolean(),
+  additionalKeywords: z.array(keywordsSchema),
+  searchSites: z.array(z.string()),
+  siteSearchMode: z.enum(['any', 'specific', 'exclude']),
+});
+
+// 使用時
+const params = googleCustomSearchParamsSchema.parse(pattern.search_params);
+```
+
+#### 仕様変更時の対応
+1. Zodスキーマを更新
+2. 新しいフィールドにはデフォルト値を設定
+3. 既存データは自動的に新スキーマに適合
+4. DBマイグレーション不要
+
+### 6.2 パフォーマンス考慮
+
+- JSONB型のGINインデックスで検索性能を確保
 - 適切なインデックスにより、大量のログデータでも高速な集計が可能
 - ビューを使用することで、複雑な集計クエリを簡素化
 
-### 6.2 データ保持ポリシー
+### 6.3 データ保持ポリシー
 
 - API使用ログは監査とコスト管理のため、最低1年間保持を推奨
 - 古いログのアーカイブやパーティショニングを検討
 
-### 6.3 拡張性
+### 6.4 拡張性
 
 - 将来的な機能追加（共有パターン、タグ付けなど）に対応できる設計
 - API制限や課金システムの実装に必要な情報を記録
@@ -298,7 +397,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS search_patterns (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  name varchar(256) NOT NULL,
+  name text NOT NULL,
   description text,
   search_params jsonb NOT NULL,
   usage_count integer DEFAULT 0,
@@ -330,6 +429,7 @@ CREATE TABLE IF NOT EXISTS search_api_logs (
 CREATE INDEX IF NOT EXISTS idx_search_patterns_user_id ON search_patterns(user_id);
 CREATE INDEX IF NOT EXISTS idx_search_patterns_last_used ON search_patterns(user_id, last_used_at DESC);
 CREATE INDEX IF NOT EXISTS idx_search_patterns_usage ON search_patterns(user_id, usage_count DESC);
+CREATE INDEX IF NOT EXISTS idx_search_patterns_params ON search_patterns USING GIN (search_params);
 CREATE INDEX IF NOT EXISTS idx_api_logs_user_date ON search_api_logs(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_api_logs_pattern ON search_api_logs(pattern_id);
 CREATE INDEX IF NOT EXISTS idx_api_logs_status ON search_api_logs(status_code);
@@ -339,19 +439,22 @@ CREATE INDEX IF NOT EXISTS idx_api_logs_created_at ON search_api_logs(created_at
 ALTER TABLE search_patterns ENABLE ROW LEVEL SECURITY;
 ALTER TABLE search_api_logs ENABLE ROW LEVEL SECURITY;
 
--- Create RLS policies
-CREATE POLICY "Users can view own patterns" ON search_patterns
-  FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can create own patterns" ON search_patterns
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can update own patterns" ON search_patterns
-  FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Users can delete own patterns" ON search_patterns
-  FOR DELETE USING (auth.uid() = user_id);
+-- Create optimized RLS policies
+CREATE POLICY "Enable access to own patterns" ON search_patterns
+  FOR ALL 
+  TO authenticated
+  USING (user_id = (select auth.uid()))
+  WITH CHECK (user_id = (select auth.uid()));
+
 CREATE POLICY "Users can view own logs" ON search_api_logs
-  FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can create own logs" ON search_api_logs
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+  FOR SELECT 
+  TO authenticated
+  USING (user_id = (select auth.uid()));
+
+CREATE POLICY "Users can insert own logs" ON search_api_logs
+  FOR INSERT 
+  TO authenticated
+  WITH CHECK (user_id = (select auth.uid()));
 
 -- Create functions and triggers
 CREATE OR REPLACE FUNCTION update_updated_at_column()
