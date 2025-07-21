@@ -16,7 +16,7 @@ export default function SettingsLayout({
         {/* メインコンテンツ */}
         <div className="w-full">
         {children}
-        </div>
+      </div>
         
       </div>
     </div>
