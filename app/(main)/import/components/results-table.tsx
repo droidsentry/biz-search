@@ -62,16 +62,16 @@ export function ResultsTable({ results, onReset, onDelete }: ResultsTableProps) 
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
   }
 
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('ja-JP', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
+  // const formatDate = (dateString: string): string => {
+  //   const date = new Date(dateString)
+  //   return date.toLocaleDateString('ja-JP', {
+  //     year: 'numeric',
+  //     month: '2-digit',
+  //     day: '2-digit',
+  //     hour: '2-digit',
+  //     minute: '2-digit'
+  //   })
+  // }
 
   // フラットな行データを作成
   interface TableRow {

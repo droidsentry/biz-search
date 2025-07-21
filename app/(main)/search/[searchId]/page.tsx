@@ -1,10 +1,14 @@
 import GoogleCustomSearchForm from './components/form'
 
-export default async function Page({
+export default async function Page(
+  
+  {
   params,
 }: {
   params: Promise<{ searchId: string }>;
-}) {
+}
+
+) {
   const { searchId } = await params;
 
   return (

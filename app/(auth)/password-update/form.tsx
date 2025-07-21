@@ -1,14 +1,13 @@
 "use client";
 
-import { updatePassword } from "@/lib/actions/auth/supabase";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { extendedSignUpSchema, passwordUpdateSchema } from "@/lib/schemas/auth";
-import { PasswordUpdate } from "@/lib/types/auth";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -18,17 +17,18 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { User } from "@supabase/supabase-js";
-import Image from "next/image";
+import { updatePassword } from "@/lib/actions/auth/supabase";
+import { extendedSignUpSchema } from "@/lib/schemas/auth";
+import { PasswordUpdate } from "@/lib/types/auth";
 import logo from "@/public/logo.png";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { User } from "@supabase/supabase-js";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import Image from "next/image";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 export default function PasswordUpdateForm({ user }: { user: User | null }) {
   const [isPending, startTransition] = useTransition();

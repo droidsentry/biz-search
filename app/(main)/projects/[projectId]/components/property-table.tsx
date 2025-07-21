@@ -1,6 +1,6 @@
 'use client'
 
-import { PropertyWithOwnerAndCompany } from '../action'
+import { Badge } from '@/components/ui/badge'
 import {
   Table,
   TableBody,
@@ -9,11 +9,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { PropertyWithOwnerAndCompany } from '../action'
 
 interface PropertyTableProps {
   properties: PropertyWithOwnerAndCompany[]

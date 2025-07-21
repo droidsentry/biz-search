@@ -11,7 +11,7 @@ interface GoogleSearchProps {
 
 export function GoogleSearch({ initialQuery = '' }: GoogleSearchProps) {
   const [query, setQuery] = useState(initialQuery)
-  const [results, setResults] = useState<any[]>([])
+  const [results, setResults] = useState<never[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -23,8 +23,8 @@ export function GoogleSearch({ initialQuery = '' }: GoogleSearchProps) {
     // 現在はダミーデータを表示
     setTimeout(() => {
       setResults([
-        { title: '検索結果1', link: '#', snippet: 'これはダミーの検索結果です。' },
-        { title: '検索結果2', link: '#', snippet: 'Custom Search APIが実装されると実際の結果が表示されます。' },
+        // { title: '検索結果1', link: '#', snippet: 'これはダミーの検索結果です。' },
+        // { title: '検索結果2', link: '#', snippet: 'Custom Search APIが実装されると実際の結果が表示されます。' },
       ])
       setIsLoading(false)
     }, 1000)

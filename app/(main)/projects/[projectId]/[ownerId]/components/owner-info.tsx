@@ -1,6 +1,7 @@
 import { OwnerWithCompaniesAndProperties } from '../action'
 import { MapPin, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import Link from 'next/link'
 
 interface OwnerInfoProps {
   owner: OwnerWithCompaniesAndProperties
@@ -22,14 +23,14 @@ export function OwnerInfo({ owner }: OwnerInfoProps) {
           size="sm"
           className="gap-2"
         >
-          <a
+          <Link
             href={googleMapsUrl}
             target="_blank"
             rel="noopener noreferrer"
           >
             Googleマップで開く
             <ExternalLink className="w-3 h-3" />
-          </a>
+          </Link>
         </Button>
       </div>
     </div>

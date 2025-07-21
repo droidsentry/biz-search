@@ -1,12 +1,11 @@
 'use client'
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useScrollRange } from '@/hooks/use-scroll-range'
 import { cn } from '@/lib/utils'
 import logo from '@/public/logo.png'
 import Image from 'next/image'
-import AvatarMenu from './avatar-menu'
 import Link from 'next/link'
+import AvatarMenu from './avatar-menu'
 
 export function Header() {
   const logoScale = useScrollRange(0, 50, 1, 0.8)

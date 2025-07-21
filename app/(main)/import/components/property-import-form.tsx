@@ -40,7 +40,7 @@ export function PropertyImportForm() {
       }
 
       // 通常のJSONレスポンスを処理
-      const parseResults: ParseResult[] = data.results.map((result: any) => ({
+      const parseResults: ParseResult[] = data.results.map((result: ParseResult) => ({
         fileName: result.fileName,
         fileSize: result.fileSize,
         status: result.status,

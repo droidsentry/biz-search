@@ -73,7 +73,7 @@ export default function GoogleCustomSearchForm({ searchId }: { searchId: string 
       console.log("formData", formData);
       setGoogleCustomSearchPattern(formData);
   }
-  const {data, isLoading, isValidating, mutate} = useGoogleCustomSearch(googleCustomSearchPattern);
+  const {data, isLoading, isValidating} = useGoogleCustomSearch(googleCustomSearchPattern);
 
   useEffect(() => {
     if (data) {

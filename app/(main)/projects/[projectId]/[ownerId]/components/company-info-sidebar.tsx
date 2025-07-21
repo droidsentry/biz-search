@@ -1,14 +1,14 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
-import { Trash2, Plus } from 'lucide-react'
-import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tables } from '@/lib/types/database'
-import { updateOwnerCompanyAction, deleteOwnerCompanyAction } from '../action'
+import { Trash2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { toast } from 'sonner'
+import { deleteOwnerCompanyAction, updateOwnerCompanyAction } from '../action'
 
 interface CompanyInfoSidebarProps {
   ownerId: string
@@ -82,7 +82,7 @@ export function CompanyInfoSidebar({ ownerId, initialCompanies }: CompanyInfoSid
       } else {
         toast.error(result.error || '保存に失敗しました')
       }
-    } catch (error) {
+    } catch (error: unknown) {
       toast.error('予期せぬエラーが発生しました')
     } finally {
       setIsLoading(false)
@@ -112,7 +112,7 @@ export function CompanyInfoSidebar({ ownerId, initialCompanies }: CompanyInfoSid
       } else {
         toast.error(result.error || '削除に失敗しました')
       }
-    } catch (error) {
+    } catch (error: unknown) {
       toast.error('予期せぬエラーが発生しました')
     } finally {
       setIsLoading(false)

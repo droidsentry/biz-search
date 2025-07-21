@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
-import { Check, X, ChevronDown, ChevronUp } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
+import { Check, ChevronDown, X } from 'lucide-react'
+import { useState } from 'react'
 import type { ParseResult } from '../types'
 
 interface ImportResultsProps {
@@ -14,8 +14,8 @@ interface ImportResultsProps {
 export function ImportResults({ results, onComplete }: ImportResultsProps) {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
   
-  const successCount = results.filter(r => r.success).length
-  const failedCount = results.filter(r => !r.success).length
+  const successCount = results.filter(r => r.status === 'success').length
+  const failedCount = results.filter(r => r.status === 'error').length
   const allSuccess = failedCount === 0
 
   return (
@@ -62,7 +62,7 @@ export function ImportResults({ results, onComplete }: ImportResultsProps) {
                 className="flex w-full items-center justify-between p-4 text-left transition-colors hover:bg-zinc-800/50"
               >
                 <div className="flex items-center gap-3">
-                  {result.success ? (
+                  {result.status === 'success' ? (
                     <Check className="h-4 w-4 text-green-500" />
                   ) : (
                     <X className="h-4 w-4 text-red-500" />
@@ -78,16 +78,16 @@ export function ImportResults({ results, onComplete }: ImportResultsProps) {
               
               {expandedIndex === index && (
                 <div className="border-t border-zinc-800 p-4">
-                  {result.success && result.textContent ? (
+                  {result.status === 'success' && result.textLength ? (
                     <div className="space-y-2">
                       <p className="text-xs text-zinc-400">抽出されたテキスト:</p>
                       <pre className="max-h-60 overflow-y-auto rounded bg-black/50 p-3 text-xs text-zinc-300">
-                        {result.textContent.slice(0, 500)}
-                        {result.textContent.length > 500 && '...'}
+                        {result.textLength.toString().slice(0, 500)}
+                        {result.textLength.toString().length > 500 && '...'}
                       </pre>
                     </div>
                   ) : (
-                    <p className="text-sm text-red-400">{result.message || 'エラーが発生しました'}</p>
+                    <p className="text-sm text-red-400">{result.error || 'エラーが発生しました'}</p>
                   )}
                 </div>
               )}

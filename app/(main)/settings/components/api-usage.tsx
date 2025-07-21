@@ -59,18 +59,18 @@ const monthlyStats = [
 ]
 
 export function ApiUsage() {
-  const getStatusColor = (status: ApiMetric['status']) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-500'
-      case 'warning':
-        return 'bg-yellow-500'
-      case 'danger':
-        return 'bg-red-500'
-      case 'inactive':
-        return 'bg-gray-400'
-    }
-  }
+  // const getStatusColor = (status: ApiMetric['status']) => {
+  //   switch (status) {
+  //     case 'active':
+  //       return 'bg-green-500'
+  //     case 'warning':
+  //       return 'bg-yellow-500'
+  //     case 'danger':
+  //       return 'bg-red-500'
+  //     case 'inactive':
+  //       return 'bg-gray-400'
+  //   }
+  // }
 
   const getStatusBadge = (status: ApiMetric['status']) => {
     switch (status) {

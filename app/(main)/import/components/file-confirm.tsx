@@ -1,8 +1,7 @@
 'use client'
 
-import { X, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { FileText, X } from 'lucide-react'
 
 interface FileConfirmProps {
   files: File[]

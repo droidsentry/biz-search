@@ -37,7 +37,6 @@ export default function Avatar({
   }, [url, supabase])
 
   const uploadAvatar: React.ChangeEventHandler<HTMLInputElement> = async (event) => {
-    try {
       setUploading(true)
 
       if (!event.target.files || event.target.files.length === 0) {
@@ -55,11 +54,7 @@ export default function Avatar({
       }
 
       onUpload(filePath)
-    } catch (error) {
-      alert('Error uploading avatar!')
-    } finally {
-      setUploading(false)
-    }
+    
   }
 
   return (

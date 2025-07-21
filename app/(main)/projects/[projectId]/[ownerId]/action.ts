@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { Tables, TablesInsert, TablesUpdate } from '@/lib/types/database'
+import { Tables, TablesInsert } from '@/lib/types/database'
 
 export type OwnerWithCompaniesAndProperties = {
   id: string

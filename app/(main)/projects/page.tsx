@@ -1,10 +1,7 @@
 import { getProjectsAction } from '@/app/(main)/projects/action'
 import { ProjectList } from './project-list'
-import { Button } from '@/components/ui/button'
 
-import Link from 'next/link'
-import { LayoutGridIcon, LayoutList, PlusIcon } from 'lucide-react'
-import { ProjectProvider } from '@/components/providers/project';
+import { ProjectProvider } from '@/components/providers/project'
 import ProjectHeader from './components/project-header'
 
 export default async function ProjectsPage() {

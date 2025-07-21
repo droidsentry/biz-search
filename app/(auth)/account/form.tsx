@@ -1,18 +1,15 @@
 'use client'
 import { signOut } from '@/lib/actions/auth/supabase'
-import { createClient } from '@/lib/supabase/client'
 import { type User } from '@supabase/supabase-js'
 import { useState } from 'react'
 
 // ...
 
 export default function AccountForm({ user }: { user: User | null }) {
-  const supabase = createClient()
-  const [loading, setLoading] = useState(true)
+
   const [fullname, setFullname] = useState<string | null>(null)
   const [username, setUsername] = useState<string | null>(null)
   const [website, setWebsite] = useState<string | null>(null)
-  const [avatar_url, setAvatarUrl] = useState<string | null>(null)
 
   return (
     <div className="form-widget">

@@ -1,11 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { ProjectWithProgress } from '@/app/(main)/projects/action'
 import { ProjectCard } from '@/app/(main)/projects/components/project-card'
 import { ProjectTable } from '@/app/(main)/projects/components/project-table'
-import { ProjectWithProgress } from '@/app/(main)/projects/action'
-import { Button } from '@/components/ui/button'
-import { LayoutGrid, LayoutList } from 'lucide-react'
 import { useProject } from '@/components/providers/project'
 
 
@@ -14,7 +11,7 @@ interface ProjectListProps {
 }
 
 export function ProjectList({ projects }: ProjectListProps) {
-  const { viewMode, setViewMode } = useProject()
+  const { viewMode } = useProject()
 
   return (
     <div className="mt-10">

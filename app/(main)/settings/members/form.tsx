@@ -44,7 +44,7 @@ export function InviteMemberForm() {
     startTransition(async () => {
       await inviteMember(formData).then(() => {
         toast.success('招待メールを送信しました')
-      }).catch((error) => {
+      }).catch((error: unknown) => {
         toast.error('招待メールの送信に失敗しました')
       })
     })
