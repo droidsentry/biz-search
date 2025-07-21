@@ -1,5 +1,6 @@
 'use client'
 
+import { useGoogleCustomSearchForm } from "@/components/providers/google-custom-search-form";
 import {
   Accordion,
   AccordionContent,
@@ -14,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Form,
   FormControl,
   FormField,
   FormItem,
@@ -32,96 +34,48 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { TagInput } from "./tag-input";
-import { TagInputElegant } from "./tag-input-elegant";
 import { DEFAULT_GOOGLE_CUSTOM_SEARCH_PATTERN } from "@/lib/constants/google-custom-search";
 import { prefectures } from "@/lib/data/prefectures";
 import { GoogleCustomSearchPattern } from "@/lib/types/custom-search";
 import { cn } from "@/lib/utils";
 import {
-  ArrowLeft,
   Edit2,
   MoreHorizontalIcon,
   SaveIcon,
   Search,
   Settings2,
-  Trash2,
+  Trash2
 } from "lucide-react";
-import Link from "next/link";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { googleCustomSearchPatternSchema } from "@/lib/schemas/custom-search";
-import { useGoogleCustomSearch } from "@/lib/swr/google-custom-search";
-import { useEffect, useState } from "react";
-import { SearchPatternFormModal } from "./search-pattern-form-modal";
+import { useState } from "react";
+import { useFormContext } from "react-hook-form";
 import { SearchPatternDeleteModal } from "./search-pattern-delete-modal";
+import { SearchPatternFormModal } from "./search-pattern-form-modal";
+import { TagInput } from "./tag-input";
+import { TagInputElegant } from "./tag-input-elegant";
 
-export default function GoogleCustomSearchForm({ searchId }: { searchId: string }) {
-  const isNewSearch = searchId === "create";
-  const [mode, setMode] = useState<"sidebar" | "full">("full");
-  const [googleCustomSearchPattern, setGoogleCustomSearchPattern] = useState<GoogleCustomSearchPattern>();
+export default function GoogleCustomSearchForm() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  const form = useForm<GoogleCustomSearchPattern>({
-    resolver: zodResolver(googleCustomSearchPatternSchema),
-    // mode: "onChange",
-    defaultValues: DEFAULT_GOOGLE_CUSTOM_SEARCH_PATTERN,
-    });
-  const handleSearch = async (formData: GoogleCustomSearchPattern) => {
-      console.log("formData", formData);
-      setGoogleCustomSearchPattern(formData);
-  }
-  const {data, isLoading, isValidating} = useGoogleCustomSearch(googleCustomSearchPattern);
-
-  useEffect(() => {
-    if (data) {
-      setMode("sidebar");
-    } else {
-      setMode("full");
-    }
-  }, [data]);
-
-  
+  const {isNewSearch, mode, googleCustomSearchPattern, handleSearch, data, isLoading, isValidating} = useGoogleCustomSearchForm();
+  const form = useFormContext<GoogleCustomSearchPattern>();
   const searchPatternName = form.watch("searchPatternName");
   const searchPatternDescription = form.watch("searchPatternDescription");
   const advancedEnabled = form.watch("googleCustomSearchParams.isAdvancedSearchEnabled");
-  console.log("advancedEnabled", advancedEnabled);
-  const defaultAdditionalKeywords =
-  DEFAULT_GOOGLE_CUSTOM_SEARCH_PATTERN.googleCustomSearchParams.additionalKeywords;
-  const defaultExcludeKeywords =
-  DEFAULT_GOOGLE_CUSTOM_SEARCH_PATTERN.googleCustomSearchParams.excludeKeywords;
+
+  const defaultAdditionalKeywords = DEFAULT_GOOGLE_CUSTOM_SEARCH_PATTERN.googleCustomSearchParams.additionalKeywords;
+  const defaultExcludeKeywords = DEFAULT_GOOGLE_CUSTOM_SEARCH_PATTERN.googleCustomSearchParams.excludeKeywords;
   const defaultSites = DEFAULT_GOOGLE_CUSTOM_SEARCH_PATTERN.googleCustomSearchParams.searchSites;
 
   return (
-<>
+    <Form {...form}>
       <form
         onSubmit={form.handleSubmit(handleSearch, (errors) => {
           console.log("errors", errors);
         })}
         className={styles(mode).form}
       >
-        {/* 戻るボタン（フル版のみ） */}
-        {mode === "full" && (
-          <div className="flex w-full bg-bg-100 h-12 mx-auto md:h-24 md:items-end">
-            <Button
-              variant="ghost"
-              size="sm"
-              asChild
-              onClick={() => form.reset()}
-            >
-              <Link
-                href="/customer-searches"
-                className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
-              >
-                <ArrowLeft className="mr-1 size-4" />
-                戻る
-              </Link>
-            </Button>
-          </div>
-        )}
-
         {/* ヘッダーとパターン情報セクション */}
         <div className={styles(mode).headerSection}>
           <div className={styles(mode).headerContainer}>
@@ -700,7 +654,7 @@ export default function GoogleCustomSearchForm({ searchId }: { searchId: string 
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
       />
-    </>
+    </Form>
   )
 }
 

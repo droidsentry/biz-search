@@ -7,6 +7,7 @@ import { generateGoogleCustomSearchParams } from "./utils";
 
 
 export async function getCustomerInfoFromGoogleCustomSearch(formData: GoogleCustomSearchPattern, start: number = 1) {
+  console.log("発火",new Date().toISOString())
   try {
   // バリデーション
   const parsed = googleCustomSearchPatternSchema.safeParse(formData);
