@@ -2,7 +2,7 @@ import { ApiUsage } from './components/api-usage'
 
 export default function SettingsPage() {
   return (
-    <div className="">
+    <>
       <div className="sm:flex sm:items-center mb-5">
         <div className="sm:flex-auto">
           <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
@@ -14,6 +14,6 @@ export default function SettingsPage() {
         </div>
       </div>
       <ApiUsage />
-    </div>
+    </>
   )
 }

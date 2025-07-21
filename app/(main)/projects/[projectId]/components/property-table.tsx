@@ -67,7 +67,9 @@ export function PropertyTable({ properties, projectId }: PropertyTableProps) {
                 key={property.id}
                 className="hover:bg-muted-foreground/10 transition-colors cursor-pointer "
                 onClick={() => {
-                  router.push(`/projects/${projectId}/properties/${property.id}`)
+                  if (property.current_ownership?.owner.id) {
+                    router.push(`/projects/${projectId}/${property.current_ownership.owner.id}`)
+                  }
                 }}
               >
                 <TableCell className="font-medium">
