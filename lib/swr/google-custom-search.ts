@@ -15,7 +15,8 @@ interface UseGoogleSearchOptions {
 export function useGoogleCustomSearch(
   formData?: GoogleCustomSearchPattern,
   start: number = 1,
-  options: UseGoogleSearchOptions = {}
+  options: UseGoogleSearchOptions = {},
+  searchOptions?: { projectId?: string; patternId?: string }
 ) {
   const {
     enabled = true,                // デフォルトでは有効
@@ -25,11 +26,11 @@ export function useGoogleCustomSearch(
   } = options;
   
   const GoogleSearchParams = formData ? generateGoogleCustomSearchParams(formData, start) : null;
-  const key = formData && enabled ? ['google-search', GoogleSearchParams] : null;
+  const key = formData && enabled ? ['google-search', GoogleSearchParams, searchOptions] : null;
 
   const { data, error, isLoading, isValidating, mutate } = useSWR<GoogleSearchRequestResponse, Error>(
     key,
-    () => getCustomerInfoFromGoogleCustomSearch(formData!, start),
+    () => getCustomerInfoFromGoogleCustomSearch(formData!, start, searchOptions),
     {
       revalidateOnFocus,
       revalidateOnReconnect,

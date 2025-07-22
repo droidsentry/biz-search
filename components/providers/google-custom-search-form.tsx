@@ -1,19 +1,22 @@
-'use client';
+"use client";
 
-import { DEFAULT_GOOGLE_CUSTOM_SEARCH_PATTERN } from '@/lib/constants/google-custom-search';
-import { googleCustomSearchPatternSchema } from '@/lib/schemas/custom-search';
-import { useGoogleCustomSearch } from '@/lib/swr/google-custom-search';
-import { GoogleCustomSearchPattern, GoogleSearchRequestResponse } from '@/lib/types/custom-search';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { DEFAULT_GOOGLE_CUSTOM_SEARCH_PATTERN } from "@/lib/constants/google-custom-search";
+import { googleCustomSearchPatternSchema } from "@/lib/schemas/custom-search";
+import { useGoogleCustomSearch } from "@/lib/swr/google-custom-search";
+import {
+  GoogleCustomSearchPattern,
+  GoogleSearchRequestResponse,
+} from "@/lib/types/custom-search";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ReactNode,
   createContext,
   useContext,
   useEffect,
   useState,
-} from 'react';
-import { useForm } from 'react-hook-form';
-import { Form } from '../ui/form';
+} from "react";
+import { useForm } from "react-hook-form";
+import { Form } from "../ui/form";
 
 type ContextType = {
   isNewSearch: boolean;
@@ -28,22 +31,34 @@ type ContextType = {
 
 const Context = createContext<ContextType>({} as ContextType);
 
-export function GoogleCustomSearchFormProvider({ children, searchId }: { children: ReactNode, searchId: string }) {
-  const isNewSearch = searchId === "create";
+export function GoogleCustomSearchFormProvider({
+  children,
+  searchId,
+}: {
+  children: ReactNode;
+  searchId: string;
+}) {
+  const isNewSearch = searchId === "new";
   const [mode, setMode] = useState<"sidebar" | "full">("full");
-  const [googleCustomSearchPattern, setGoogleCustomSearchPattern] = useState<GoogleCustomSearchPattern>();
+  const [googleCustomSearchPattern, setGoogleCustomSearchPattern] =
+    useState<GoogleCustomSearchPattern>();
+  const [persistedSearchId, setPersistedSearchId] = useState(searchId);
+
+  // searchIdが変更されても、明示的に更新されるまでは古い値を保持
   const form = useForm<GoogleCustomSearchPattern>({
     resolver: zodResolver(googleCustomSearchPatternSchema),
     // mode: "onChange",
     defaultValues: DEFAULT_GOOGLE_CUSTOM_SEARCH_PATTERN,
-    });
+  });
   const handleSearch = async (formData: GoogleCustomSearchPattern) => {
-      console.log("formData", formData);
-      setGoogleCustomSearchPattern(formData);
-  }
-  const {data, isLoading, isValidating, error} = useGoogleCustomSearch(googleCustomSearchPattern);
+    console.log("formData", formData);
+    setGoogleCustomSearchPattern(formData);
+  };
+  const { data, isLoading, isValidating, error } = useGoogleCustomSearch(
+    googleCustomSearchPattern
+  );
 
-  console.log("data",data)
+  console.log("data", data);
 
   useEffect(() => {
     if (data) {
@@ -52,7 +67,6 @@ export function GoogleCustomSearchFormProvider({ children, searchId }: { childre
       setMode("full");
     }
   }, [data]);
-
 
   return (
     <Context.Provider
@@ -67,9 +81,7 @@ export function GoogleCustomSearchFormProvider({ children, searchId }: { childre
         error,
       }}
     >
-      <Form {...form}>
-        {children}
-      </Form>
+      <Form {...form}>{children}</Form>
     </Context.Provider>
   );
 }

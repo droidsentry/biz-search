@@ -281,9 +281,10 @@ SearchProvider
 - **住所**（任意）
   - 都道府県の個別選択は廃止、一つのテキストフィールドに統合
   - 完全一致/部分一致の選択可能
-- **検索期間**（任意）
+- **検索期間**（任意）※現在はUIのみ実装
   - デフォルト：すべての期間
   - 選択肢：過去1年、3年、5年、10年
+  - 注：現在の実装では選択肢に関わらず期間制限なしで検索されます
 
 #### 高度な検索オプション（折りたたみ式）
 
@@ -303,11 +304,16 @@ SearchProvider
 
 Google Custom Search APIの`dateRestrict`パラメータを使用：
 
-- `''`（空文字）: すべての期間
+- `'all'`: すべての期間（パラメータを送信しない）
 - `'y1'`: 過去1年間
 - `'y3'`: 過去3年間
 - `'y5'`: 過去5年間
 - `'y10'`: 過去10年間
+
+**現在の実装状況**: 
+- UIにはすべての選択肢が表示されていますが、実際にはdateRestrictパラメータは使用されていません
+- すべての検索は期間制限なし（`'all'`）として実行されます
+- 将来的な実装のためにUIとスキーマは準備済み
 
 ## 7. 技術的考慮事項
 
@@ -342,7 +348,7 @@ export const googleCustomSearchParamsSchema = z.object({
   customerNameExactMatch: matchTypeSchema,
   address: z.string().trim().optional(),
   addressExactMatch: matchTypeSchema,
-  dateRestrict: z.enum(["", "y1", "y3", "y5", "y10"]).optional().default(""),
+  dateRestrict: z.enum(["all", "y1", "y3", "y5", "y10"]).optional().default("all"),
   isAdvancedSearchEnabled: z.boolean(),
   additionalKeywords: z.array(keywordsSchema),
   searchSites: z.array(z.string()),

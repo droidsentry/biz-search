@@ -20,8 +20,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 
 export function SearchResults() {
-  const { data, isLoading , error} = useGoogleCustomSearchForm();
-
+  const { data, isLoading, error } = useGoogleCustomSearchForm();
 
   const searchParams = useSearchParams();
   // URLパラメータからstart値を取得（デフォルト1）
@@ -46,7 +45,7 @@ export function SearchResults() {
     [searchParams, updateURL]
   );
 
-   // ページネーション情報の計算
+  // ページネーション情報の計算
   const resultsPerPage = 10;
   const currentPage = Math.ceil(currentStart / resultsPerPage);
   const totalResults = data?.searchInformation?.totalResults
@@ -106,8 +105,8 @@ export function SearchResults() {
   if (!data) return null;
 
   return (
-    <div className="w-full ">
-      <div className="sticky top-10 pb-4 sm:pb-6 -mt-8 pt-8 z-10 bg-background/50 backdrop-blur-sm">
+    <div className="w-full h-full">
+      <div className="sticky top-10 pb-4 sm:py-6 z-10 bg-background backdrop-blur-sm">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h2 className="text-xl sm:text-2xl font-semibold">
@@ -123,29 +122,8 @@ export function SearchResults() {
               除外項目：{data?.queries?.request?.[0].excludeTerms}
             </p>
           </div>
-
         </div>
       </div>
-      {/* <div className="sticky top-10 pb-4 sm:pb-6 -mt-8 pt-8 z-10 bg-background/50 backdrop-blur-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-semibold">
-              検索結果
-              <span className="text-xs sm:text-sm text-muted-foreground ml-2">
-                ({data?.searchInformation?.formattedTotalResults} 件)
-              </span>
-            </h2>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-              検索項目：{data?.queries?.request?.[0].searchTerms}
-            </p>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-              除外項目：{data?.queries?.request?.[0].excludeTerms}
-            </p>
-          </div>
-
-        </div>
-      </div> */}
-
       {/* エラー表示 */}
       {error && (
         <div className="mb-4 p-4 border border-red-200 rounded-lg bg-red-50">
@@ -177,7 +155,7 @@ export function SearchResults() {
       )}
 
       {isLoading ? (
-        <div className="space-y-4">
+        <div className="space-y-4 ">
           {[1, 2, 3].map((i) => (
             <Card key={i} className="animate-pulse">
               <CardContent className="p-6">
@@ -194,7 +172,7 @@ export function SearchResults() {
           ))}
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4 ">
           {data?.items?.map((item, index) => {
             const image: string | undefined =
               item.pagemap?.cse_image?.[0]?.src ||

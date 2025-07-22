@@ -1,27 +1,29 @@
-import GoogleCustomSearchForm from './components/form'
-import { SearchResults } from './components/search-results';
+import { SearchLayout } from "./components/search-layout";
+import { getSearchPattern } from "./action";
+import { getPatterns } from "./components/get-patterns";
+import { redirect } from "next/navigation";
 
-export default async function Page(
-  
-  {
+export default async function SearchDetailPage({
   params,
 }: {
   params: Promise<{ searchId: string }>;
-}
-
-) {
+}) {
   const { searchId } = await params;
-  console.log("searchId", searchId);
 
-  return (
-    <div className="mx-auto max-w-7xl px-2 md:px-4">
-    <div className="border-0 border-b border-solid flex items-center justify-between relative">
-        <h1 className="my-10 text-3xl font-bold">カスタム検索</h1>
-    </div>
-    <div className="flex flex-col md:flex-row justify-center mt-10 gap-10">
-      <SearchResults/>
-      <GoogleCustomSearchForm />
-    </div>
-    </div>
-  )
+  // パターン一覧を取得
+  const patterns = await getPatterns();
+
+  // 新規検索の場合は特別な処理
+  if (searchId === "new") {
+    return <SearchLayout patterns={patterns} searchId={searchId} />;
+  }
+
+  // 既存パターンの取得
+  const result = await getSearchPattern(searchId);
+
+  if (result.error || !result.data) {
+    redirect("/search");
+  }
+
+  return <SearchLayout patterns={patterns} searchId={searchId} />;
 }
