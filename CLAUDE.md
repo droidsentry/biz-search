@@ -535,6 +535,65 @@ LIMIT 10;
 - 型定義は`lib/types`に配置
 - スキーマは`lib/schemas`に配置
 
+## Supabaseクライアント使用方針
+
+### JavaScriptクライアントライブラリ
+- **必須**: すべてのDB通信には`@supabase/supabase-js`を使用
+- **ドキュメント参照**: 実装時は必ずMCP経由でSupabase公式ドキュメントを参照
+  ```typescript
+  // ドキュメント取得例
+  mcp__supabase__search_docs({
+    graphql_query: `
+      query {
+        searchDocs(query: "javascript client library", limit: 5) {
+          nodes {
+            title
+            href
+            content
+          }
+        }
+      }
+    `
+  })
+  ```
+
+### トランザクション処理
+- **RPC使用**: 複雑なトランザクションが必要な場合はリモートプロシージャコールを使用
+  ```typescript
+  const { data, error } = await supabase.rpc('function_name', { 
+    param1: value1,
+    param2: value2 
+  })
+  ```
+
+### 実装前の必須手順
+1. MCPでSupabaseドキュメントから該当機能のベストプラクティスを検索
+2. 最新のAPIとメソッドを確認
+3. エラーハンドリングパターンを確認
+
+### 使用例
+```typescript
+// 基本的なクエリ
+const { data, error } = await supabase
+  .from('search_patterns')
+  .select('*')
+  .eq('project_id', projectId);
+
+// RLSを考慮した明示的なフィルタ
+const { data, error } = await supabase
+  .from('search_patterns')
+  .select('*')
+  .eq('user_id', userId)
+  .eq('project_id', projectId);
+
+// トランザクション処理（RPC経由）
+const { data, error } = await supabase.rpc('create_pattern_with_log', {
+  pattern_name: 'パターン名',
+  pattern_params: { /* ... */ },
+  project_id: projectId
+});
+```
+
 ## 今後の実装予定
 
 1. Supabaseの初期設定
