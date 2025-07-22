@@ -4,9 +4,10 @@ export default async function Layout({
   children,
   params,
 }: {
-  children: React.ReactNode
-  params: Promise<{ searchId: string }>
+  children: React.ReactNode;
+  params: Promise<{ searchId: string }>;
 }) {
   const { searchId } = await params;
-  return <GoogleCustomSearchFormProvider searchId={searchId}>{children}</GoogleCustomSearchFormProvider>;
+  return <>{children}</>;
+  // return <GoogleCustomSearchFormProvider searchId={searchId}>{children}</GoogleCustomSearchFormProvider>;
 }
