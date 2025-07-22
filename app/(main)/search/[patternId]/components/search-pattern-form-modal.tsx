@@ -57,7 +57,6 @@ export function SearchPatternFormModal({
   currentDescription = "",
   mode,
   patternId,
-  projectId,
   onSaveSuccess,
 }: SearchPatternFormModalProps) {
   const router = useRouter();

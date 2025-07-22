@@ -3,6 +3,10 @@ import { getSearchPattern } from "./action";
 import { getPatterns } from "./components/get-patterns";
 import { redirect } from "next/navigation";
 
+// export type SearchPatterns = Awaited<ReturnType<typeof getPatterns>>;
+
+// export type SearchPattern = Awaited<ReturnType<typeof getSearchPattern>>;
+
 export default async function SearchDetailPage({
   params,
 }: {
@@ -19,11 +23,18 @@ export default async function SearchDetailPage({
   }
 
   // 既存パターンの取得
-  const result = await getSearchPattern(patternId);
+  const searchPattern = await getSearchPattern(patternId);
+  console.log("searchPattern", searchPattern);
 
-  if (result.error || !result.data) {
+  if (!searchPattern) {
     redirect("/search");
   }
 
-  return <SearchLayout patterns={patterns} patternId={patternId} />;
+  return (
+    <SearchLayout
+      patterns={patterns}
+      patternId={patternId}
+      searchPattern={searchPattern}
+    />
+  );
 }

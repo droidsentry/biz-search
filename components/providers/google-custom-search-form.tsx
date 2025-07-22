@@ -69,6 +69,8 @@ export function GoogleCustomSearchFormProvider({
   });
 
   useEffect(() => {
+    console.log("useEffect data", data);
+    console.log("useEffect formDate", form.getValues());
     const page = searchParams.get("start");
     if (data) {
       setMode("sidebar");

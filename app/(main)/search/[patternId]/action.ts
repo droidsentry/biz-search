@@ -138,5 +138,5 @@ export async function getSearchPattern(id: string) {
     return { error: error.message }
   }
 
-  return { success: true, data }
+  return data
 }

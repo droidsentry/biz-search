@@ -16,6 +16,7 @@ import { SearchPatternFormModal } from "./search-pattern-form-modal";
 import { useState, useEffect } from "react";
 import { MobileSidebarToggle } from "./mobile-sidebar-toggle";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 type SearchPattern = Tables<"search_patterns">;
 
@@ -28,11 +29,12 @@ export function SearchLayout({
   patterns: initialPatterns,
   patternId,
 }: SearchLayoutProps) {
-  const { isNewSearch, data, mode } = useGoogleCustomSearchForm();
+  const { isNewSearch, data } = useGoogleCustomSearchForm();
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [patterns, setPatterns] = useState(initialPatterns);
   const [currentSearchId, setCurrentSearchId] = useState(patternId);
+  const router = useRouter();
 
   // 新規検索で、まだ検索を実行していない場合は、フルスクリーンフォームを表示
   if (isNewSearch && !data) {
@@ -47,10 +49,7 @@ export function SearchLayout({
           </div>
           <Card>
             <CardContent className="p-6">
-              <CompactSearchForm
-                searchId={currentSearchId}
-                onSave={() => setShowSaveModal(true)}
-              />
+              <CompactSearchForm onSave={() => setShowSaveModal(true)} />
             </CardContent>
           </Card>
         </div>
@@ -78,10 +77,7 @@ export function SearchLayout({
         >
           {/* 検索フォーム */}
           <div className="space-y-4 ">
-            <CompactSearchForm
-              searchId={currentSearchId}
-              onSave={() => setShowSaveModal(true)}
-            />
+            <CompactSearchForm onSave={() => setShowSaveModal(true)} />
           </div>
 
           <Separator />
@@ -112,14 +108,15 @@ export function SearchLayout({
           mode="create"
           projectId="default"
           onSaveSuccess={(newPatternId, patternData) => {
-            // URLをhistory APIで静かに更新（リロードなし）
-            window.history.replaceState({}, "", `/search/${newPatternId}`);
-            setCurrentSearchId(newPatternId);
+            // // URLをhistory APIで静かに更新（リロードなし）
+            // window.history.replaceState({}, "", `/search/${newPatternId}`);
+            // setCurrentSearchId(newPatternId);
+            router.push(`/search/${newPatternId}`);
 
-            // 新しいパターンを即座にリストに追加
-            if (patternData) {
-              setPatterns((prev) => [...prev, patternData]);
-            }
+            // // 新しいパターンを即座にリストに追加
+            // if (patternData) {
+            //   setPatterns((prev) => [...prev, patternData]);
+            // }
           }}
         />
       </div>

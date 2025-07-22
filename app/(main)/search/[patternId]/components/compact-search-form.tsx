@@ -37,12 +37,7 @@ interface CompactSearchFormProps {
   onSave?: () => void;
 }
 
-type SearchSource = "facebook" | "linkedin" | "eight";
-
-export function CompactSearchForm({
-  searchId,
-  onSave,
-}: CompactSearchFormProps) {
+export function CompactSearchForm({ onSave }: CompactSearchFormProps) {
   const { handleSearch, isLoading, isValidating, isNewSearch } =
     useGoogleCustomSearchForm();
   const form = useFormContext<GoogleCustomSearchPattern>();
@@ -66,6 +61,7 @@ export function CompactSearchForm({
 
   // Eightボタンのクリック処理
   const handleEightClick = () => {
+    console.log("handleEightClick");
     const customerName = form.getValues(
       "googleCustomSearchParams.customerName"
     );
@@ -430,6 +426,13 @@ export function CompactSearchForm({
                 href="https://8card.net/myhome?page=1&sort=exchangeDate&tab=network"
                 target="_blank"
                 rel="noopener noreferrer"
+                onMouseDown={(e) => {
+                  // 中クリック（ホイールクリック）の場合も関数を実行
+                  if (e.button === 1) {
+                    e.preventDefault();
+                    handleEightClick();
+                  }
+                }}
                 onClick={handleEightClick}
               >
                 <span className="flex items-center justify-center gap-1">

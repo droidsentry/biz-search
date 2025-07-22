@@ -36,6 +36,7 @@ export function SearchResults() {
     },
     [pathname, router]
   );
+
   // ページネーション用のハンドラー
   const handlePageChange = useCallback(
     (newStart: number) => {
