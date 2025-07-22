@@ -32,7 +32,7 @@ const buildMultipleSiteQuery = (sites: string[], mode: 'specific' | 'exclude'): 
  * @param start ページネーション用の開始位置
  * @returns Google検索APIパラメータ
  */
-export const generateGoogleCustomSearchParams = (parsedData: GoogleCustomSearchPattern, start: number = 1): GoogleSearchRequestParams => {
+export const generateGoogleCustomSearchParams = (parsedData: GoogleCustomSearchPattern): GoogleSearchRequestParams => {
   const MAX_RESULTS = 10;
   const { googleCustomSearchParams } = parsedData;
   const { 
@@ -41,7 +41,8 @@ export const generateGoogleCustomSearchParams = (parsedData: GoogleCustomSearchP
     dateRestrict,
     isAdvancedSearchEnabled,
     additionalKeywords,
-    searchSites, siteSearchMode
+    searchSites, siteSearchMode,
+    startPage
   } = googleCustomSearchParams;
 
   // ========================================
@@ -62,7 +63,7 @@ export const generateGoogleCustomSearchParams = (parsedData: GoogleCustomSearchP
     q: queryParts.join(' ').trim(),
     cx: process.env.GOOGLE_CUSTOM_SEARCH_ENGINE_ID!,
     num: MAX_RESULTS,
-    start: start,
+    start: startPage || 1,
   };
 
   // 検索期間の設定

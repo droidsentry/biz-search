@@ -106,7 +106,7 @@ export function SearchResults() {
   if (!data) return null;
 
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full mb-96">
       <div className="sticky top-10 pb-4 sm:py-6 z-10 bg-background backdrop-blur-sm">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -264,10 +264,10 @@ export function SearchResults() {
                   className={cn(
                     "transition-all hover:shadow-md",
                     "hover:border-muted-foreground/30",
-                    "relative !bg-muted/50 "
+                    "relative bg-card-foreground/5 py-0"
                   )}
                 >
-                  <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row gap-4">
+                  <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row gap-4 ">
                     <div className="flex-1 space-y-3">
                       <div>
                         <Link

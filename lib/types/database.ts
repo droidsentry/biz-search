@@ -312,7 +312,7 @@ export type Database = {
           id: string
           ip_address: unknown | null
           pattern_id: string | null
-          project_id: string
+          project_id: string | null
           result_count: number | null
           status_code: number
           user_agent: string | null
@@ -326,7 +326,7 @@ export type Database = {
           id?: string
           ip_address?: unknown | null
           pattern_id?: string | null
-          project_id: string
+          project_id?: string | null
           result_count?: number | null
           status_code: number
           user_agent?: string | null
@@ -340,7 +340,7 @@ export type Database = {
           id?: string
           ip_address?: unknown | null
           pattern_id?: string | null
-          project_id?: string
+          project_id?: string | null
           result_count?: number | null
           status_code?: number
           user_agent?: string | null

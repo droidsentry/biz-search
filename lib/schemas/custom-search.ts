@@ -22,6 +22,7 @@ export const googleCustomSearchParamsSchema = z.object({
   additionalKeywords: z.array(keywordsSchema),
   searchSites: z.array(z.string()),
   siteSearchMode: z.enum(["any", "specific", "exclude"]),
+  startPage: z.number().optional(), // 検索ページの開始位置
 });
 
 const searchPatternDescriptionSchema = z
@@ -35,4 +36,6 @@ export const googleCustomSearchPatternSchema = z.object({
   searchPatternName: nameSchema,
   searchPatternDescription: searchPatternDescriptionSchema,
   googleCustomSearchParams: googleCustomSearchParamsSchema,
+  projectId: z.string().optional(),
+  patternId: z.uuid().optional(),
 });

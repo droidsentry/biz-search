@@ -6,24 +6,24 @@ import { redirect } from "next/navigation";
 export default async function SearchDetailPage({
   params,
 }: {
-  params: Promise<{ searchId: string }>;
+  params: Promise<{ patternId: string }>;
 }) {
-  const { searchId } = await params;
+  const { patternId } = await params;
 
   // パターン一覧を取得
   const patterns = await getPatterns();
 
   // 新規検索の場合は特別な処理
-  if (searchId === "new") {
-    return <SearchLayout patterns={patterns} searchId={searchId} />;
+  if (patternId === "new") {
+    return <SearchLayout patterns={patterns} patternId={patternId} />;
   }
 
   // 既存パターンの取得
-  const result = await getSearchPattern(searchId);
+  const result = await getSearchPattern(patternId);
 
   if (result.error || !result.data) {
     redirect("/search");
   }
 
-  return <SearchLayout patterns={patterns} searchId={searchId} />;
+  return <SearchLayout patterns={patterns} patternId={patternId} />;
 }

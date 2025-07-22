@@ -1,189 +1,354 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowUpRight, Building2, Search, TrendingUp, Users } from 'lucide-react'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  ArrowUpRight,
+  Building2,
+  Search,
+  FileText,
+  Users,
+  Clock,
+  Package,
+  FolderOpen,
+  Activity,
+} from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { format, subDays } from "date-fns";
+import { ja } from "date-fns/locale";
+import {
+  ApiUsageChart,
+  ApiUsageByPatternChart,
+} from "./components/api-usage-chart";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return null;
+  }
+
+  // 統計データを取得
+  const [projectsCount, propertiesCount, ownersCount, searchPatternsCount] =
+    await Promise.all([
+      supabase.from("projects").select("id", { count: "exact", head: true }),
+      supabase.from("properties").select("id", { count: "exact", head: true }),
+      supabase.from("owners").select("id", { count: "exact", head: true }),
+      supabase
+        .from("search_patterns")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id),
+    ]);
+
+  // 最近のプロジェクトを取得
+  const { data: recentProjects } = await supabase
+    .from("projects")
+    .select("id, name, created_at")
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  // 最近の検索パターンを取得
+  const { data: recentPatterns } = await supabase
+    .from("search_patterns")
+    .select("id, name, usage_count, last_used_at")
+    .eq("user_id", user.id)
+    .order("last_used_at", { ascending: false, nullsFirst: false })
+    .limit(5);
+
+  // 最近追加された物件を取得
+  const { data: recentProperties } = await supabase
+    .from("project_properties")
+    .select(
+      `
+      id,
+      added_at,
+      property:properties!inner (
+        address
+      ),
+      project:projects!inner (
+        name
+      )
+    `
+    )
+    .order("added_at", { ascending: false })
+    .limit(10);
+
+  // API使用状況を取得（過去7日間）
+  const sevenDaysAgo = subDays(new Date(), 7);
+  const { data: apiUsageData } = await supabase
+    .from("search_api_logs")
+    .select("created_at")
+    .eq("user_id", user.id)
+    .gte("created_at", sevenDaysAgo.toISOString())
+    .order("created_at", { ascending: true });
+
+  // 日付別にグループ化
+  const apiUsageByDate =
+    apiUsageData?.reduce((acc, log) => {
+      const date = format(new Date(log.created_at), "yyyy-MM-dd");
+      acc[date] = (acc[date] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>) || {};
+
+  // 過去7日間のデータを生成（デモデータを含む）
+  const apiUsageChartData = Array.from({ length: 7 }, (_, i) => {
+    const date = subDays(new Date(), 6 - i);
+    const dateStr = format(date, "yyyy-MM-dd");
+    // デモデータ：実際のデータがない場合はランダムな値を生成
+    const actualCount = apiUsageByDate[dateStr] || 0;
+    const demoCount = Math.floor(Math.random() * 20) + 5;
+    return {
+      date: dateStr,
+      count: actualCount > 0 ? actualCount : demoCount,
+    };
+  });
+
+  // パターン別の使用回数を取得
+  const { data: patternUsageData } = await supabase
+    .from("search_patterns")
+    .select("name, usage_count")
+    .eq("user_id", user.id)
+    .gt("usage_count", 0)
+    .order("usage_count", { ascending: false });
+
+  // パターン別のデータ（デモデータを含む）
+  const apiUsageByPatternData =
+    patternUsageData && patternUsageData.length > 0
+      ? patternUsageData.map((pattern) => ({
+          pattern_name: pattern.name,
+          count: pattern.usage_count || 0,
+        }))
+      : [
+          { pattern_name: "基本検索パターン", count: 45 },
+          { pattern_name: "詳細検索（住所含む）", count: 32 },
+          { pattern_name: "会社情報検索", count: 28 },
+          { pattern_name: "役職者検索", count: 15 },
+          { pattern_name: "地域限定検索", count: 10 },
+        ];
   const stats = [
     {
-      title: '登録企業数',
-      value: '1,234',
-      change: '+12.5%',
+      title: "プロジェクト数",
+      value: projectsCount?.count || 0,
+      icon: FolderOpen,
+      href: "/projects",
+      description: "アクティブなプロジェクト",
+    },
+    {
+      title: "物件数",
+      value: propertiesCount?.count || 0,
       icon: Building2,
+      href: "/projects",
+      description: "登録済み物件",
     },
     {
-      title: '検索回数',
-      value: '5,678',
-      change: '+23.1%',
-      icon: Search,
-    },
-    {
-      title: 'アクティブユーザー',
-      value: '892',
-      change: '+18.2%',
+      title: "所有者数",
+      value: ownersCount?.count || 0,
       icon: Users,
+      href: "/projects",
+      description: "登録済み所有者",
     },
     {
-      title: 'API利用率',
-      value: '94.2%',
-      change: '+5.4%',
-      icon: TrendingUp,
+      title: "検索パターン",
+      value: searchPatternsCount?.count || 0,
+      icon: Search,
+      href: "/search",
+      description: "保存済みパターン",
     },
-  ]
-
-  const recentActivities = [
-    { id: 1, company: '株式会社テクノロジー', action: '新規登録', time: '5分前' },
-    { id: 2, company: 'グローバルトレード株式会社', action: '情報更新', time: '15分前' },
-    { id: 3, company: 'イノベーションラボ合同会社', action: '検索実行', time: '1時間前' },
-    { id: 4, company: 'スマートソリューション株式会社', action: '新規登録', time: '2時間前' },
-    { id: 5, company: 'エコテック株式会社', action: 'API呼び出し', time: '3時間前' },
-    { id: 6, company: 'デジタルマーケティング株式会社', action: '情報更新', time: '4時間前' },
-    { id: 7, company: 'クラウドサービス合同会社', action: '新規登録', time: '5時間前' },
-    { id: 8, company: 'AIソリューション株式会社', action: '検索実行', time: '6時間前' },
-    { id: 9, company: 'モバイルアプリ開発株式会社', action: 'API呼び出し', time: '7時間前' },
-    { id: 10, company: 'ビッグデータ分析株式会社', action: '情報更新', time: '8時間前' },
-    { id: 11, company: 'サイバーセキュリティ株式会社', action: '新規登録', time: '9時間前' },
-    { id: 12, company: 'IoTプラットフォーム株式会社', action: '検索実行', time: '10時間前' },
-    { id: 13, company: 'ブロックチェーン開発株式会社', action: 'API呼び出し', time: '11時間前' },
-    { id: 14, company: 'VR/ARコンテンツ株式会社', action: '情報更新', time: '12時間前' },
-    { id: 15, company: '量子コンピューティング研究所', action: '新規登録', time: '13時間前' },
-  ]
-
-  const topCompanies = [
-    { rank: 1, name: 'テックジャイアント株式会社', industry: 'IT・ソフトウェア', views: 15234 },
-    { rank: 2, name: 'グローバルイノベーション株式会社', industry: '製造業', views: 12890 },
-    { rank: 3, name: 'デジタルトランスフォーム株式会社', industry: 'コンサルティング', views: 11567 },
-    { rank: 4, name: 'エンタープライズソリューション株式会社', industry: 'SaaS', views: 10234 },
-    { rank: 5, name: 'フィンテックパイオニア株式会社', industry: '金融・保険', views: 9876 },
-    { rank: 6, name: 'ヘルステック革新株式会社', industry: 'ヘルスケア', views: 8765 },
-    { rank: 7, name: 'エコロジーテクノロジー株式会社', industry: '環境・エネルギー', views: 7654 },
-    { rank: 8, name: 'ロジスティクスDX株式会社', industry: '物流・運輸', views: 6543 },
-    { rank: 9, name: 'リテールイノベーション株式会社', industry: '小売・流通', views: 5432 },
-    { rank: 10, name: 'エデュテックソリューション株式会社', industry: '教育', views: 4321 },
-  ]
+  ];
 
   return (
     <div className="mx-auto max-w-[1400px] px-2 md:px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground mb-2">ダッシュボード</h1>
-        <p className="text-muted-foreground">ビジネス検索プラットフォームの概要</p>
+        <h1 className="text-3xl font-bold text-foreground mb-2">
+          ダッシュボード
+        </h1>
+        <p className="text-muted-foreground">プロジェクトと検索の概要</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
         {stats.map((stat) => {
-          const Icon = stat.icon
+          const Icon = stat.icon;
           return (
-            <Card key={stat.title}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  {stat.title}
-                </CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                  <ArrowUpRight className="h-3 w-3 text-green-500" />
-                  <span className="text-green-500">{stat.change}</span>
-                  <span>前月比</span>
-                </p>
-              </CardContent>
-            </Card>
-          )
+            <Link key={stat.title} href={stat.href}>
+              <Card className="hover:shadow-md transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    {stat.title}
+                  </CardTitle>
+                  <Icon className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {stat.value.toLocaleString()}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {stat.description}
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
+          );
         })}
       </div>
-
+      <div className="grid gap-6 md:grid-cols-2 mb-8">
+        <ApiUsageChart data={apiUsageChartData} />
+        <ApiUsageByPatternChart data={apiUsageByPatternData} />
+      </div>
       <div className="grid gap-6 md:grid-cols-2 mb-8">
         <Card>
           <CardHeader>
-            <CardTitle>最近のアクティビティ</CardTitle>
-            <CardDescription>
-              プラットフォーム上の最新の活動
-            </CardDescription>
+            <CardTitle>最近のプロジェクト</CardTitle>
+            <CardDescription>最近作成されたプロジェクト</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4 max-h-[400px] overflow-y-auto">
-              {recentActivities.map((activity) => (
-                <div key={activity.id} className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      {activity.company}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {activity.action}
-                    </p>
+            {recentProjects && recentProjects.length > 0 ? (
+              <div className="space-y-4">
+                {recentProjects.map((project) => (
+                  <div
+                    key={project.id}
+                    className="flex items-center justify-between"
+                  >
+                    <Link
+                      href={`/projects/${project.id}`}
+                      className="hover:underline"
+                    >
+                      <p className="text-sm font-medium text-foreground">
+                        {project.name}
+                      </p>
+                    </Link>
+                    <span className="text-xs text-muted-foreground">
+                      {format(new Date(project.created_at), "M/d HH:mm", {
+                        locale: ja,
+                      })}
+                    </span>
                   </div>
-                  <span className="text-xs text-muted-foreground">
-                    {activity.time}
-                  </span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-sm text-muted-foreground mb-4">
+                  プロジェクトがありません
+                </p>
+                <Link href="/projects">
+                  <Button size="sm">最初のプロジェクトを作成</Button>
+                </Link>
+              </div>
+            )}
           </CardContent>
+          <CardFooter>
+            <Button variant="outline" size="sm" className="w-full" asChild>
+              <Link href="/projects">すべてのプロジェクトを見る</Link>
+            </Button>
+          </CardFooter>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>人気の検索キーワード</CardTitle>
-            <CardDescription>
-              よく検索されているキーワード
-            </CardDescription>
+            <CardTitle>よく使う検索パターン</CardTitle>
+            <CardDescription>最近使用した検索パターン</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {['IT・ソフトウェア', '製造業', '小売・流通', '金融・保険', 'ヘルスケア', 'コンサルティング', 'SaaS', '環境・エネルギー', '物流・運輸', '教育'].map((keyword, index) => (
-                <div key={keyword} className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-foreground">
-                    {keyword}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-24 bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-primary rounded-full"
-                        style={{ width: `${100 - index * 8}%` }}
-                      />
+            {recentPatterns && recentPatterns.length > 0 ? (
+              <div className="space-y-4">
+                {recentPatterns.map((pattern) => (
+                  <div
+                    key={pattern.id}
+                    className="flex items-center justify-between"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        {pattern.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        使用回数: {pattern.usage_count}回
+                      </p>
                     </div>
-                    <span className="text-xs text-muted-foreground w-12 text-right">
-                      {100 - index * 8}%
-                    </span>
+                    {pattern.last_used_at && (
+                      <span className="text-xs text-muted-foreground">
+                        {format(new Date(pattern.last_used_at), "M/d HH:mm", {
+                          locale: ja,
+                        })}
+                      </span>
+                    )}
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-sm text-muted-foreground mb-4">
+                  検索パターンがありません
+                </p>
+                <Link href="/search">
+                  <Button size="sm">検索を開始</Button>
+                </Link>
+              </div>
+            )}
           </CardContent>
+          <CardFooter>
+            <Button variant="outline" size="sm" className="w-full" asChild>
+              <Link href="/search">検索パターンを管理</Link>
+            </Button>
+          </CardFooter>
         </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>注目企業ランキング</CardTitle>
-          <CardDescription>
-            最も閲覧されている企業トップ10
-          </CardDescription>
+          <CardTitle>最近追加された物件</CardTitle>
+          <CardDescription>プロジェクトに追加された最新の物件</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-2 text-sm font-medium text-muted-foreground">順位</th>
-                  <th className="text-left p-2 text-sm font-medium text-muted-foreground">企業名</th>
-                  <th className="text-left p-2 text-sm font-medium text-muted-foreground">業種</th>
-                  <th className="text-right p-2 text-sm font-medium text-muted-foreground">閲覧数</th>
-                </tr>
-              </thead>
-              <tbody>
-                {topCompanies.map((company) => (
-                  <tr key={company.rank} className="border-b hover:bg-muted/50">
-                    <td className="p-2 text-sm">{company.rank}</td>
-                    <td className="p-2 text-sm font-medium">{company.name}</td>
-                    <td className="p-2 text-sm text-muted-foreground">{company.industry}</td>
-                    <td className="p-2 text-sm text-right">{company.views.toLocaleString()}</td>
+          {recentProperties && recentProperties.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-2 text-sm font-medium text-muted-foreground">
+                      物件住所
+                    </th>
+                    <th className="text-left p-2 text-sm font-medium text-muted-foreground">
+                      プロジェクト
+                    </th>
+                    <th className="text-right p-2 text-sm font-medium text-muted-foreground">
+                      追加日時
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {recentProperties.map((item) => (
+                    <tr key={item.id} className="border-b hover:bg-muted/50">
+                      <td className="p-2 text-sm">{item.property.address}</td>
+                      <td className="p-2 text-sm text-muted-foreground">
+                        {item.project.name}
+                      </td>
+                      <td className="p-2 text-sm text-right">
+                        {format(new Date(item.added_at), "M/d HH:mm", {
+                          locale: ja,
+                        })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-sm text-muted-foreground">
+                まだ物件が追加されていません
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

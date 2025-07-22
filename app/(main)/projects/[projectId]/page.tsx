@@ -1,28 +1,29 @@
-import { notFound } from 'next/navigation'
-import { getProjectAction, getProjectPropertiesAction } from './action'
-import { PropertyTable } from './components/property-table'
-import { ExportButton } from './components/export-button'
-import { ArrowLeft } from 'lucide-react'
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
+import { notFound } from "next/navigation";
+import { getProjectAction, getProjectPropertiesAction } from "./action";
+import { PropertyTable } from "./components/property-table";
+import { ExportButton } from "./components/export-button";
+import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default async function ProjectDetailPage({
   params,
 }: {
-  params: Promise<{ projectId: string }>
+  params: Promise<{ projectId: string }>;
 }) {
-  const { projectId } = await params
+  const { projectId } = await params;
   // プロジェクト情報を取得
-  const { data: project, error: projectError } = await getProjectAction(projectId)
-  
+  const { data: project, error: projectError } = await getProjectAction(
+    projectId
+  );
+
   if (projectError || !project) {
-    notFound()
+    notFound();
   }
 
   // 物件一覧を取得
-  const { data: properties, error: propertiesError } = await getProjectPropertiesAction(
-    projectId
-  )
+  const { data: properties, error: propertiesError } =
+    await getProjectPropertiesAction(projectId);
 
   return (
     <div className="mx-auto max-w-[1400px] px-2 md:px-4">
@@ -55,30 +56,23 @@ export default async function ProjectDetailPage({
       {/* 物件一覧 */}
       <div className="pb-10">
         <div className="mb-6">
-          <h2 className="text-xl font-semibold text-foreground">
-            顧客一覧
-          </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            {properties ? `全${properties.length}件` : '読み込み中...'}
+            {properties ? `全${properties.length}件` : "読み込み中..."}
           </p>
         </div>
 
         {propertiesError ? (
           <div className="rounded-md bg-destructive/10 p-4">
-            <p className="text-sm text-destructive">
-              {propertiesError}
-            </p>
+            <p className="text-sm text-destructive">{propertiesError}</p>
           </div>
         ) : properties ? (
           <PropertyTable properties={properties} projectId={projectId} />
         ) : (
           <div className="flex items-center justify-center h-32">
-            <p className="text-muted-foreground">
-              物件データを読み込み中...
-            </p>
+            <p className="text-muted-foreground">物件データを読み込み中...</p>
           </div>
         )}
       </div>
     </div>
-  )
+  );
 }

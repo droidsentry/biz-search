@@ -129,10 +129,10 @@ export async function getProjectPropertiesAction(
   }
 }
 
-// CSVエクスポート用のデータ取得
-export async function exportProjectPropertiesToCSV(
+// Excelエクスポート用のデータ取得
+export async function exportProjectPropertiesToExcel(
   projectId: string
-): Promise<{ data: string | null; error: string | null }> {
+): Promise<{ data: any[] | null; error: string | null }> {
   try {
     const supabase = await createClient()
     
@@ -152,44 +152,8 @@ export async function exportProjectPropertiesToCSV(
       return { data: null, error: error.message }
     }
 
-    // CSVフォーマットに変換
-    const headers = [
-      '物件住所',
-      '所有者名',
-      '所有者住所',
-      '所有者緯度',
-      '所有者経度',
-      '会社名',
-      '法人番号',
-      '役職',
-      '所有開始日',
-      'インポート日時',
-      '調査日時'
-    ]
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rows = data.map((row: any) => [
-      row.property_address || '',
-      row.owner_name || '',
-      row.owner_address || '',
-      row.owner_lat || '',
-      row.owner_lng || '',
-      row.company_1_name || '',
-      row.company_1_number || '',
-      row.company_1_position || '',
-      row.ownership_start || '',
-      row.import_date || '',
-      row.researched_date || ''
-    ])
-
-    const csv = [
-      headers.join(','),
-      ...rows.map((row: string[]) => row.map(cell => `"${cell}"`).join(','))
-    ].join('\n')
-
-    // BOMを追加（Excelでの文字化け対策）
-    const bom = '\uFEFF'
-    return { data: bom + csv, error: null }
+    // データをそのまま返す（クライアント側でExcel形式に変換）
+    return { data, error: null }
   } catch (error) {
     console.error('予期せぬエラー:', error)
     return { 

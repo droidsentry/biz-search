@@ -1,8 +1,8 @@
 "use client";
 
 import { GoogleCustomSearchFormProvider } from "@/components/providers/google-custom-search-form";
-import { CompactSearchForm } from "@/app/(main)/search/[searchId]/components/compact-search-form";
-import { SearchResults } from "@/app/(main)/search/[searchId]/components/search-results";
+import { CompactSearchForm } from "@/app/(main)/search/[patternId]/components/compact-search-form";
+import { SearchResults } from "@/app/(main)/search/[patternId]/components/search-results";
 import { useGoogleCustomSearchForm } from "@/components/providers/google-custom-search-form";
 import { useFormContext } from "react-hook-form";
 import { GoogleCustomSearchPattern } from "@/lib/types/custom-search";
@@ -33,16 +33,16 @@ function SearchContent({ initialQuery, initialAddress }: OwnerSearchProps) {
   }, []); // 依存配列を空にして初回のみ実行
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full">
       <h3 className="text-lg font-semibold">Web検索</h3>
 
-      <div className={data ? "flex gap-4" : "max-w-lg"}>
+      <div className={data ? "flex gap-4" : "flex justify-center w-full"}>
         {data && (
-          <div className=" sticky top-10">
+          <div className="flex-1 sticky top-10">
             <SearchResults />
           </div>
         )}
-        <div className="space-y-4 w-[500px]  border rounded-lg p-2 sticky top-10 h-fit">
+        <div className="space-y-4 w-[320px] border rounded-lg p-4 sticky top-10 h-fit">
           <CompactSearchForm searchId="new" />
         </div>
       </div>

@@ -21,18 +21,18 @@ type SearchPattern = Tables<"search_patterns">;
 
 interface SearchLayoutProps {
   patterns: SearchPattern[];
-  searchId: string;
+  patternId: string;
 }
 
 export function SearchLayout({
   patterns: initialPatterns,
-  searchId,
+  patternId,
 }: SearchLayoutProps) {
   const { isNewSearch, data, mode } = useGoogleCustomSearchForm();
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [patterns, setPatterns] = useState(initialPatterns);
-  const [currentSearchId, setCurrentSearchId] = useState(searchId);
+  const [currentSearchId, setCurrentSearchId] = useState(patternId);
 
   // 新規検索で、まだ検索を実行していない場合は、フルスクリーンフォームを表示
   if (isNewSearch && !data) {

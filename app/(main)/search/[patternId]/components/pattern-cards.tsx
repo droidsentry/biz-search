@@ -13,6 +13,7 @@ import { SearchPatternDeleteModal } from "./search-pattern-delete-modal";
 import { useGoogleCustomSearchForm } from "@/components/providers/google-custom-search-form";
 import { useFormContext } from "react-hook-form";
 import { GoogleCustomSearchPattern } from "@/lib/types/custom-search";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type SearchPattern = Tables<"search_patterns">;
 
@@ -29,6 +30,8 @@ export function PatternCards({
   const [selectedPatternId, setSelectedPatternId] = useState<string>("");
   const { handleSearch } = useGoogleCustomSearchForm();
   const form = useFormContext<GoogleCustomSearchPattern>();
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
   const handleDelete = (e: React.MouseEvent, patternId: string) => {
     e.preventDefault();
@@ -42,7 +45,7 @@ export function PatternCards({
 
     // 現在のフォームの値を取得
     const currentFormValues = form.getValues();
-    
+
     // パターンのparamsをパース
     const savedParams = pattern.google_custom_search_params as any;
 
@@ -70,6 +73,14 @@ export function PatternCards({
     // フォームの値を更新
     form.reset(formData);
 
+    // URLからstartパラメータを削除してページを更新
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete("start");
+    const newUrl = `${window.location.pathname}${
+      newParams.toString() ? `?${newParams.toString()}` : ""
+    }`;
+    router.replace(newUrl);
+
     // 自動的に検索を実行
     setTimeout(() => {
       form.handleSubmit(handleSearch)();
@@ -95,7 +106,7 @@ export function PatternCards({
             className={cn(
               "group cursor-pointer transition-all hover:shadow-md",
               "hover:border-foreground/20 mb-2",
-              currentPatternId === pattern.id && "border-primary bg-primary/5"
+              currentPatternId === pattern.id && "border-primary bg-primary/5 "
             )}
             onClick={(e) => handlePatternClick(e, pattern)}
           >

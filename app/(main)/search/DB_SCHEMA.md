@@ -196,18 +196,19 @@ CREATE POLICY "search_patterns_delete" ON search_patterns
 -- RLSを有効化
 ALTER TABLE search_api_logs ENABLE ROW LEVEL SECURITY;
 
--- APIログのアクセス制御（system_ownerのみ閲覧可能）
+-- APIログのアクセス制御
+-- SELECTはsystem_ownerのみ（監視・分析用）
 CREATE POLICY "search_api_logs_select" ON search_api_logs
   FOR SELECT
   TO authenticated
   USING (is_system_owner());
 
+-- INSERTは認証済みユーザーなら誰でも可能
+-- プロジェクトIDの有無に関わらずログを記録可能（テスト、デモ、個人利用等をサポート）
 CREATE POLICY "search_api_logs_insert" ON search_api_logs
   FOR INSERT
   TO authenticated
-  WITH CHECK (
-    project_id IN (SELECT user_accessible_projects())
-  );
+  WITH CHECK (true);
 
 -- テーブルにコメントを追加
 ```
@@ -819,18 +820,19 @@ CREATE POLICY "search_patterns_delete" ON search_patterns
     user_id = (select auth.uid())
   );
 
--- APIログのアクセス制御（system_ownerのみ閲覧可能）
+-- APIログのアクセス制御
+-- SELECTはsystem_ownerのみ（監視・分析用）
 CREATE POLICY "search_api_logs_select" ON search_api_logs
   FOR SELECT
   TO authenticated
   USING (is_system_owner());
 
+-- INSERTは認証済みユーザーなら誰でも可能
+-- プロジェクトIDの有無に関わらずログを記録可能（テスト、デモ、個人利用等をサポート）
 CREATE POLICY "search_api_logs_insert" ON search_api_logs
   FOR INSERT
   TO authenticated
-  WITH CHECK (
-    project_id IN (SELECT user_accessible_projects())
-  );
+  WITH CHECK (true);
 
 -- Create functions and triggers
 CREATE OR REPLACE FUNCTION update_updated_at_column()

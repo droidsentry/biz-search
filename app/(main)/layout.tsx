@@ -1,7 +1,7 @@
 import { Header } from "@/components/layouts/header";
 import { SubNavigation } from "@/components/layouts/sub-navigation";
 import { Footer } from "@/components/layouts/footer";
-import { GoogleCustomSearchFormProvider } from "@/components/providers/google-custom-search-form";
+// import { GoogleCustomSearchFormProvider } from "@/components/providers/google-custom-search-form";
 
 export default async function DashboardLayout({
   children,
@@ -17,9 +17,9 @@ export default async function DashboardLayout({
       <div className="flex-1 flex flex-col bg-background text-foreground">
         <SubNavigation />
         <main className="flex-1">
-          <GoogleCustomSearchFormProvider searchId={searchId}>
-            {children}
-          </GoogleCustomSearchFormProvider>
+          {/* <GoogleCustomSearchFormProvider searchId={searchId}> */}
+          {children}
+          {/* </GoogleCustomSearchFormProvider> */}
         </main>
       </div>
       <Footer />

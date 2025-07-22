@@ -66,7 +66,9 @@ export function CompactSearchForm({
 
   // Eightボタンのクリック処理
   const handleEightClick = () => {
-    const customerName = form.getValues("googleCustomSearchParams.customerName");
+    const customerName = form.getValues(
+      "googleCustomSearchParams.customerName"
+    );
     if (customerName) {
       navigator.clipboard.writeText(customerName);
       toast.success("名前をクリップボードにコピーしました");
@@ -75,7 +77,12 @@ export function CompactSearchForm({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSearch)} className="space-y-4">
+      <form
+        onSubmit={form.handleSubmit(handleSearch, (errors) => {
+          console.log("errors", errors);
+        })}
+        className="space-y-4"
+      >
         {/* ヘッダー */}
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-medium">検索条件</h2>
@@ -302,7 +309,7 @@ export function CompactSearchForm({
                     </FormItem>
                   )}
                 />
-                
+
                 {/* サイト検索モード */}
                 <FormField
                   control={form.control}
@@ -317,19 +324,28 @@ export function CompactSearchForm({
                         >
                           <div className="flex items-center space-x-1">
                             <RadioGroupItem value="any" id="any" />
-                            <Label htmlFor="any" className="text-xs font-normal cursor-pointer">
+                            <Label
+                              htmlFor="any"
+                              className="text-xs font-normal cursor-pointer"
+                            >
                               すべて検索
                             </Label>
                           </div>
                           <div className="flex items-center space-x-1">
                             <RadioGroupItem value="specific" id="specific" />
-                            <Label htmlFor="specific" className="text-xs font-normal cursor-pointer">
+                            <Label
+                              htmlFor="specific"
+                              className="text-xs font-normal cursor-pointer"
+                            >
                               指定サイトのみ
                             </Label>
                           </div>
                           <div className="flex items-center space-x-1">
                             <RadioGroupItem value="exclude" id="exclude" />
-                            <Label htmlFor="exclude" className="text-xs font-normal cursor-pointer">
+                            <Label
+                              htmlFor="exclude"
+                              className="text-xs font-normal cursor-pointer"
+                            >
                               指定サイト除外
                             </Label>
                           </div>
@@ -364,67 +380,66 @@ export function CompactSearchForm({
         </Button>
 
         {/* 外部リンクボタン */}
-        {isNewSearch &&
-          form.watch("googleCustomSearchParams.customerName") && (
-            <div className="grid grid-cols-3 gap-2">
-              <Button
-                type="button"
-                size="sm"
-                className="bg-[#1877F2] hover:bg-[#1864C9] text-white w-full"
-                asChild
+        {isNewSearch && form.watch("googleCustomSearchParams.customerName") && (
+          <div className="grid grid-cols-3 gap-2">
+            <Button
+              type="button"
+              size="sm"
+              className="bg-[#1877F2] hover:bg-[#1864C9] text-white w-full"
+              asChild
+            >
+              <Link
+                href={`https://www.facebook.com/search/top?q=${encodeURIComponent(
+                  form.watch("googleCustomSearchParams.customerName")
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
               >
-                <Link
-                  href={`https://www.facebook.com/search/top?q=${encodeURIComponent(
-                    form.watch("googleCustomSearchParams.customerName")
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <span className="flex items-center justify-center gap-1">
-                    Facebook
-                    <ExternalLink className="w-3 h-3" />
-                  </span>
-                </Link>
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                className="bg-[#0A66C2] hover:bg-[#0952A5] text-white w-full"
-                asChild
+                <span className="flex items-center justify-center gap-1">
+                  Facebook
+                  <ExternalLink className="w-3 h-3" />
+                </span>
+              </Link>
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="bg-[#0A66C2] hover:bg-[#0952A5] text-white w-full"
+              asChild
+            >
+              <Link
+                href={`https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(
+                  form.watch("googleCustomSearchParams.customerName")
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
               >
-                <Link
-                  href={`https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(
-                    form.watch("googleCustomSearchParams.customerName")
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <span className="flex items-center justify-center gap-1">
-                    LinkedIn
-                    <ExternalLink className="w-3 h-3" />
-                  </span>
-                </Link>
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                className="bg-gray-800 hover:bg-gray-700 text-white w-full"
-                asChild
+                <span className="flex items-center justify-center gap-1">
+                  LinkedIn
+                  <ExternalLink className="w-3 h-3" />
+                </span>
+              </Link>
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="bg-gray-800 hover:bg-gray-700 text-white w-full"
+              asChild
+            >
+              <Link
+                href="https://8card.net/myhome?page=1&sort=exchangeDate&tab=network"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={handleEightClick}
               >
-                <Link
-                  href="https://8card.net/myhome?page=1&sort=exchangeDate&tab=network"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={handleEightClick}
-                >
-                  <span className="flex items-center justify-center gap-1">
-                    Eight
-                    <ExternalLink className="w-3 h-3" />
-                  </span>
-                </Link>
-              </Button>
-            </div>
-          )}
+                <span className="flex items-center justify-center gap-1">
+                  Eight
+                  <ExternalLink className="w-3 h-3" />
+                </span>
+              </Link>
+            </Button>
+          </div>
+        )}
       </form>
     </Form>
   );

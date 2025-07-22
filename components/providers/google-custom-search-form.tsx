@@ -11,12 +11,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ReactNode,
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useState,
 } from "react";
 import { useForm } from "react-hook-form";
 import { Form } from "../ui/form";
+import { useSearchParams } from "next/navigation";
 
 type ContextType = {
   isNewSearch: boolean;
@@ -33,40 +35,52 @@ const Context = createContext<ContextType>({} as ContextType);
 
 export function GoogleCustomSearchFormProvider({
   children,
-  searchId,
+  patternId,
 }: {
   children: ReactNode;
-  searchId: string;
+  patternId: string;
 }) {
-  const isNewSearch = searchId === "new";
+  const isNewSearch = patternId === "new";
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState<"sidebar" | "full">("full");
   const [googleCustomSearchPattern, setGoogleCustomSearchPattern] =
     useState<GoogleCustomSearchPattern>();
-  const [persistedSearchId, setPersistedSearchId] = useState(searchId);
+
+  const defaultValues = isNewSearch
+    ? DEFAULT_GOOGLE_CUSTOM_SEARCH_PATTERN
+    : {
+        ...DEFAULT_GOOGLE_CUSTOM_SEARCH_PATTERN,
+        patternId: isNewSearch ? undefined : patternId,
+      };
 
   // searchIdが変更されても、明示的に更新されるまでは古い値を保持
   const form = useForm<GoogleCustomSearchPattern>({
     resolver: zodResolver(googleCustomSearchPatternSchema),
-    // mode: "onChange",
-    defaultValues: DEFAULT_GOOGLE_CUSTOM_SEARCH_PATTERN,
+    mode: "onChange",
+    defaultValues,
   });
+
   const handleSearch = async (formData: GoogleCustomSearchPattern) => {
-    console.log("formData", formData);
     setGoogleCustomSearchPattern(formData);
   };
-  const { data, isLoading, isValidating, error } = useGoogleCustomSearch(
-    googleCustomSearchPattern
-  );
 
-  console.log("data", data);
+  const { data, isLoading, isValidating, error } = useGoogleCustomSearch({
+    formData: googleCustomSearchPattern,
+  });
 
   useEffect(() => {
+    const page = searchParams.get("start");
     if (data) {
       setMode("sidebar");
     } else {
       setMode("full");
     }
-  }, [data]);
+    if (page) {
+      const currentFormData = form.getValues();
+      currentFormData.googleCustomSearchParams.startPage = parseInt(page);
+      setGoogleCustomSearchPattern(currentFormData);
+    }
+  }, [data, form, searchParams]);
 
   return (
     <Context.Provider
