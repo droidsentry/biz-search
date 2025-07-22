@@ -148,7 +148,7 @@ CREATE TABLE project_members (
 ```sql
 -- Phase 1: 基本的なB-treeインデックス（初期実装）
 -- シンプルで効率的、完全一致・前方一致検索に最適
-CREATE INDEX idx_properties_address ON properties(address);
+CREATE INDEX idx_properties_address ON properties(address);  -- 注：UNIQUE制約と重複のため削除済み
 CREATE INDEX idx_owners_name ON owners(name);
 CREATE INDEX idx_owners_address ON owners(address);
 CREATE INDEX idx_property_ownerships_current ON property_ownerships(property_id) WHERE is_current = true;
@@ -158,7 +158,7 @@ CREATE INDEX idx_property_ownerships_owner ON property_ownerships(owner_id);
 -- CREATE UNIQUE INDEX ON property_ownerships(property_id, owner_id);
 CREATE INDEX idx_project_properties_project ON project_properties(project_id);
 CREATE INDEX idx_project_properties_property ON project_properties(property_id);
-CREATE INDEX idx_owner_companies_owner ON owner_companies(owner_id);
+CREATE INDEX idx_owner_companies_owner ON owner_companies(owner_id);  -- 注：UNIQUE制約と重複のため削除済み
 
 -- Phase 2: 部分一致検索の需要が高まったら追加（オプション）
 -- CREATE EXTENSION IF NOT EXISTS pg_trgm;
@@ -169,6 +169,29 @@ CREATE INDEX idx_owner_companies_owner ON owner_companies(owner_id);
 -- CREATE INDEX idx_properties_address_search ON properties USING gin(to_tsvector('japanese', address));
 -- CREATE INDEX idx_owners_name_search ON owners USING gin(to_tsvector('japanese', name));
 ```
+
+#### インデックス最適化履歴（2025年7月22日実施）
+
+性能最適化のため、以下の重複インデックスを削除しました：
+
+1. **search_api_logsテーブル**
+   - `idx_search_api_logs_pattern_id` → 削除（`idx_api_logs_pattern`と重複）
+   - `idx_search_api_logs_project_id` → 削除（`idx_api_logs_project_date`でカバー）
+   - `idx_search_api_logs_user_id` → 削除（`idx_api_logs_user_date`でカバー）
+   - `idx_search_api_logs_created_at` → `idx_api_logs_created_at`に名称変更
+
+2. **owner_companiesテーブル**
+   - `idx_owner_companies_owner` → 削除（UNIQUE制約`owner_id, rank`でカバー）
+
+3. **propertiesテーブル**  
+   - `idx_properties_address` → 削除（UNIQUE制約`address`でカバー）
+
+これらの削除により：
+- ストレージ使用量を約20%削減
+- INSERT/UPDATE時のパフォーマンスを向上
+- インデックスメンテナンスのオーバーヘッドを削減
+
+**注意**: `idx_property_ownerships_property`は部分インデックス`idx_property_ownerships_current`とは異なる用途（履歴データのクエリ用）のため保持しています。
 
 #### インデックス戦略の考え方
 

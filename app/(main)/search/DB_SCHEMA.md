@@ -125,6 +125,11 @@ CREATE INDEX idx_api_logs_created_at ON search_api_logs(created_at DESC);
 
 -- インデックス命名規則：idx_[テーブル名]_[カラム名]
 -- 複合インデックス：idx_[テーブル名]_[カラム1]_[カラム2]
+
+-- 注意: 2025年7月22日のインデックス最適化で以下を削除済み：
+-- idx_search_api_logs_pattern_id (idx_api_logs_patternと重複)
+-- idx_search_api_logs_project_id (idx_api_logs_project_dateでカバー)
+-- idx_search_api_logs_user_id (idx_api_logs_user_dateでカバー)
 ```
 
 ## 3. Row Level Security (RLS) ポリシー
