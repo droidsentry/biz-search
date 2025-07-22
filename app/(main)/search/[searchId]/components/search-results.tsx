@@ -20,7 +20,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 
 export function SearchResults() {
-  const { data, isLoading, error } = useGoogleCustomSearchForm();
+  const { data, isLoading, error, googleCustomSearchPattern } =
+    useGoogleCustomSearchForm();
 
   const searchParams = useSearchParams();
   // URLパラメータからstart値を取得（デフォルト1）
@@ -115,12 +116,90 @@ export function SearchResults() {
                 ({data?.searchInformation?.formattedTotalResults} 件)
               </span>
             </h2>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-              検索項目：{data?.queries?.request?.[0].searchTerms}
-            </p>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-              除外項目：{data?.queries?.request?.[0].excludeTerms}
-            </p>
+
+            {/* フォーム入力内容の表示 */}
+            {googleCustomSearchPattern && (
+              <div className="space-y-1 mt-2">
+                {/* 基本検索項目 */}
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  <span className="font-medium">顧客氏名：</span>
+                  {
+                    googleCustomSearchPattern.googleCustomSearchParams
+                      .customerName
+                  }
+                  {googleCustomSearchPattern.googleCustomSearchParams
+                    .customerNameExactMatch === "exact" && " (完全一致)"}
+                </p>
+
+                {/* 住所（入力されている場合） */}
+                {googleCustomSearchPattern.googleCustomSearchParams.address && (
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    <span className="font-medium">住所：</span>
+                    {googleCustomSearchPattern.googleCustomSearchParams.address}
+                    {googleCustomSearchPattern.googleCustomSearchParams
+                      .addressExactMatch === "exact" && " (完全一致)"}
+                  </p>
+                )}
+
+                {/* 日付制限 */}
+                {googleCustomSearchPattern.googleCustomSearchParams
+                  .dateRestrict !== "all" && (
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    <span className="font-medium">期間：</span>
+                    {googleCustomSearchPattern.googleCustomSearchParams
+                      .dateRestrict === "y1" && "過去1年"}
+                    {googleCustomSearchPattern.googleCustomSearchParams
+                      .dateRestrict === "y3" && "過去3年"}
+                    {googleCustomSearchPattern.googleCustomSearchParams
+                      .dateRestrict === "y5" && "過去5年"}
+                    {googleCustomSearchPattern.googleCustomSearchParams
+                      .dateRestrict === "y10" && "過去10年"}
+                  </p>
+                )}
+
+                {/* 詳細オプション */}
+                {googleCustomSearchPattern.googleCustomSearchParams
+                  .isAdvancedSearchEnabled && (
+                  <>
+                    {/* 追加キーワード */}
+                    {googleCustomSearchPattern.googleCustomSearchParams
+                      .additionalKeywords.length > 0 && (
+                      <p className="text-xs sm:text-sm text-muted-foreground">
+                        <span className="font-medium">追加キーワード：</span>
+                        {googleCustomSearchPattern.googleCustomSearchParams.additionalKeywords
+                          .map(
+                            (k) =>
+                              `${k.value}${
+                                k.matchType === "exact"
+                                  ? "(完全一致)"
+                                  : "(部分一致)"
+                              }`
+                          )
+                          .join("、")}
+                      </p>
+                    )}
+
+                    {/* 検索サイト */}
+                    {googleCustomSearchPattern.googleCustomSearchParams
+                      .siteSearchMode !== "any" &&
+                      googleCustomSearchPattern.googleCustomSearchParams
+                        .searchSites.length > 0 && (
+                        <p className="text-xs sm:text-sm text-muted-foreground">
+                          <span className="font-medium">検索サイト：</span>
+                          {googleCustomSearchPattern.googleCustomSearchParams.searchSites.join(
+                            "、"
+                          )}
+                          {googleCustomSearchPattern.googleCustomSearchParams
+                            .siteSearchMode === "specific" &&
+                            " (指定サイトのみ)"}
+                          {googleCustomSearchPattern.googleCustomSearchParams
+                            .siteSearchMode === "exclude" && " (除外)"}
+                        </p>
+                      )}
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -220,7 +299,7 @@ export function SearchResults() {
                       />
                     </div>
 
-                    {/* {image && (
+                    {image && (
                       <img
                         src={image}
                         alt={item.title || "Search result image"}
@@ -229,7 +308,7 @@ export function SearchResults() {
                           e.currentTarget.style.display = "none";
                         }}
                       />
-                    )} */}
+                    )}
                   </CardContent>
                 </Card>
               )

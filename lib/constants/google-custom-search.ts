@@ -9,7 +9,7 @@ export const DEFAULT_GOOGLE_CUSTOM_SEARCH_PATTERN: GoogleCustomSearchPattern = {
     customerName: "",
     customerNameExactMatch: "exact",
     address: "",
-    addressExactMatch: "exact",
+    addressExactMatch: "partial",
     dateRestrict: "all",
     isAdvancedSearchEnabled: false,
     additionalKeywords: [

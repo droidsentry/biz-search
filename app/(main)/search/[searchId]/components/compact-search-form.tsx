@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 
-import { Search, Settings2 } from "lucide-react";
+import { Search, Settings2, ExternalLink } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import type { GoogleCustomSearchPattern } from "@/lib/types/custom-search";
 import {
@@ -29,11 +29,15 @@ import { TagInputElegant } from "./tag-input-elegant";
 import { TagInput } from "./tag-input";
 import { DEFAULT_GOOGLE_CUSTOM_SEARCH_PATTERN } from "@/lib/constants/google-custom-search";
 import { useState, useEffect } from "react";
+import Link from "next/link";
+import { toast } from "sonner";
 
 interface CompactSearchFormProps {
   searchId?: string;
   onSave?: () => void;
 }
+
+type SearchSource = "facebook" | "linkedin" | "eight";
 
 export function CompactSearchForm({
   searchId,
@@ -59,6 +63,15 @@ export function CompactSearchForm({
       setExpandedAdvanced(true);
     }
   }, [advancedEnabled]);
+
+  // Eightボタンのクリック処理
+  const handleEightClick = () => {
+    const customerName = form.getValues("googleCustomSearchParams.customerName");
+    if (customerName) {
+      navigator.clipboard.writeText(customerName);
+      toast.success("名前をクリップボードにコピーしました");
+    }
+  };
 
   return (
     <Form {...form}>
@@ -271,7 +284,7 @@ export function CompactSearchForm({
               </div>
 
               {/* 検索対象サイト */}
-              <div>
+              <div className="space-y-2">
                 <Label className="text-sm">検索対象サイト</Label>
                 <FormField
                   control={form.control}
@@ -285,6 +298,42 @@ export function CompactSearchForm({
                           placeholder="ドメイン"
                           defaultTags={defaultSites}
                         />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                
+                {/* サイト検索モード */}
+                <FormField
+                  control={form.control}
+                  name="googleCustomSearchParams.siteSearchMode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <RadioGroup
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          className="flex gap-4 text-xs"
+                        >
+                          <div className="flex items-center space-x-1">
+                            <RadioGroupItem value="any" id="any" />
+                            <Label htmlFor="any" className="text-xs font-normal cursor-pointer">
+                              すべて検索
+                            </Label>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <RadioGroupItem value="specific" id="specific" />
+                            <Label htmlFor="specific" className="text-xs font-normal cursor-pointer">
+                              指定サイトのみ
+                            </Label>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <RadioGroupItem value="exclude" id="exclude" />
+                            <Label htmlFor="exclude" className="text-xs font-normal cursor-pointer">
+                              指定サイト除外
+                            </Label>
+                          </div>
+                        </RadioGroup>
                       </FormControl>
                     </FormItem>
                   )}
@@ -313,6 +362,69 @@ export function CompactSearchForm({
             </div>
           )}
         </Button>
+
+        {/* 外部リンクボタン */}
+        {isNewSearch &&
+          form.watch("googleCustomSearchParams.customerName") && (
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                type="button"
+                size="sm"
+                className="bg-[#1877F2] hover:bg-[#1864C9] text-white w-full"
+                asChild
+              >
+                <Link
+                  href={`https://www.facebook.com/search/top?q=${encodeURIComponent(
+                    form.watch("googleCustomSearchParams.customerName")
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <span className="flex items-center justify-center gap-1">
+                    Facebook
+                    <ExternalLink className="w-3 h-3" />
+                  </span>
+                </Link>
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="bg-[#0A66C2] hover:bg-[#0952A5] text-white w-full"
+                asChild
+              >
+                <Link
+                  href={`https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(
+                    form.watch("googleCustomSearchParams.customerName")
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <span className="flex items-center justify-center gap-1">
+                    LinkedIn
+                    <ExternalLink className="w-3 h-3" />
+                  </span>
+                </Link>
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="bg-gray-800 hover:bg-gray-700 text-white w-full"
+                asChild
+              >
+                <Link
+                  href="https://8card.net/myhome?page=1&sort=exchangeDate&tab=network"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={handleEightClick}
+                >
+                  <span className="flex items-center justify-center gap-1">
+                    Eight
+                    <ExternalLink className="w-3 h-3" />
+                  </span>
+                </Link>
+              </Button>
+            </div>
+          )}
       </form>
     </Form>
   );
