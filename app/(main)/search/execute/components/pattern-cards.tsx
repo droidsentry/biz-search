@@ -2,7 +2,17 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, BarChart3, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Clock,
+  BarChart3,
+  Trash2,
+  Search,
+  Calendar,
+  Globe,
+  FileText,
+  Link as LinkIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -43,53 +53,8 @@ export function PatternCards({ patterns }: PatternCardsProps) {
   const handlePatternClick = (e: React.MouseEvent, pattern: SearchPattern) => {
     e.preventDefault();
 
-    // // 現在のフォームの値を取得
-    // const currentFormValues = form.getValues();
-
-    // // パターンのparamsをパース
-    // const savedParams = pattern.googleCustomSearchParams;
-
-    // // フォームにデータを設定（customerNameとaddressは現在の値を維持）
-    // const formData: GoogleCustomSearchPattern = {
-    //   id: pattern.id,
-    //   searchPatternName: pattern.searchPatternName,
-    //   searchPatternDescription: pattern.searchPatternDescription || undefined,
-    //   googleCustomSearchParams: {
-    //     // 現在のフォームの顧客名と住所を維持
-    //     customerName: currentFormValues.googleCustomSearchParams.customerName,
-    //     address: currentFormValues.googleCustomSearchParams.address,
-    //     // その他の設定はパターンから読み込む
-    //     customerNameExactMatch: savedParams.customerNameExactMatch || "exact",
-    //     addressExactMatch: savedParams.addressExactMatch || "partial",
-    //     dateRestrict: savedParams.dateRestrict || "all",
-    //     isAdvancedSearchEnabled: savedParams.isAdvancedSearchEnabled || false,
-    //     additionalKeywords: savedParams.additionalKeywords || [],
-    //     searchSites: savedParams.searchSites || [],
-    //     siteSearchMode: savedParams.siteSearchMode || "any",
-    //   },
-    // };
-
-    // // フォームの値を更新
-    // form.reset(formData);
-
-    // // URLからstartパラメータを削除してページを更新
-    // const newParams = new URLSearchParams(searchParams);
-    // newParams.delete("start");
-    // newParams.set("patternId", pattern.id);
-    // // const newUrl = `${window.location.pathname}${
-    // //   newParams.toString() ? `?${newParams.toString()}` : ""
-    // // }`;
-    // const newUrl = `${pathname}${
-    //   newParams.toString() ? `?${newParams.toString()}` : ""
-    // }`;
-    // // パターンIDを更新
-    // router.replace(newUrl);
+    // URLを更新（これによりプロバイダーのuseEffectがトリガーされる）
     router.push(`/search/execute?patternId=${pattern.id}`);
-
-    // 自動的に検索を実行
-    setTimeout(() => {
-      form.handleSubmit(handleSearch)();
-    }, 100);
   };
 
   if (patterns.length === 0) {
@@ -109,25 +74,26 @@ export function PatternCards({ patterns }: PatternCardsProps) {
           <Card
             key={pattern.id}
             className={cn(
-              "group cursor-pointer transition-all hover:shadow-md",
+              "group cursor-pointer transition-all hover:shadow-sm  py-0",
               "hover:border-foreground/20 mb-2",
-              currentPatternId === pattern.id && "border-primary bg-primary/5 "
+              currentPatternId === pattern.id &&
+                "border-primary bg-primary/5 shadow-sm"
             )}
             onClick={(e) => handlePatternClick(e, pattern)}
           >
-            <CardContent className="p-4">
-              <div className="space-y-2">
-                <div className="flex items-start justify-between gap-2">
+            <CardContent className="p-3">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-2">
                   <h3 className="font-medium text-sm line-clamp-1">
                     {pattern.searchPatternName}
                   </h3>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity"
                     onClick={(e) => handleDelete(e, pattern.id)}
                   >
-                    <Trash2 className="h-3 w-3" />
+                    <Trash2 />
                   </Button>
                 </div>
 
@@ -137,7 +103,116 @@ export function PatternCards({ patterns }: PatternCardsProps) {
                   </p>
                 )}
 
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                {/* 検索パラメータの表示 */}
+                <div className="space-y-1.5 mt-2">
+                  {/* 検索期間 */}
+                  {pattern.googleCustomSearchParams.dateRestrict &&
+                    pattern.googleCustomSearchParams.dateRestrict !== "all" && (
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-3 w-3 text-muted-foreground" />
+                        <Badge variant="secondary" className="text-xs">
+                          {pattern.googleCustomSearchParams.dateRestrict ===
+                          "m6"
+                            ? "過去6ヶ月"
+                            : pattern.googleCustomSearchParams.dateRestrict ===
+                              "y1"
+                            ? "過去1年"
+                            : pattern.googleCustomSearchParams.dateRestrict ===
+                              "y3"
+                            ? "過去3年"
+                            : pattern.googleCustomSearchParams.dateRestrict ===
+                              "y5"
+                            ? "過去5年"
+                            : pattern.googleCustomSearchParams.dateRestrict ===
+                              "y10"
+                            ? "過去10年"
+                            : "指定なし"}
+                        </Badge>
+                      </div>
+                    )}
+
+                  {/* 追加キーワード */}
+                  {pattern.googleCustomSearchParams.additionalKeywords &&
+                    pattern.googleCustomSearchParams.additionalKeywords.length >
+                      0 && (
+                      <div className="flex items-start gap-2">
+                        <FileText className="h-3 w-3 text-muted-foreground mt-0.5" />
+                        <div className="flex-1 flex flex-wrap items-center gap-1">
+                          {pattern.googleCustomSearchParams.additionalKeywords
+                            .slice(0, 3)
+                            .map((keyword, index) => (
+                              <Badge
+                                key={index}
+                                variant="outline"
+                                className="px-1.5 py-0 text-[10px]"
+                              >
+                                {keyword.value}
+                                {keyword.matchType === "exact" && (
+                                  <span className="ml-0.5 text-[9px]">
+                                    (完全)
+                                  </span>
+                                )}
+                              </Badge>
+                            ))}
+                          {pattern.googleCustomSearchParams.additionalKeywords
+                            .length > 3 && (
+                            <Badge
+                              variant="outline"
+                              className="px-1.5 py-0 text-[10px]"
+                            >
+                              +
+                              {pattern.googleCustomSearchParams
+                                .additionalKeywords.length - 3}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                  {/* 検索対象サイト */}
+                  {pattern.googleCustomSearchParams.searchSites &&
+                    pattern.googleCustomSearchParams.searchSites.length > 0 &&
+                    pattern.googleCustomSearchParams.siteSearchMode !==
+                      "any" && (
+                      <div className="flex items-start gap-2">
+                        <Globe className="h-3 w-3 text-muted-foreground mt-0.5" />
+                        <div className="flex-1 flex flex-wrap items-center gap-1">
+                          <span className="text-xs text-muted-foreground">
+                            {pattern.googleCustomSearchParams.siteSearchMode ===
+                            "specific"
+                              ? "対象"
+                              : "除外"}
+                            :
+                          </span>
+                          {pattern.googleCustomSearchParams.searchSites
+                            .slice(0, 2)
+                            .map((site, index) => (
+                              <Badge
+                                key={index}
+                                variant="outline"
+                                className="px-1.5 py-0 text-[10px]"
+                              >
+                                <LinkIcon className="h-2.5 w-2.5 mr-0.5" />
+                                {site}
+                              </Badge>
+                            ))}
+                          {pattern.googleCustomSearchParams.searchSites.length >
+                            2 && (
+                            <Badge
+                              variant="outline"
+                              className="px-1.5 py-0 text-[10px]"
+                            >
+                              +
+                              {pattern.googleCustomSearchParams.searchSites
+                                .length - 2}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                </div>
+
+                <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground pt-1.5 mt-1.5 border-t">
                   <div className="flex items-center gap-1">
                     <BarChart3 className="h-3 w-3" />
                     <span>{pattern.usageCount}回</span>

@@ -24,6 +24,7 @@ export default async function SearchDetailPage({
   return (
     <GoogleCustomSearchFormProvider
       selectedSearchPattern={selectedSearchPattern}
+      patterns={patterns}
     >
       <SearchLayout patterns={patterns} />
     </GoogleCustomSearchFormProvider>

@@ -14,7 +14,13 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 
-import { Search, Settings2, ExternalLink } from "lucide-react";
+import {
+  Search,
+  Settings2,
+  ExternalLink,
+  RefreshCcw,
+  Save,
+} from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import type { GoogleCustomSearchPattern } from "@/lib/types/custom-search";
 import {
@@ -29,8 +35,8 @@ import { TagInputElegant } from "./tag-input-elegant";
 import { TagInput } from "./tag-input";
 import { DEFAULT_GOOGLE_CUSTOM_SEARCH_PATTERN } from "@/lib/constants/google-custom-search";
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { toast } from "sonner";
+import Link from "next/link";
 
 interface CompactSearchFormProps {
   onSave?: () => void;
@@ -60,7 +66,7 @@ export function CompactSearchForm({ onSave }: CompactSearchFormProps) {
 
   // Eightボタンのクリック処理
   const handleEightClick = () => {
-    console.log("handleEightClick");
+    // console.log("handleEightClick");
     const customerName = form.getValues(
       "googleCustomSearchParams.customerName"
     );
@@ -90,8 +96,23 @@ export function CompactSearchForm({ onSave }: CompactSearchFormProps) {
               disabled={
                 !form.getValues("googleCustomSearchParams.customerName")
               }
+              className="cursor-pointer"
             >
               保存
+            </Button>
+          )}
+          {!isNewSearch && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                // フォームをリセット
+                form.reset(DEFAULT_GOOGLE_CUSTOM_SEARCH_PATTERN);
+                // 新規検索ページへ遷移（検索結果もリセットされる）
+                window.location.href = "/search/execute?patternId=new";
+              }}
+            >
+              <RefreshCcw className="size-4" />
             </Button>
           )}
         </div>

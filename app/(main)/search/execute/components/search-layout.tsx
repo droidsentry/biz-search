@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tables } from "@/lib/types/database";
 import { useGoogleCustomSearchForm } from "@/components/providers/google-custom-search-form";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, RefreshCcw } from "lucide-react";
 import Link from "next/link";
 import { SearchPatternFormModal } from "./search-pattern-form-modal";
 import { useState, useEffect } from "react";
@@ -90,13 +90,6 @@ export function SearchLayout({ patterns: initialPatterns }: SearchLayoutProps) {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-medium text-sm">保存された検索パターン</h3>
-              {!isNewSearch && (
-                <Link href="/search/new">
-                  <Button variant="ghost" size="sm" className="h-8 px-2">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </Link>
-              )}
             </div>
             <PatternCards
               patterns={patterns}
