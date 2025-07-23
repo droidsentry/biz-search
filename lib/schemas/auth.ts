@@ -37,7 +37,7 @@ import AwesomeDebouncePromise from "awesome-debounce-promise";
   .refine(
     AwesomeDebouncePromise(
       async (userName) => await isUserNameUnique(userName),
-      500
+      800
     ),
     {
       message: "このユーザー名は既に使用されています",
