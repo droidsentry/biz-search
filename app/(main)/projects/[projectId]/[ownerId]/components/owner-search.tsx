@@ -7,6 +7,11 @@ import { useGoogleCustomSearchForm } from "@/components/providers/google-custom-
 import { useFormContext } from "react-hook-form";
 import { GoogleCustomSearchPattern } from "@/lib/types/custom-search";
 import { useEffect } from "react";
+import { Separator } from "@/components/ui/separator";
+import { PatternCards } from "./pattern-cards";
+import { SearchSidebar } from "./search-sidebar";
+import { cn } from "@/lib/utils";
+import { SearchForm } from "./search-form";
 
 interface OwnerSearchProps {
   initialQuery: string;
@@ -14,7 +19,7 @@ interface OwnerSearchProps {
 }
 
 function SearchContent({ initialQuery, initialAddress }: OwnerSearchProps) {
-  const { data } = useGoogleCustomSearchForm();
+  const { data, patterns } = useGoogleCustomSearchForm();
   const form = useFormContext<GoogleCustomSearchPattern>();
 
   // 初期値を設定（初回レンダリング時のみ）
@@ -42,9 +47,23 @@ function SearchContent({ initialQuery, initialAddress }: OwnerSearchProps) {
             <SearchResults />
           </div>
         )}
-        <div className="space-y-4 w-[320px] border rounded-lg p-4 sticky top-10 h-fit">
-          <CompactSearchForm searchId="new" />
-        </div>
+        {/* サイドバー */}
+        <SearchSidebar className={cn("z-40")}>
+          {/* <div className="space-y-4 w-[320px] border rounded-lg p-4 sticky top-10 h-fit"> */}
+          <div className="space-y-4 ">
+            <SearchForm />
+
+            <Separator />
+
+            {/* 保存されたパターン */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-medium text-sm">保存された検索パターン</h3>
+              </div>
+              <PatternCards patterns={patterns} />
+            </div>
+          </div>
+        </SearchSidebar>
       </div>
     </div>
   );
@@ -55,11 +74,14 @@ export function OwnerSearch({
   initialAddress,
 }: OwnerSearchProps) {
   return (
-    <GoogleCustomSearchFormProvider searchId="new">
-      <SearchContent
-        initialQuery={initialQuery}
-        initialAddress={initialAddress}
-      />
-    </GoogleCustomSearchFormProvider>
+    // <GoogleCustomSearchFormProvider
+    //   patterns={[]}
+    //   selectedSearchPattern={undefined}
+    // >
+    <SearchContent
+      initialQuery={initialQuery}
+      initialAddress={initialAddress}
+    />
+    // </GoogleCustomSearchFormProvider>
   );
 }

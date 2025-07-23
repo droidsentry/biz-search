@@ -48,6 +48,7 @@ export const generateGoogleCustomSearchParams = (parsedData: GoogleCustomSearchP
   // ========================================
   // 基本検索クエリの構築（常に実行）
   // ========================================
+  
   const queryParts: string[] = [];
   
   // 顧客名（必須）

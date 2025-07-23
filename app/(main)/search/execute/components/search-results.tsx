@@ -148,6 +148,8 @@ export function SearchResults() {
                   <p className="text-xs sm:text-sm text-muted-foreground">
                     <span className="font-medium">期間：</span>
                     {googleCustomSearchPattern.googleCustomSearchParams
+                      .dateRestrict === "m6" && "過去6ヶ月"}
+                    {googleCustomSearchPattern.googleCustomSearchParams
                       .dateRestrict === "y1" && "過去1年"}
                     {googleCustomSearchPattern.googleCustomSearchParams
                       .dateRestrict === "y3" && "過去3年"}

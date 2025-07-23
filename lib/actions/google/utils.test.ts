@@ -107,7 +107,14 @@ describe('generateGoogleCustomSearchParams', () => {
     });
 
     it('ページネーション用のstartパラメータを正しく設定する', () => {
-      const result = generateGoogleCustomSearchParams(basePattern, 11);
+      const patternWithStartPage: GoogleCustomSearchPattern = {
+        ...basePattern,
+        googleCustomSearchParams: {
+          ...basePattern.googleCustomSearchParams,
+          startPage: 11,
+        },
+      };
+      const result = generateGoogleCustomSearchParams(patternWithStartPage);
       
       expect(result.start).toBe(11);
     });

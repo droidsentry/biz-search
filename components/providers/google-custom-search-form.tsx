@@ -30,6 +30,7 @@ type ContextType = {
   isLoading: boolean;
   isValidating: boolean;
   error: Error | undefined;
+  patterns: SearchPattern[];
 };
 
 const Context = createContext<ContextType>({} as ContextType);
@@ -77,34 +78,41 @@ export function GoogleCustomSearchFormProvider({
   });
 
   // パターンの内容が変更されているかチェックする関数
-  const isPatternModified = (formData: GoogleCustomSearchPattern, originalPattern?: SearchPattern) => {
+  const isPatternModified = (
+    formData: GoogleCustomSearchPattern,
+    originalPattern?: SearchPattern
+  ) => {
     if (!originalPattern || !formData.patternId) return false;
-    
+
     const savedParams = originalPattern.googleCustomSearchParams;
     const currentParams = formData.googleCustomSearchParams;
-    
+
     // 各設定項目を比較（customerNameとaddressは除外）
     return (
-      savedParams.customerNameExactMatch !== currentParams.customerNameExactMatch ||
+      savedParams.customerNameExactMatch !==
+        currentParams.customerNameExactMatch ||
       savedParams.addressExactMatch !== currentParams.addressExactMatch ||
       savedParams.dateRestrict !== currentParams.dateRestrict ||
-      savedParams.isAdvancedSearchEnabled !== currentParams.isAdvancedSearchEnabled ||
-      JSON.stringify(savedParams.additionalKeywords) !== JSON.stringify(currentParams.additionalKeywords) ||
-      JSON.stringify(savedParams.searchSites) !== JSON.stringify(currentParams.searchSites) ||
+      savedParams.isAdvancedSearchEnabled !==
+        currentParams.isAdvancedSearchEnabled ||
+      JSON.stringify(savedParams.additionalKeywords) !==
+        JSON.stringify(currentParams.additionalKeywords) ||
+      JSON.stringify(savedParams.searchSites) !==
+        JSON.stringify(currentParams.searchSites) ||
       savedParams.siteSearchMode !== currentParams.siteSearchMode
     );
   };
 
   const handleSearch = async (formData: GoogleCustomSearchPattern) => {
     setIsSearching(true);
-    
+
     // パターンが変更されている場合はpatternIdをnullに設定
     if (formData.patternId && dynamicSelectedPattern) {
       if (isPatternModified(formData, dynamicSelectedPattern)) {
         formData.patternId = undefined;
       }
     }
-    
+
     setGoogleCustomSearchPattern(formData);
   };
 
@@ -230,6 +238,7 @@ export function GoogleCustomSearchFormProvider({
         isLoading,
         isValidating,
         error,
+        patterns,
       }}
     >
       <Form {...form}>{children}</Form>

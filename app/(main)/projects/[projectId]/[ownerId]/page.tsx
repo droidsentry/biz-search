@@ -9,6 +9,7 @@ import { CompanyInfoSidebar } from "./components/company-info-sidebar";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { formatAddressToCityLevel } from "@/lib/utils/address";
 
 export default async function OwnerDetailPage({
   params,
@@ -93,7 +94,7 @@ export default async function OwnerDetailPage({
             <div className="bg-background border border-muted-foreground/20 rounded-lg p-6 mt-[-1px] ">
               <OwnerSearch
                 initialQuery={owner.name}
-                initialAddress={owner.address}
+                initialAddress={formatAddressToCityLevel(owner.address)}
               />
             </div>
           </div>
