@@ -68,7 +68,7 @@ export default async function SearchPatternList({
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground">検索パターンがまだありません</p>
-        <Link href="/execute?patternId=new">
+        <Link href="/search/execute?patternId=new">
           <Button className="mt-4">最初の検索を開始</Button>
         </Link>
       </div>
