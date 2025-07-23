@@ -42,45 +42,30 @@ export async function checkProjectName(name: string): Promise<boolean> {
 export async function createProjectAction(formData: CreateProjectFormData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  
   if (!user) {
-    return { error: '認証が必要です' };
+    throw new Error('認証が必要です');
   }
-  
-  const result = createProjectSchema.safeParse(formData);
-  if (!result.success) {
-    return { 
-      error: '入力データが不正です',
-      details: result.error.flatten() 
-    };
-  }
-  
-  try {
-    const isUnique = await checkProjectName(result.data.name);
-    if (!isUnique) {
-      return { error: 'このプロジェクト名は既に使用されています' };
-    }
-    
-    const { data: project, error: projectError } = await supabase
-      .from('projects')
-      .insert({
-        name: result.data.name,
-        description: result.data.description,
-        created_by: user.id,
-      })
-      .select()
-      .single();
-    
-    if (projectError) {
-      console.error('プロジェクト作成エラー:', projectError);
-      return { error: 'プロジェクトの作成に失敗しました' };
-    }
-    
-    return { success: true, data: project };
-  } catch (error) {
+
+  const {success, data, error} = await createProjectSchema.safeParseAsync(formData);
+  if (!success) {
     console.error('プロジェクト作成エラー:', error);
-    return { error: '予期せぬエラーが発生しました' };
+    throw new Error(`プロジェクト作成エラー: ${error.message}`);
   }
+  const { data: project, error: projectError } = await supabase
+    .from('projects')
+    .insert({
+      name: data.name,
+      description: data.description,
+      created_by: user.id,
+    })
+    .select()
+    .single();
+    
+  if (projectError) {
+    console.error('プロジェクト作成エラー:', projectError);
+    throw new Error('プロジェクトの作成に失敗しました');
+  }
+  return project;
 }
 
 
@@ -274,7 +259,7 @@ async function upsertProjectProperties(
 /**
  * メイン関数：PDFデータをインポート
  */
-export async function importPropertiesFromPDF(
+async function importPropertiesFromPDF(
   projectId: string,
   pdfData: PDFPropertyData[],
   userId: string

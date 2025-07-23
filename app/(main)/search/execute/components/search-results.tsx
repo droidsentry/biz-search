@@ -1,7 +1,6 @@
 "use client";
 
 import { useGoogleCustomSearchForm } from "@/components/providers/google-custom-search-form";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Pagination,
@@ -14,7 +13,7 @@ import {
 } from "@/components/ui/pagination";
 
 import { cn } from "@/lib/utils";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";

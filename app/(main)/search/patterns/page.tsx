@@ -1,3 +1,5 @@
+import { Metadata } from "next";
+import { getBaseURL } from "@/lib/base-url";
 import { Button } from "@/components/ui/button";
 import { Plus, Search } from "lucide-react";
 import Link from "next/link";
@@ -18,6 +20,12 @@ function PatternListSkeleton() {
     </div>
   );
 }
+
+export const metadata: Metadata = {
+  metadataBase: new URL(getBaseURL()),
+  title: "検索パターン - BizSearch",
+  description: "よく使用する検索条件をパターンとして保存・管理できます。保存したパターンを使って効率的にビジネス情報を検索します。",
+};
 
 export default function SearchPage() {
   return (

@@ -26,7 +26,7 @@ export type PropertyWithOwnerAndCompany = {
   } | null
 }
 
-export type ProjectPropertiesResponse = {
+type ProjectPropertiesResponse = {
   data: PropertyWithOwnerAndCompany[] | null
   error: string | null
 }
@@ -129,38 +129,28 @@ export async function getProjectPropertiesAction(
   }
 }
 
-// Excelエクスポート用のデータ取得
-export async function exportProjectPropertiesToExcel(
+// エクスポート用のデータ取得
+export async function exportProjectProperties(
   projectId: string
-): Promise<{ data: any[] | null; error: string | null }> {
-  try {
-    const supabase = await createClient()
-    
+) {
+    const supabase = await createClient() 
     // 認証確認
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
-      return { data: null, error: '認証が必要です' }
+      throw new Error('認証が必要です')
     }
 
     // エクスポート用の関数を呼び出し
     const { data, error } = await supabase.rpc('get_project_export_data', {
       p_project_id: projectId
     })
-
-    if (error) {
+    if (error || !data) {
       console.error('エクスポートエラー:', error)
-      return { data: null, error: error.message }
+      throw new Error(error.message)
     }
 
     // データをそのまま返す（クライアント側でExcel形式に変換）
-    return { data, error: null }
-  } catch (error) {
-    console.error('予期せぬエラー:', error)
-    return { 
-      data: null, 
-      error: error instanceof Error ? error.message : '予期せぬエラーが発生しました' 
-    }
-  }
+    return data
 }
 
 // プロジェクト詳細を取得

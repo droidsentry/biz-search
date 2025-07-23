@@ -2,6 +2,7 @@
 
 import { googleCustomSearchParamsSchema } from '@/lib/schemas/custom-search'
 import { createClient } from '@/lib/supabase/server'
+import { GoogleCustomSearchParams } from '@/lib/types/custom-search'
 import { TablesInsert, TablesUpdate } from '@/lib/types/database'
 import { redirect } from 'next/navigation'
 
@@ -9,7 +10,7 @@ import { redirect } from 'next/navigation'
 export async function createSearchPattern(
   name: string,
   description: string | null,
-  googleCustomSearchParams: unknown
+  googleCustomSearchParams: GoogleCustomSearchParams
 ) {
   const supabase = await createClient()
   
@@ -23,7 +24,7 @@ export async function createSearchPattern(
   const paramsResult = googleCustomSearchParamsSchema.safeParse(googleCustomSearchParams)
   if (!paramsResult.success) {
     console.error('Invalid search parameters', paramsResult.error)
-    return { error: 'Invalid search parameters', details: paramsResult.error.flatten() }
+    throw new Error('Invalid search parameters')
   }
 
   // パターンの作成
@@ -40,10 +41,10 @@ export async function createSearchPattern(
 
   if (error) {
     console.error('パターン作成エラー:', error)
-    return { error: error.message }
+    throw new Error(error.message)
   }
 
-  return { success: true, data }
+  return data
 }
 
 // 検索パターンの更新

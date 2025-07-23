@@ -1,3 +1,6 @@
+import { Metadata } from "next";
+import { getBaseURL } from "@/lib/base-url";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -6,26 +9,21 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  ArrowUpRight,
-  Building2,
-  Search,
-  FileText,
-  Users,
-  Clock,
-  Package,
-  FolderOpen,
-  Activity,
-} from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { format, subDays } from "date-fns";
 import { ja } from "date-fns/locale";
+import { Building2, FolderOpen, Search, Users } from "lucide-react";
+import Link from "next/link";
 import {
-  ApiUsageChart,
   ApiUsageByPatternChart,
+  ApiUsageChart,
 } from "./components/api-usage-chart";
+
+export const metadata: Metadata = {
+  metadataBase: new URL(getBaseURL()),
+  title: "ダッシュボード - BizSearch",
+  description: "BizSearchの利用状況や最新の活動を確認できるダッシュボードです。プロジェクトの概要、API利用状況、検索履歴などを一覧で表示します。",
+};
 
 export default async function DashboardPage() {
   const supabase = await createClient();

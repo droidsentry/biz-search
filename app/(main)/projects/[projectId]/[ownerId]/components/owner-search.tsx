@@ -1,17 +1,15 @@
 "use client";
 
-import { GoogleCustomSearchFormProvider } from "@/components/providers/google-custom-search-form";
-import { CompactSearchForm } from "@/app/(main)/search/execute/components/compact-search-form";
 import { SearchResults } from "@/app/(main)/search/execute/components/search-results";
 import { useGoogleCustomSearchForm } from "@/components/providers/google-custom-search-form";
-import { useFormContext } from "react-hook-form";
-import { GoogleCustomSearchPattern } from "@/lib/types/custom-search";
-import { useEffect } from "react";
 import { Separator } from "@/components/ui/separator";
-import { PatternCards } from "./pattern-cards";
-import { SearchSidebar } from "./search-sidebar";
+import { GoogleCustomSearchPattern } from "@/lib/types/custom-search";
 import { cn } from "@/lib/utils";
+import { useEffect } from "react";
+import { useFormContext } from "react-hook-form";
+import { PatternCards } from "./pattern-cards";
 import { SearchForm } from "./search-form";
+import { SearchSidebar } from "./search-sidebar";
 
 interface OwnerSearchProps {
   initialQuery: string;
@@ -35,7 +33,7 @@ function SearchContent({ initialQuery, initialAddress }: OwnerSearchProps) {
     if (initialAddress && !currentAddress) {
       form.setValue("googleCustomSearchParams.address", initialAddress);
     }
-  }, []); // 依存配列を空にして初回のみ実行
+  }, [form, initialAddress, initialQuery]);
 
   return (
     <div className="space-y-6 w-full">

@@ -20,7 +20,7 @@ export type OwnerWithCompaniesAndProperties = {
   }[]
 }
 
-export type OwnerDetailsResponse = {
+type OwnerDetailsResponse = {
   data: OwnerWithCompaniesAndProperties | null
   error: string | null
 }
@@ -121,7 +121,12 @@ export async function getOwnerDetailsAction(
   }
 }
 
-// 会社情報を更新
+/**
+ * 会社情報を更新
+ * @param ownerId 所有者ID
+ * @param companyData 会社情報
+ * @returns 成功したかどうか
+ */
 export async function updateOwnerCompanyAction(
   ownerId: string,
   companyData: {
@@ -131,14 +136,12 @@ export async function updateOwnerCompanyAction(
     sourceUrl: string
     rank: 1 | 2 | 3
   }
-): Promise<{ success: boolean; error?: string }> {
-  try {
+) {
     const supabase = await createClient()
-    
     // 認証確認
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
-      return { success: false, error: '認証が必要です' }
+      throw new Error('認証が必要です')
     }
 
     const insertData: TablesInsert<'owner_companies'> = {
@@ -159,31 +162,27 @@ export async function updateOwnerCompanyAction(
 
     if (error) {
       console.error('会社情報更新エラー:', error)
-      return { success: false, error: '会社情報の更新に失敗しました' }
+      throw new Error('会社情報の更新に失敗しました')
     }
 
-    return { success: true }
-  } catch (error) {
-    console.error('予期せぬエラー:', error)
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : '予期せぬエラーが発生しました' 
-    }
-  }
+    return true
 }
 
-// 会社情報を削除
+/**
+ * 会社情報を削除
+ * @param ownerId 所有者ID
+ * @param rank 会社情報のランク
+ * @returns 成功したかどうか
+ */
 export async function deleteOwnerCompanyAction(
   ownerId: string,
   rank: 1 | 2 | 3
-): Promise<{ success: boolean; error?: string }> {
-  try {
+) {
     const supabase = await createClient()
-    
     // 認証確認
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
-      return { success: false, error: '認証が必要です' }
+      throw new Error('認証が必要です')
     }
 
     const { error } = await supabase
@@ -194,15 +193,8 @@ export async function deleteOwnerCompanyAction(
 
     if (error) {
       console.error('会社情報削除エラー:', error)
-      return { success: false, error: '会社情報の削除に失敗しました' }
+      throw new Error('会社情報の削除に失敗しました エラー:' + error.message)
     }
 
-    return { success: true }
-  } catch (error) {
-    console.error('予期せぬエラー:', error)
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : '予期せぬエラーが発生しました' 
-    }
-  }
+    return true
 }

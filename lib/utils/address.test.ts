@@ -182,8 +182,8 @@ describe('formatAddressToCityLevel', () => {
     });
 
     test('nullやundefinedの場合', () => {
-      expect(formatAddressToCityLevel(null as any)).toBe('');
-      expect(formatAddressToCityLevel(undefined as any)).toBe('');
+      expect(formatAddressToCityLevel(null as unknown as string)).toBe('');
+      expect(formatAddressToCityLevel(undefined as unknown as string)).toBe('');
     });
 
     test('不完全な住所の場合', () => {

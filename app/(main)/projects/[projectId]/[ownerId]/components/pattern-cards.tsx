@@ -1,53 +1,33 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useGoogleCustomSearchForm } from "@/components/providers/google-custom-search-form";
 import { Badge } from "@/components/ui/badge";
-import {
-  Clock,
-  BarChart3,
-  Trash2,
-  Search,
-  Calendar,
-  Globe,
-  FileText,
-  Link as LinkIcon,
-} from "lucide-react";
-import Link from "next/link";
+import { Card, CardContent } from "@/components/ui/card";
+import { SearchPattern } from "@/lib/types/custom-search";
+import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
-import { cn } from "@/lib/utils";
-import { Tables } from "@/lib/types/database";
-import { useState } from "react";
-import { useGoogleCustomSearchForm } from "@/components/providers/google-custom-search-form";
-import { useFormContext } from "react-hook-form";
 import {
-  GoogleCustomSearchPattern,
-  SearchPattern,
-} from "@/lib/types/custom-search";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+  BarChart3,
+  Calendar,
+  Clock,
+  FileText,
+  Globe,
+  Link as LinkIcon,
+} from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 
 interface PatternCardsProps {
   patterns: SearchPattern[];
 }
 
 export function PatternCards({ patterns }: PatternCardsProps) {
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [selectedPatternId, setSelectedPatternId] = useState<string>("");
-  const { handleSearch, patternId } = useGoogleCustomSearchForm();
+  const { patternId } = useGoogleCustomSearchForm();
 
   const currentPatternId = patternId;
-  const form = useFormContext<GoogleCustomSearchPattern>();
-  const searchParams = useSearchParams();
+
   const pathname = usePathname();
   const router = useRouter();
-
-  const handleDelete = (e: React.MouseEvent, patternId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setSelectedPatternId(patternId);
-    setDeleteModalOpen(true);
-  };
 
   const handlePatternClick = (e: React.MouseEvent, pattern: SearchPattern) => {
     e.preventDefault();

@@ -1,3 +1,5 @@
+import { Metadata } from "next";
+import { getBaseURL } from "@/lib/base-url";
 import { notFound } from "next/navigation";
 import { getProjectAction, getProjectPropertiesAction } from "./action";
 import { PropertyTable } from "./components/property-table";
@@ -5,6 +7,23 @@ import { ExportButton } from "./components/export-button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ projectId: string }>;
+}): Promise<Metadata> {
+  const { projectId } = await params;
+  const { data: project } = await getProjectAction(projectId);
+  
+  return {
+    metadataBase: new URL(getBaseURL()),
+    title: project ? `${project.name} - BizSearch` : "プロジェクト詳細 - BizSearch",
+    description: project 
+      ? `${project.name}の物件一覧と詳細情報を確認できます。物件の追加、編集、エクスポートなどの管理機能を提供します。`
+      : "プロジェクトの物件一覧と詳細情報を確認できます。",
+  };
+}
 
 export default async function ProjectDetailPage({
   params,

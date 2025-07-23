@@ -1,15 +1,33 @@
-import { notFound } from "next/navigation";
-import { getOwnerDetailsAction } from "./action";
-import { OwnerInfo } from "./components/owner-info";
-import { MapView } from "./components/map-view";
-import { StreetView } from "./components/street-view";
-import { ResearchTools } from "./components/research-tools";
-import { OwnerSearch } from "./components/owner-search";
-import { CompanyInfoSidebar } from "./components/company-info-sidebar";
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { Metadata } from "next";
+import { getBaseURL } from "@/lib/base-url";
 import { Button } from "@/components/ui/button";
 import { formatAddressToCityLevel } from "@/lib/utils/address";
+import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { getOwnerDetailsAction } from "./action";
+import { CompanyInfoSidebar } from "./components/company-info-sidebar";
+import { MapView } from "./components/map-view";
+import { OwnerInfo } from "./components/owner-info";
+import { OwnerSearch } from "./components/owner-search";
+import { StreetView } from "./components/street-view";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ projectId: string; ownerId: string }>;
+}): Promise<Metadata> {
+  const { projectId, ownerId } = await params;
+  const { data: owner } = await getOwnerDetailsAction(projectId, ownerId);
+  
+  return {
+    metadataBase: new URL(getBaseURL()),
+    title: owner ? `${owner.name} - BizSearch` : "所有者詳細 - BizSearch",
+    description: owner 
+      ? `${owner.name}の詳細情報、地図、ストリートビュー、関連企業情報を確認できます。`
+      : "所有者の詳細情報と関連データを確認できます。",
+  };
+}
 
 export default async function OwnerDetailPage({
   params,

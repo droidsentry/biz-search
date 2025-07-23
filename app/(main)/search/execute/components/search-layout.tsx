@@ -1,23 +1,18 @@
 "use client";
 
-import { SearchSidebar } from "./search-sidebar";
-import { CompactSearchForm } from "./compact-search-form";
-import { PatternCards } from "./pattern-cards";
-import { SearchResults } from "./search-results";
-import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Card, CardContent } from "@/components/ui/card";
-import { Tables } from "@/lib/types/database";
 import { useGoogleCustomSearchForm } from "@/components/providers/google-custom-search-form";
-import { Button } from "@/components/ui/button";
-import { Plus, RefreshCcw } from "lucide-react";
-import Link from "next/link";
-import { SearchPatternFormModal } from "./search-pattern-form-modal";
-import { useState, useEffect } from "react";
-import { MobileSidebarToggle } from "./mobile-sidebar-toggle";
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { SearchPattern } from "@/lib/types/custom-search";
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { SearchPattern } from "@/lib/types/custom-search";
+import { useState } from "react";
+import { CompactSearchForm } from "./compact-search-form";
+import { MobileSidebarToggle } from "./mobile-sidebar-toggle";
+import { PatternCards } from "./pattern-cards";
+import { SearchPatternFormModal } from "./search-pattern-form-modal";
+import { SearchResults } from "./search-results";
+import { SearchSidebar } from "./search-sidebar";
 
 interface SearchLayoutProps {
   patterns: SearchPattern[];
@@ -27,8 +22,7 @@ export function SearchLayout({ patterns: initialPatterns }: SearchLayoutProps) {
   const { isNewSearch, data, patternId } = useGoogleCustomSearchForm();
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [patterns, setPatterns] = useState(initialPatterns);
-  // const [currentSearchId, setCurrentSearchId] = useState(patternId);
+  const [patterns] = useState(initialPatterns);
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
@@ -104,12 +98,7 @@ export function SearchLayout({ patterns: initialPatterns }: SearchLayoutProps) {
           onClose={() => setShowSaveModal(false)}
           mode="create"
           projectId="default"
-          onSaveSuccess={(newPatternId, patternData) => {
-            // // URLをhistory APIで静かに更新（リロードなし）
-            // window.history.replaceState({}, "", `/search/${newPatternId}`);
-            // setCurrentSearchId(newPatternId);
-            // router.push(`/search/${newPatternId}`);
-            // URLからstartパラメータを削除してページを更新
+          onSaveSuccess={(newPatternId) => {
             const newParams = new URLSearchParams(searchParams);
             newParams.delete("start");
             newParams.set("patternId", newPatternId);

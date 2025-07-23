@@ -1,4 +1,12 @@
+import { Metadata } from "next";
+import { getBaseURL } from "@/lib/base-url";
 import { ApiUsage } from './components/api-usage'
+
+export const metadata: Metadata = {
+  metadataBase: new URL(getBaseURL()),
+  title: "設定 - BizSearch",
+  description: "BizSearchの各種設定を管理します。API使用状況の確認、アカウント設定、通知設定などを行うことができます。",
+};
 
 export default function SettingsPage() {
   return (

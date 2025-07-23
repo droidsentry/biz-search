@@ -1,19 +1,16 @@
 "use server";
 
 import { createGoogleSearchClient } from "@/lib/google/client";
-import {
-  googleCustomSearchParamsSchema,
-  googleCustomSearchPatternSchema,
-} from "@/lib/schemas/custom-search";
+import { googleCustomSearchPatternSchema } from "@/lib/schemas/custom-search";
+import { createClient } from "@/lib/supabase/server";
 import {
   GoogleCustomSearchPattern,
   GoogleSearchRequestParams,
 } from "@/lib/types/custom-search";
-import { generateGoogleCustomSearchParams } from "./utils";
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import { Json, TablesInsert } from "@/lib/types/database";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { generateGoogleCustomSearchParams } from "./utils";
 
 export async function getCustomerInfoFromGoogleCustomSearch(
   formData: GoogleCustomSearchPattern

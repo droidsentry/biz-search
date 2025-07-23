@@ -19,17 +19,14 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { GoogleCustomSearchPattern } from "@/lib/types/custom-search";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useTransition } from "react";
+import { useForm, useFormContext } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { createSearchPattern, updateSearchPattern } from "../action";
-import { useGoogleCustomSearchForm } from "@/components/providers/google-custom-search-form";
-import { useFormContext } from "react-hook-form";
-import { GoogleCustomSearchPattern } from "@/lib/types/custom-search";
-import { googleCustomSearchPatternSchema } from "@/lib/schemas/custom-search";
-import { useState } from "react";
 
 // パターン保存用のスキーマ
 const patternFormSchema = z.object({
@@ -47,7 +44,7 @@ interface SearchPatternFormModalProps {
   mode: "create" | "edit";
   patternId?: string;
   projectId: string;
-  onSaveSuccess?: (patternId: string, patternData?: any) => void;
+  onSaveSuccess?: (patternId: string) => void;
 }
 
 export function SearchPatternFormModal({
@@ -61,7 +58,7 @@ export function SearchPatternFormModal({
 }: SearchPatternFormModalProps) {
   const router = useRouter();
   const formContext = useFormContext<GoogleCustomSearchPattern>();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const form = useForm<PatternFormData>({
     resolver: zodResolver(patternFormSchema),
@@ -72,10 +69,7 @@ export function SearchPatternFormModal({
   });
 
   const handleSubmit = async (data: PatternFormData) => {
-    console.log("handleSubmit", data);
-    setIsLoading(true);
-
-    try {
+    startTransition(async () => {
       if (mode === "create") {
         // 現在のフォームデータから検索パラメータを取得
         const currentFormData = formContext.getValues();
@@ -84,20 +78,17 @@ export function SearchPatternFormModal({
           data.name,
           data.description || null,
           currentFormData.googleCustomSearchParams
-        );
+        ).catch((error) => {
+          toast.error(error.message);
+        });
 
-        if (result.error) {
-          toast.error(result.error);
-          return;
-        }
-
-        if (result.success && result.data) {
+        if (result) {
           toast.success("検索パターンを保存しました");
           // URLを更新せずにモーダルを閉じるだけにする
           onClose();
           // 保存成功を親コンポーネントに通知
           if (onSaveSuccess) {
-            onSaveSuccess(result.data.id, result.data);
+            onSaveSuccess(result.id);
           }
         }
       } else if (mode === "edit" && patternId) {
@@ -117,12 +108,7 @@ export function SearchPatternFormModal({
           onClose();
         }
       }
-    } catch (error) {
-      console.error("エラー:", error);
-      toast.error("予期せぬエラーが発生しました");
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
 
   return (
@@ -156,7 +142,7 @@ export function SearchPatternFormModal({
                     <Input
                       placeholder="例: 東京都内の経営者"
                       {...field}
-                      disabled={isLoading}
+                      disabled={isPending}
                     />
                   </FormControl>
                   <FormMessage />
@@ -176,7 +162,7 @@ export function SearchPatternFormModal({
                       rows={3}
                       className="resize-none"
                       {...field}
-                      disabled={isLoading}
+                      disabled={isPending}
                     />
                   </FormControl>
                   <FormMessage />
@@ -189,12 +175,12 @@ export function SearchPatternFormModal({
                 type="button"
                 variant="outline"
                 onClick={onClose}
-                disabled={isLoading}
+                disabled={isPending}
               >
                 キャンセル
               </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? "処理中..." : mode === "create" ? "保存" : "更新"}
+              <Button type="submit" disabled={isPending}>
+                {isPending ? "処理中..." : mode === "create" ? "保存" : "更新"}
               </Button>
             </DialogFooter>
           </form>

@@ -1,21 +1,16 @@
-'use client'
+"use client";
 
-import { ProjectWithProgress } from '@/app/(main)/projects/action'
-import { ProjectCard } from '@/app/(main)/projects/components/project-card'
-import { ProjectTable } from '@/app/(main)/projects/components/project-table'
-import { useProject } from '@/components/providers/project'
+import { ProjectCard } from "@/app/(main)/projects/components/project-card";
+import { ProjectTable } from "@/app/(main)/projects/components/project-table";
+import { useProject } from "@/components/providers/project";
+import { ProjectWithProgress } from "@/lib/types/project";
 
-
-interface ProjectListProps {
-  projects: ProjectWithProgress[]
-}
-
-export function ProjectList({ projects }: ProjectListProps) {
-  const { viewMode } = useProject()
+export function ProjectList({ projects }: { projects: ProjectWithProgress[] }) {
+  const { viewMode } = useProject();
 
   return (
     <div className="mt-10">
-      {viewMode === 'grid' ? (
+      {viewMode === "grid" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {projects.map((project) => (
             <ProjectCard key={project.id} project={project} />
@@ -36,5 +31,5 @@ export function ProjectList({ projects }: ProjectListProps) {
         </div>
       )}
     </div>
-  )
+  );
 }

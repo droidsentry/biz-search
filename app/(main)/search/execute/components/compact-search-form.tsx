@@ -5,24 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 
-import {
-  Search,
-  Settings2,
-  ExternalLink,
-  RefreshCcw,
-  Save,
-} from "lucide-react";
-import { useFormContext } from "react-hook-form";
-import type { GoogleCustomSearchPattern } from "@/lib/types/custom-search";
 import {
   Form,
   FormControl,
@@ -31,12 +15,15 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { TagInputElegant } from "./tag-input-elegant";
-import { TagInput } from "./tag-input";
 import { DEFAULT_GOOGLE_CUSTOM_SEARCH_PATTERN } from "@/lib/constants/google-custom-search";
-import { useState, useEffect } from "react";
-import { toast } from "sonner";
+import type { GoogleCustomSearchPattern } from "@/lib/types/custom-search";
+import { ExternalLink, RefreshCcw, Search, Settings2 } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useFormContext } from "react-hook-form";
+import { toast } from "sonner";
+import { TagInput } from "./tag-input";
+import { TagInputElegant } from "./tag-input-elegant";
 
 interface CompactSearchFormProps {
   onSave?: () => void;
@@ -438,7 +425,7 @@ export function CompactSearchForm({ onSave }: CompactSearchFormProps) {
         </Button>
 
         {/* 外部リンクボタン */}
-        {isNewSearch && form.watch("googleCustomSearchParams.customerName") && (
+        {form.watch("googleCustomSearchParams.customerName") && (
           <div className="grid grid-cols-3 gap-2">
             <Button
               type="button"

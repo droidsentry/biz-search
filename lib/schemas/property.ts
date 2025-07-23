@@ -2,26 +2,21 @@ import { z } from "zod";
 import AwesomeDebouncePromise from "awesome-debounce-promise";
 import { checkProjectName } from "@/lib/actions/property";
 
-// プロジェクト作成スキーマ
-export const createProjectSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(3, "プロジェクト名は3文字以上で入力してください")
-    .max(100, "プロジェクト名は100文字以内で入力してください")
-    .regex(
-      /^[a-zA-Z0-9ぁ-んァ-ヶー一-龠々〆〤〥〦〧〨〩〪〭〮〫〬\s\-_]+$/,
-      "使用できない文字が含まれています"
-    ),
-  description: z
+
+/**
+ * プロジェクト説明スキーマ
+ */
+const descriptionSchema = z
     .string()
     .trim()
     .max(500, "説明は500文字以内で入力してください")
-    .optional(),
-});
+    .optional()
 
-// サーバーアクション用（デバウンスなし）
-export const projectNameWithUniquenessCheckSchema = z
+/**
+ * プロジェクト名スキーマ
+ * サーバーアクション用（デバウンスなし）
+ */
+const projectNameWithUniquenessCheckSchema = z
   .string()
   .trim()
   .min(3, "プロジェクト名は3文字以上で入力してください")
@@ -30,10 +25,14 @@ export const projectNameWithUniquenessCheckSchema = z
     /^[a-zA-Z0-9ぁ-んァ-ヶー一-龠々〆〤〥〦〧〨〩〪〭〮〫〬\s\-_]+$/,
     "使用できない文字が含まれています"
   )
-  .refine((name) => checkProjectName(name));
+  .refine(async (name) => await checkProjectName(name),{
+    message: "このプロジェクト名は既に使用されています",
+  });
 
-// フロントエンド用（デバウンス付き）
-export const debouncedProjectNameWithUniquenessCheckSchema = z
+/**
+ * フロントエンド用（デバウンス付き）
+ */
+const debouncedProjectNameWithUniquenessCheckSchema = z
   .string()
   .trim()
   .min(3, "プロジェクト名は3文字以上で入力してください")
@@ -45,17 +44,31 @@ export const debouncedProjectNameWithUniquenessCheckSchema = z
   .refine(
     AwesomeDebouncePromise(
       async (name) => await checkProjectName(name),
-      500
+      800
     ),
     {
       message: "このプロジェクト名は既に使用されています",
     }
   );
 
-// フロントエンド用の拡張プロジェクト作成スキーマ
+/**
+ * プロジェクト作成スキーマ
+ * サーバーアクション用（デバウンスなし）
+ */
+export const createProjectSchema = z.object({
+  name: projectNameWithUniquenessCheckSchema,
+  description:descriptionSchema,
+});
+/**
+ * フロントエンド用の拡張プロジェクト作成スキーマ
+ * デバウンスを使用したバリデーションを行う。
+ */
 export const extendedCreateProjectSchema = createProjectSchema.extend({
   name: debouncedProjectNameWithUniquenessCheckSchema,
 });
+
+
+
 
 // 物件データ保存用スキーマ
 export const propertyDataSchema = z.object({

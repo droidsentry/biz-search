@@ -1,8 +1,7 @@
-import { googleCustomSearchParamsSchema, googleCustomSearchPatternSchema } from '@/lib/schemas/custom-search';
-import { createClient } from '@/lib/supabase/server';
-import { Tables } from '@/lib/types/database';
+'use server'
 
-type SearchPattern = Tables<'search_patterns'>;
+import { googleCustomSearchParamsSchema } from '@/lib/schemas/custom-search';
+import { createClient } from '@/lib/supabase/server';
 
 export async function getSearchPatterns() {
   const supabase = await createClient();
