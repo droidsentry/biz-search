@@ -43,7 +43,7 @@ export function SearchPatternDeleteModal({
 
       if (result.success) {
         toast.success("検索パターンを削除しました");
-        router.push("/search");
+        router.push("/search/patterns");
       }
     } catch (error) {
       console.error("削除エラー:", error);
@@ -65,16 +65,16 @@ export function SearchPatternDeleteModal({
         </AlertDialogHeader>
 
         <AlertDialogFooter>
-          <Button 
-            type="button" 
-            variant="outline" 
+          <Button
+            type="button"
+            variant="outline"
             onClick={onClose}
             disabled={isDeleting}
           >
             キャンセル
           </Button>
-          <Button 
-            variant="destructive" 
+          <Button
+            variant="destructive"
             onClick={handleDelete}
             disabled={isDeleting}
           >
