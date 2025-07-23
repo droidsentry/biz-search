@@ -1,8 +1,8 @@
 "use client";
 
 import { GoogleCustomSearchFormProvider } from "@/components/providers/google-custom-search-form";
-import { CompactSearchForm } from "@/app/(main)/search/[patternId]/components/compact-search-form";
-import { SearchResults } from "@/app/(main)/search/[patternId]/components/search-results";
+import { CompactSearchForm } from "@/app/(main)/search/execute/components/compact-search-form";
+import { SearchResults } from "@/app/(main)/search/execute/components/search-results";
 import { useGoogleCustomSearchForm } from "@/components/providers/google-custom-search-form";
 import { useFormContext } from "react-hook-form";
 import { GoogleCustomSearchPattern } from "@/lib/types/custom-search";

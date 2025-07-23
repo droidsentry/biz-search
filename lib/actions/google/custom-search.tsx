@@ -198,7 +198,9 @@ async function recordSearchApiLog({
   }
 
   if (process.env.NODE_ENV === "development") {
+    // console.log("APIログ記録成功:", data);
     console.log("APIログ記録成功:", data);
+    // console.log("APIログ記録成功:");
   }
 
   return { success: true, data };

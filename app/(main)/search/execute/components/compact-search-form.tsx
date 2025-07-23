@@ -33,7 +33,6 @@ import Link from "next/link";
 import { toast } from "sonner";
 
 interface CompactSearchFormProps {
-  searchId?: string;
   onSave?: () => void;
 }
 
@@ -210,26 +209,68 @@ export function CompactSearchForm({ onSave }: CompactSearchFormProps) {
           <FormField
             control={form.control}
             name="googleCustomSearchParams.dateRestrict"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-sm">検索期間</FormLabel>
-                <Select
-                  defaultValue={field.value}
-                  onValueChange={field.onChange}
-                >
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="すべての期間" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">すべての期間</SelectItem>
-                    <SelectItem value="y1">過去1年間</SelectItem>
-                    <SelectItem value="y3">過去3年間</SelectItem>
-                    <SelectItem value="y5">過去5年間</SelectItem>
-                    <SelectItem value="y10">過去10年間</SelectItem>
-                  </SelectContent>
-                </Select>
-              </FormItem>
-            )}
+            render={({ field }) => {
+              // console.log("field", field);
+              return (
+                <FormItem>
+                  <FormLabel className="text-sm">検索期間</FormLabel>
+                  <RadioGroup
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    className="grid grid-cols-3 gap-2 text-xs"
+                  >
+                    <FormItem className="flex items-center gap-2">
+                      <FormControl>
+                        <RadioGroupItem value="all" />
+                      </FormControl>
+                      <FormLabel className="text-xs cursor-pointer font-normal">
+                        全て
+                      </FormLabel>
+                    </FormItem>
+                    <FormItem className="flex items-center gap-2">
+                      <FormControl>
+                        <RadioGroupItem value="m6" />
+                      </FormControl>
+                      <FormLabel className="text-xs cursor-pointer font-normal">
+                        半年間
+                      </FormLabel>
+                    </FormItem>
+                    <FormItem className="flex items-center gap-2">
+                      <FormControl>
+                        <RadioGroupItem value="y1" />
+                      </FormControl>
+                      <FormLabel className="text-xs cursor-pointer font-normal">
+                        1年間
+                      </FormLabel>
+                    </FormItem>
+                    <FormItem className="flex items-center gap-2">
+                      <FormControl>
+                        <RadioGroupItem value="y3" />
+                      </FormControl>
+                      <FormLabel className="text-xs cursor-pointer font-normal">
+                        3年間
+                      </FormLabel>
+                    </FormItem>
+                    <FormItem className="flex items-center gap-2">
+                      <FormControl>
+                        <RadioGroupItem value="y5" />
+                      </FormControl>
+                      <FormLabel className="text-xs cursor-pointer font-normal">
+                        5年間
+                      </FormLabel>
+                    </FormItem>
+                    <FormItem className="flex items-center gap-2">
+                      <FormControl>
+                        <RadioGroupItem value="y10" />
+                      </FormControl>
+                      <FormLabel className="text-xs cursor-pointer font-normal">
+                        10年間
+                      </FormLabel>
+                    </FormItem>
+                  </RadioGroup>
+                </FormItem>
+              );
+            }}
           />
         </div>
 

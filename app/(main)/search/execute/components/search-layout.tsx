@@ -16,35 +16,39 @@ import { SearchPatternFormModal } from "./search-pattern-form-modal";
 import { useState, useEffect } from "react";
 import { MobileSidebarToggle } from "./mobile-sidebar-toggle";
 import { cn } from "@/lib/utils";
-import { useRouter } from "next/navigation";
-
-type SearchPattern = Tables<"search_patterns">;
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { SearchPattern } from "@/lib/types/custom-search";
 
 interface SearchLayoutProps {
   patterns: SearchPattern[];
-  patternId: string;
 }
 
-export function SearchLayout({
-  patterns: initialPatterns,
-  patternId,
-}: SearchLayoutProps) {
-  const { isNewSearch, data } = useGoogleCustomSearchForm();
+export function SearchLayout({ patterns: initialPatterns }: SearchLayoutProps) {
+  const { isNewSearch, data, patternId } = useGoogleCustomSearchForm();
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [patterns, setPatterns] = useState(initialPatterns);
-  const [currentSearchId, setCurrentSearchId] = useState(patternId);
+  // const [currentSearchId, setCurrentSearchId] = useState(patternId);
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
   const router = useRouter();
 
-  // 新規検索で、まだ検索を実行していない場合は、フルスクリーンフォームを表示
-  if (isNewSearch && !data) {
+  const currentPattern = patterns.find((pattern) => pattern.id === patternId);
+
+  if (!data) {
     return (
       <div className="h-full mx-auto max-w-[1400px] px-2 md:px-4 flex items-center justify-center mb-8">
         <div className="w-full max-w-2xl">
           <div className="text-center my-8">
-            <h1 className="text-3xl font-bold mb-2">新規検索</h1>
+            <h1 className="text-3xl font-bold mb-2">
+              {isNewSearch
+                ? "新規検索"
+                : `検索パターン: ${currentPattern?.searchPatternName}`}
+            </h1>
             <p className="text-muted-foreground">
-              検索条件を入力して、ビジネス情報を検索します
+              {isNewSearch
+                ? "検索条件を入力して、ビジネス情報を検索します"
+                : currentPattern?.searchPatternDescription}
             </p>
           </div>
           <Card>
@@ -96,7 +100,7 @@ export function SearchLayout({
             </div>
             <PatternCards
               patterns={patterns}
-              currentPatternId={currentSearchId}
+              // currentPatternId={currentSearchId}
             />
           </div>
         </SearchSidebar>
@@ -111,7 +115,16 @@ export function SearchLayout({
             // // URLをhistory APIで静かに更新（リロードなし）
             // window.history.replaceState({}, "", `/search/${newPatternId}`);
             // setCurrentSearchId(newPatternId);
-            router.push(`/search/${newPatternId}`);
+            // router.push(`/search/${newPatternId}`);
+            // URLからstartパラメータを削除してページを更新
+            const newParams = new URLSearchParams(searchParams);
+            newParams.delete("start");
+            newParams.set("patternId", newPatternId);
+            const newUrl = `${pathname}${
+              newParams.toString() ? `?${newParams.toString()}` : ""
+            }`;
+            // パターンIDを更新
+            router.replace(newUrl);
 
             // // 新しいパターンを即座にリストに追加
             // if (patternData) {

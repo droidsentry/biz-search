@@ -1,53 +1,68 @@
-import React from 'react'
-import { createClient } from '@/lib/supabase/server'
-import { Tables } from '@/lib/types/database'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Clock, BarChart3 } from 'lucide-react'
-import Link from 'next/link'
-import { format } from 'date-fns'
-import { ja } from 'date-fns/locale'
+import React from "react";
+import { createClient } from "@/lib/supabase/server";
+import { Tables } from "@/lib/types/database";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Clock, BarChart3 } from "lucide-react";
+import Link from "next/link";
+import { format } from "date-fns";
+import { ja } from "date-fns/locale";
 
-type SearchPattern = Tables<'search_patterns'>
+type SearchPattern = Tables<"search_patterns">;
 
-async function getSearchPatterns(sortBy: 'usage' | 'recent' = 'recent'): Promise<SearchPattern[]> {
-  const supabase = await createClient()
-  
+async function getSearchPatterns(
+  sortBy: "usage" | "recent" = "recent"
+): Promise<SearchPattern[]> {
+  const supabase = await createClient();
+
   // 認証確認
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
-    return []
+    return [];
   }
 
   // パターンの取得
   let query = supabase
-    .from('search_patterns')
-    .select('*')
-    .eq('user_id', user.id)
+    .from("search_patterns")
+    .select("*")
+    .eq("user_id", user.id);
 
   // ソート条件
-  if (sortBy === 'usage') {
-    query = query.order('usage_count', { ascending: false })
+  if (sortBy === "usage") {
+    query = query.order("usage_count", { ascending: false });
   } else {
-    query = query.order('last_used_at', { ascending: false, nullsFirst: false })
+    query = query.order("last_used_at", {
+      ascending: false,
+      nullsFirst: false,
+    });
   }
 
-  const { data, error } = await query
+  const { data, error } = await query;
 
   if (error) {
-    console.error('パターン取得エラー:', error)
-    return []
+    console.error("パターン取得エラー:", error);
+    return [];
   }
 
-  return data || []
+  return data || [];
 }
 
 interface SearchPatternListProps {
-  sortBy?: 'usage' | 'recent'
+  sortBy?: "usage" | "recent";
 }
 
-export default async function SearchPatternList({ sortBy = 'recent' }: SearchPatternListProps) {
-  const patterns = await getSearchPatterns(sortBy)
+export default async function SearchPatternList({
+  sortBy = "recent",
+}: SearchPatternListProps) {
+  const patterns = await getSearchPatterns(sortBy);
 
   if (patterns.length === 0) {
     return (
@@ -57,13 +72,13 @@ export default async function SearchPatternList({ sortBy = 'recent' }: SearchPat
           <Button className="mt-4">最初の検索を開始</Button>
         </Link>
       </div>
-    )
+    );
   }
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {patterns.map((pattern) => (
-        <Link key={pattern.id} href={`/search/${pattern.id}`}>
+        <Link key={pattern.id} href={`/search/execute?patternId=${pattern.id}`}>
           <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
             <CardHeader>
               <CardTitle className="text-lg">{pattern.name}</CardTitle>
@@ -81,7 +96,9 @@ export default async function SearchPatternList({ sortBy = 'recent' }: SearchPat
                   <div className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
                     <span>
-                      {format(new Date(pattern.last_used_at), 'M/d HH:mm', { locale: ja })}
+                      {format(new Date(pattern.last_used_at), "M/d HH:mm", {
+                        locale: ja,
+                      })}
                     </span>
                   </div>
                 )}
@@ -91,5 +108,5 @@ export default async function SearchPatternList({ sortBy = 'recent' }: SearchPat
         </Link>
       ))}
     </div>
-  )
+  );
 }

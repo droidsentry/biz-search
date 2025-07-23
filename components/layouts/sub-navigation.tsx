@@ -10,7 +10,7 @@ const navItems = [
   { href: "/dashboard", label: "ダッシュボード" },
   { href: "/import", label: "インポート" },
   { href: "/projects", label: "プロジェクト" },
-  { href: "/search", label: "カスタム検索" },
+  { href: "/search/patterns", label: "カスタム検索" },
   { href: "/logs", label: "ログ" },
   { href: "/settings", label: "設定" },
 ];

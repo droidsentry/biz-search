@@ -6,21 +6,22 @@ import { useGoogleCustomSearch } from "@/lib/swr/google-custom-search";
 import {
   GoogleCustomSearchPattern,
   GoogleSearchRequestResponse,
+  SearchPattern,
 } from "@/lib/types/custom-search";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useSearchParams } from "next/navigation";
 import {
   ReactNode,
   createContext,
-  useCallback,
   useContext,
   useEffect,
   useState,
 } from "react";
 import { useForm } from "react-hook-form";
 import { Form } from "../ui/form";
-import { useSearchParams } from "next/navigation";
 
 type ContextType = {
+  patternId: string;
   isNewSearch: boolean;
   mode: "sidebar" | "full";
   googleCustomSearchPattern: GoogleCustomSearchPattern | undefined;
@@ -35,11 +36,12 @@ const Context = createContext<ContextType>({} as ContextType);
 
 export function GoogleCustomSearchFormProvider({
   children,
-  patternId,
+  selectedSearchPattern,
 }: {
   children: ReactNode;
-  patternId: string;
+  selectedSearchPattern?: SearchPattern;
 }) {
+  const patternId = selectedSearchPattern?.id || "new";
   const isNewSearch = patternId === "new";
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<"sidebar" | "full">("full");
@@ -68,25 +70,66 @@ export function GoogleCustomSearchFormProvider({
     formData: googleCustomSearchPattern,
   });
 
+  const currentFormValues = form.getValues();
   useEffect(() => {
-    console.log("useEffect data", data);
-    console.log("useEffect formDate", form.getValues());
-    const page = searchParams.get("start");
     if (data) {
       setMode("sidebar");
     } else {
       setMode("full");
     }
+    const page = searchParams.get("start");
     if (page) {
-      const currentFormData = form.getValues();
-      currentFormData.googleCustomSearchParams.startPage = parseInt(page);
-      setGoogleCustomSearchPattern(currentFormData);
+      currentFormValues.googleCustomSearchParams.startPage = parseInt(page);
+      setGoogleCustomSearchPattern(currentFormValues);
     }
-  }, [data, form, searchParams]);
+    const patternId = searchParams.get("patternId");
+    if (patternId && patternId !== "new") {
+      if (selectedSearchPattern) {
+        // 現在のフォームの値を取得
+        // パターンのparamsをパース
+        const savedParams = selectedSearchPattern.googleCustomSearchParams;
+        // フォームにデータを設定（customerNameとaddressは現在の値を維持）
+        const formData: GoogleCustomSearchPattern = {
+          id: selectedSearchPattern.id,
+          searchPatternName: selectedSearchPattern.searchPatternName,
+          searchPatternDescription:
+            selectedSearchPattern.searchPatternDescription || undefined,
+          googleCustomSearchParams: {
+            // 現在のフォームの顧客名と住所を維持
+            customerName:
+              currentFormValues.googleCustomSearchParams.customerName,
+            address: currentFormValues.googleCustomSearchParams.address,
+            // その他の設定はパターンから読み込む
+            customerNameExactMatch:
+              savedParams.customerNameExactMatch || "exact",
+            addressExactMatch: savedParams.addressExactMatch || "partial",
+            dateRestrict: savedParams.dateRestrict || "all",
+            isAdvancedSearchEnabled:
+              savedParams.isAdvancedSearchEnabled || false,
+            additionalKeywords: savedParams.additionalKeywords || [],
+            searchSites: savedParams.searchSites || [],
+            siteSearchMode: savedParams.siteSearchMode || "any",
+          },
+        };
+        console.log(
+          "dateRestrict",
+          formData.googleCustomSearchParams.dateRestrict
+        );
+        console.log("発火");
+        // フォームの値を更新
+        form.reset(formData);
+        //
+        if (formData.googleCustomSearchParams.customerName) {
+          setGoogleCustomSearchPattern(formData);
+        }
+      }
+    }
+  }, [data, searchParams]);
 
   return (
     <Context.Provider
       value={{
+        patternId,
         isNewSearch,
         mode,
         googleCustomSearchPattern,

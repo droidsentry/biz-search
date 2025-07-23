@@ -17,7 +17,7 @@ export const googleCustomSearchParamsSchema = z.object({
   customerNameExactMatch: matchTypeSchema,
   address: z.string().trim().optional(),
   addressExactMatch: matchTypeSchema,
-  dateRestrict: z.enum(["all", "y1", "y3", "y5", "y10"]),
+  dateRestrict: z.enum(["all", "m6", "y1", "y3", "y5", "y10"]),
   isAdvancedSearchEnabled: z.boolean(),
   additionalKeywords: z.array(keywordsSchema),
   searchSites: z.array(z.string()),
@@ -29,6 +29,7 @@ const searchPatternDescriptionSchema = z
   .string()
   .trim()
   .max(1000, { message: "1000文字以内で入力してください" })
+  .nullable()
   .optional();
 export const googleCustomSearchPatternSchema = z.object({
   id: z.string().optional(),
@@ -38,4 +39,8 @@ export const googleCustomSearchPatternSchema = z.object({
   googleCustomSearchParams: googleCustomSearchParamsSchema,
   projectId: z.string().optional(),
   patternId: z.uuid().optional(),
+  createdAt: z.string().nullable().optional(),
+  updatedAt: z.string().nullable().optional(),
+  lastUsedAt: z.string().nullable().optional(),
+  usageCount: z.number().nullable().optional(),
 });

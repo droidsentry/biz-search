@@ -1,10 +1,10 @@
-import { Button } from '@/components/ui/button'
-import { Plus, Search } from 'lucide-react'
-import Link from 'next/link'
-import { Suspense } from 'react'
-import SearchPatternList from './list'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from "@/components/ui/button";
+import { Plus, Search } from "lucide-react";
+import Link from "next/link";
+import { Suspense } from "react";
+import SearchPatternList from "./list";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // ローディングコンポーネント
 function PatternListSkeleton() {
@@ -16,7 +16,7 @@ function PatternListSkeleton() {
         </div>
       ))}
     </div>
-  )
+  );
 }
 
 export default function SearchPage() {
@@ -26,9 +26,11 @@ export default function SearchPage() {
         <div className="flex items-center justify-between my-10">
           <div>
             <h1 className="text-3xl font-bold">カスタム検索</h1>
-            <p className="text-muted-foreground mt-2">保存した検索パターンで効率的に情報を収集</p>
+            <p className="text-muted-foreground mt-2">
+              保存した検索パターンで効率的に情報を収集
+            </p>
           </div>
-          <Link href="/search/new">
+          <Link href="/search/execute?patternId=new">
             <Button>
               <Plus className="mr-2 h-4 w-4" />
               新規検索
@@ -62,5 +64,5 @@ export default function SearchPage() {
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }

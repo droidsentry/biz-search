@@ -12,25 +12,25 @@ import { useState } from "react";
 import { SearchPatternDeleteModal } from "./search-pattern-delete-modal";
 import { useGoogleCustomSearchForm } from "@/components/providers/google-custom-search-form";
 import { useFormContext } from "react-hook-form";
-import { GoogleCustomSearchPattern } from "@/lib/types/custom-search";
-import { useRouter, useSearchParams } from "next/navigation";
-
-type SearchPattern = Tables<"search_patterns">;
+import {
+  GoogleCustomSearchPattern,
+  SearchPattern,
+} from "@/lib/types/custom-search";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 interface PatternCardsProps {
   patterns: SearchPattern[];
-  currentPatternId?: string;
 }
 
-export function PatternCards({
-  patterns,
-  currentPatternId,
-}: PatternCardsProps) {
+export function PatternCards({ patterns }: PatternCardsProps) {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedPatternId, setSelectedPatternId] = useState<string>("");
-  const { handleSearch } = useGoogleCustomSearchForm();
+  const { handleSearch, patternId } = useGoogleCustomSearchForm();
+
+  const currentPatternId = patternId;
   const form = useFormContext<GoogleCustomSearchPattern>();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const router = useRouter();
 
   const handleDelete = (e: React.MouseEvent, patternId: string) => {
@@ -43,43 +43,48 @@ export function PatternCards({
   const handlePatternClick = (e: React.MouseEvent, pattern: SearchPattern) => {
     e.preventDefault();
 
-    // 現在のフォームの値を取得
-    const currentFormValues = form.getValues();
+    // // 現在のフォームの値を取得
+    // const currentFormValues = form.getValues();
 
-    // パターンのparamsをパース
-    const savedParams = pattern.google_custom_search_params as any;
+    // // パターンのparamsをパース
+    // const savedParams = pattern.googleCustomSearchParams;
 
-    // フォームにデータを設定（customerNameとaddressは現在の値を維持）
-    const formData: GoogleCustomSearchPattern = {
-      id: pattern.id,
-      userId: pattern.user_id || undefined,
-      searchPatternName: pattern.name,
-      searchPatternDescription: pattern.description || undefined,
-      googleCustomSearchParams: {
-        // 現在のフォームの顧客名と住所を維持
-        customerName: currentFormValues.googleCustomSearchParams.customerName,
-        address: currentFormValues.googleCustomSearchParams.address,
-        // その他の設定はパターンから読み込む
-        customerNameExactMatch: savedParams.customerNameExactMatch || "exact",
-        addressExactMatch: savedParams.addressExactMatch || "partial",
-        dateRestrict: savedParams.dateRestrict || "all",
-        isAdvancedSearchEnabled: savedParams.isAdvancedSearchEnabled || false,
-        additionalKeywords: savedParams.additionalKeywords || [],
-        searchSites: savedParams.searchSites || [],
-        siteSearchMode: savedParams.siteSearchMode || "any",
-      },
-    };
+    // // フォームにデータを設定（customerNameとaddressは現在の値を維持）
+    // const formData: GoogleCustomSearchPattern = {
+    //   id: pattern.id,
+    //   searchPatternName: pattern.searchPatternName,
+    //   searchPatternDescription: pattern.searchPatternDescription || undefined,
+    //   googleCustomSearchParams: {
+    //     // 現在のフォームの顧客名と住所を維持
+    //     customerName: currentFormValues.googleCustomSearchParams.customerName,
+    //     address: currentFormValues.googleCustomSearchParams.address,
+    //     // その他の設定はパターンから読み込む
+    //     customerNameExactMatch: savedParams.customerNameExactMatch || "exact",
+    //     addressExactMatch: savedParams.addressExactMatch || "partial",
+    //     dateRestrict: savedParams.dateRestrict || "all",
+    //     isAdvancedSearchEnabled: savedParams.isAdvancedSearchEnabled || false,
+    //     additionalKeywords: savedParams.additionalKeywords || [],
+    //     searchSites: savedParams.searchSites || [],
+    //     siteSearchMode: savedParams.siteSearchMode || "any",
+    //   },
+    // };
 
-    // フォームの値を更新
-    form.reset(formData);
+    // // フォームの値を更新
+    // form.reset(formData);
 
-    // URLからstartパラメータを削除してページを更新
-    const newParams = new URLSearchParams(searchParams);
-    newParams.delete("start");
-    const newUrl = `${window.location.pathname}${
-      newParams.toString() ? `?${newParams.toString()}` : ""
-    }`;
-    router.replace(newUrl);
+    // // URLからstartパラメータを削除してページを更新
+    // const newParams = new URLSearchParams(searchParams);
+    // newParams.delete("start");
+    // newParams.set("patternId", pattern.id);
+    // // const newUrl = `${window.location.pathname}${
+    // //   newParams.toString() ? `?${newParams.toString()}` : ""
+    // // }`;
+    // const newUrl = `${pathname}${
+    //   newParams.toString() ? `?${newParams.toString()}` : ""
+    // }`;
+    // // パターンIDを更新
+    // router.replace(newUrl);
+    router.push(`/search/execute?patternId=${pattern.id}`);
 
     // 自動的に検索を実行
     setTimeout(() => {
@@ -114,7 +119,7 @@ export function PatternCards({
               <div className="space-y-2">
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="font-medium text-sm line-clamp-1">
-                    {pattern.name}
+                    {pattern.searchPatternName}
                   </h3>
                   <Button
                     variant="ghost"
@@ -126,22 +131,22 @@ export function PatternCards({
                   </Button>
                 </div>
 
-                {pattern.description && (
+                {pattern.searchPatternDescription && (
                   <p className="text-xs text-muted-foreground line-clamp-2">
-                    {pattern.description}
+                    {pattern.searchPatternDescription}
                   </p>
                 )}
 
                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <BarChart3 className="h-3 w-3" />
-                    <span>{pattern.usage_count}回</span>
+                    <span>{pattern.usageCount}回</span>
                   </div>
-                  {pattern.last_used_at && (
+                  {pattern.lastUsedAt && (
                     <div className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
                       <span>
-                        {format(new Date(pattern.last_used_at), "M/d HH:mm", {
+                        {format(new Date(pattern.lastUsedAt), "M/d HH:mm", {
                           locale: ja,
                         })}
                       </span>
