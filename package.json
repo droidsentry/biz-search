@@ -14,6 +14,9 @@
     "supabase-get-types": "pnpm dlx supabase gen types typescript --linked --schema public > lib/types/database.ts",
     "supabase-dump": "pnpm dlx supabase db dump --data-only -f supabase/seed.sql",
     "supabase-generate-seed": "pnpm dlx supabase db dump --data-only -f supabase/seed.sql",
+    "supabase-setup": "pnpm dlx supabase logout && pnpm dlx supabase login && pnpm dlx supabase link",
+    "supabase-pull": "pnpm dlx supabase db pull",
+    "supabase-push": "pnpm dlx supabase db push",
     "pw-test": "pnpm exec playwright test --headed",
     "vi-test": "pnpm vitest"
   },
