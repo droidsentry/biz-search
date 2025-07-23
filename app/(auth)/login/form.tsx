@@ -32,11 +32,11 @@ import logo from "@/public/logo.png";
 
 export function Form() {
   const [isPending, startTransition] = useTransition();
-  const [showPassword, setShowPassword] = useState(false);
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnUrl = searchParams.get("from");
-  
+
   const form = useForm<Login>({
     mode: "onChange",
     resolver: zodResolver(loginSchema),
@@ -45,7 +45,7 @@ export function Form() {
       password: "",
     },
   });
-  
+
   const { isSubmitting, isValid } = form.formState;
 
   const onSubmit = async (data: Login) => {
@@ -110,23 +110,30 @@ export function Form() {
                     <FormControl>
                       <div className="relative">
                         <Input
-                          type={showPassword ? "text" : "password"}
+                          type={passwordVisible ? "text" : "password"}
+                          autoComplete="new-password"
                           placeholder="••••••••"
-                          autoComplete="current-password"
+                          minLength={6}
+                          className="pr-10"
                           {...field}
                         />
                         <Button
+                          size="icon"
                           type="button"
+                          className="absolute top-0 right-0"
                           variant="ghost"
-                          size="sm"
-                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                          onClick={() => setShowPassword(!showPassword)}
+                          onClick={() => setPasswordVisible((v) => !v)}
                         >
-                          {showPassword ? (
-                            <EyeOff className="size-4 text-muted-foreground" />
+                          {passwordVisible ? (
+                            <Eye size={18} />
                           ) : (
-                            <Eye className="size-4 text-muted-foreground" />
+                            <EyeOff size={18} />
                           )}
+                          <span className="sr-only">
+                            {passwordVisible
+                              ? "パスワードを非表示にする"
+                              : "パスワードを表示する"}
+                          </span>
                         </Button>
                       </div>
                     </FormControl>
