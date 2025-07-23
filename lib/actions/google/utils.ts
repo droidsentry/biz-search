@@ -32,33 +32,29 @@ const buildMultipleSiteQuery = (sites: string[], mode: 'specific' | 'exclude'): 
  * @param start ページネーション用の開始位置
  * @returns Google検索APIパラメータ
  */
-export const generateGoogleCustomSearchParams = (parsedData: GoogleCustomSearchPattern, start: number = 1): GoogleSearchRequestParams => {
+export const generateGoogleCustomSearchParams = (parsedData: GoogleCustomSearchPattern): GoogleSearchRequestParams => {
   const MAX_RESULTS = 10;
   const { googleCustomSearchParams } = parsedData;
   const { 
     customerName, customerNameExactMatch,
-    prefecture, prefectureExactMatch,
     address, addressExactMatch,
+    dateRestrict,
     isAdvancedSearchEnabled,
-    additionalKeywords, additionalKeywordsSearchMode,
-    excludeKeywords,
-    searchSites, siteSearchMode
+    additionalKeywords,
+    searchSites, siteSearchMode,
+    startPage
   } = googleCustomSearchParams;
 
   // ========================================
   // 基本検索クエリの構築（常に実行）
   // ========================================
+  
   const queryParts: string[] = [];
   
   // 顧客名（必須）
   queryParts.push(formatKeyword(customerName, customerNameExactMatch));
   
-  // 都道府県（オプション）
-  if (prefecture && prefecture !== '選択しない') {
-    queryParts.push(formatKeyword(prefecture, prefectureExactMatch));
-  }
-  
-  // 市区町村以降（オプション）
+  // 住所（オプション）
   if (address && address.trim()) {
     queryParts.push(formatKeyword(address.trim(), addressExactMatch));
   }
@@ -68,47 +64,28 @@ export const generateGoogleCustomSearchParams = (parsedData: GoogleCustomSearchP
     q: queryParts.join(' ').trim(),
     cx: process.env.GOOGLE_CUSTOM_SEARCH_ENGINE_ID!,
     num: MAX_RESULTS,
-    start: start,
+    start: startPage || 1,
   };
+
+  // 検索期間の設定
+  if (dateRestrict && dateRestrict !== "all") {
+    googleSearchParams.dateRestrict = dateRestrict;
+  }
 
   // ========================================
   // 高度な検索オプション（トグルON時のみ実行）
   // ========================================
   if (isAdvancedSearchEnabled) {
-    // 追加キーワードの処理
+    // 追加キーワードの処理（常にOR検索）
     if (additionalKeywords && additionalKeywords.length > 0) {
-      if (additionalKeywordsSearchMode === "and") {
-        // AND検索: メインクエリに追加
-        const andKeywords = additionalKeywords
-          .filter(keyword => keyword.value && keyword.value.trim()) // 空の値を除外
-          .map(keyword => formatKeyword(keyword.value.trim(), keyword.matchType));
-        
-        if (andKeywords.length > 0) {
-          // 既存のクエリに追加
-          googleSearchParams.q = `${googleSearchParams.q} ${andKeywords.join(' ')}`.trim();
-        }
-      } else if (additionalKeywordsSearchMode === "or") {
-        // OR検索: orTermsパラメータを使用
-        const orKeywords = additionalKeywords
-          .filter(keyword => keyword.value && keyword.value.trim()) // 空の値を除外
-          .map(keyword => formatKeyword(keyword.value.trim(), keyword.matchType))
-          .join("|");
-        
-        if (orKeywords) {
-          googleSearchParams.orTerms = orKeywords;
-        }
-      }
-    }
-
-    // 除外キーワードの処理
-    if (excludeKeywords && excludeKeywords.length > 0) {
-      const excludeTerms = excludeKeywords
+      // OR検索: orTermsパラメータを使用
+      const orKeywords = additionalKeywords
         .filter(keyword => keyword.value && keyword.value.trim()) // 空の値を除外
         .map(keyword => formatKeyword(keyword.value.trim(), keyword.matchType))
-        .join(" ");
+        .join("|");
       
-      if (excludeTerms) {
-        googleSearchParams.excludeTerms = excludeTerms;
+      if (orKeywords) {
+        googleSearchParams.orTerms = orKeywords;
       }
     }
 

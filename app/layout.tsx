@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { getBaseURL } from "@/lib/base-url";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,8 +16,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getBaseURL()),
   title: "BizSearch - ビジネス情報検索システム",
-  description: "効率的なビジネス情報検索を実現。複数の条件を組み合わせて必要な情報をすばやく見つけることができます。",
+  description:
+    "効率的なビジネス情報検索を実現。複数の条件を組み合わせて必要な情報をすばやく見つけることができます。",
 };
 
 export default function RootLayout({
@@ -31,12 +34,12 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem
-            disableTransitionOnChange
-          >
-        {children}
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
           <Toaster />
         </ThemeProvider>
       </body>

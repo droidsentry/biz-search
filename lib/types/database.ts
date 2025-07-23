@@ -303,6 +303,102 @@ export type Database = {
           },
         ]
       }
+      search_api_logs: {
+        Row: {
+          api_response_time: number | null
+          created_at: string
+          error_message: string | null
+          google_custom_search_params: Json
+          id: string
+          ip_address: unknown | null
+          pattern_id: string | null
+          project_id: string | null
+          result_count: number | null
+          status_code: number
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          api_response_time?: number | null
+          created_at?: string
+          error_message?: string | null
+          google_custom_search_params: Json
+          id?: string
+          ip_address?: unknown | null
+          pattern_id?: string | null
+          project_id?: string | null
+          result_count?: number | null
+          status_code: number
+          user_agent?: string | null
+          user_id?: string
+        }
+        Update: {
+          api_response_time?: number | null
+          created_at?: string
+          error_message?: string | null
+          google_custom_search_params?: Json
+          id?: string
+          ip_address?: unknown | null
+          pattern_id?: string | null
+          project_id?: string | null
+          result_count?: number | null
+          status_code?: number
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "search_api_logs_pattern_id_fkey"
+            columns: ["pattern_id"]
+            isOneToOne: false
+            referencedRelation: "search_patterns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "search_api_logs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      search_patterns: {
+        Row: {
+          created_at: string
+          description: string | null
+          google_custom_search_params: Json
+          id: string
+          last_used_at: string | null
+          name: string
+          updated_at: string
+          usage_count: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          google_custom_search_params: Json
+          id?: string
+          last_used_at?: string | null
+          name: string
+          updated_at?: string
+          usage_count?: number | null
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          google_custom_search_params?: Json
+          id?: string
+          last_used_at?: string | null
+          name?: string
+          updated_at?: string
+          usage_count?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -311,6 +407,19 @@ export type Database = {
       cached_uid: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      delete_old_search_api_logs: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      get_project_api_usage: {
+        Args: { p_project_id: string; p_period?: unknown }
+        Returns: {
+          date: string
+          total_requests: number
+          successful_requests: number
+          avg_response_time: number
+        }[]
       }
       get_project_export_data: {
         Args: { p_project_id: string }
@@ -333,6 +442,20 @@ export type Database = {
           import_date: string
           researched_date: string
         }[]
+      }
+      get_user_patterns_with_stats: {
+        Args: { p_user_id: string }
+        Returns: {
+          pattern_id: string
+          pattern_name: string
+          total_usage_count: number
+          last_30_days_count: number
+          last_used_at: string
+        }[]
+      }
+      increment_search_pattern_usage: {
+        Args: { pattern_id: string }
+        Returns: undefined
       }
       is_system_owner: {
         Args: Record<PropertyKey, never>

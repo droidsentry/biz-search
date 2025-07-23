@@ -3,7 +3,7 @@
 import { geocodeAddress } from './geocoding'
 
 // バッチジオコーディングの結果型
-export interface BatchGeocodingResult {
+interface BatchGeocodingResult {
   address: string
   success: boolean
   data?: {

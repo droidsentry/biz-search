@@ -1,11 +1,5 @@
 // PDF解析関連の型定義
 
-// PDFファイル情報
-export interface PDFFile {
-  name: string
-  size: number
-}
-
 // 不動産情報（property-parserのPropertyOwnerと同じ構造）
 export interface PropertyData {
   recordDate: string      // 記録日時（ISO形式）

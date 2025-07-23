@@ -26,7 +26,7 @@ export type PropertyWithOwnerAndCompany = {
   } | null
 }
 
-export type ProjectPropertiesResponse = {
+type ProjectPropertiesResponse = {
   data: PropertyWithOwnerAndCompany[] | null
   error: string | null
 }
@@ -129,74 +129,28 @@ export async function getProjectPropertiesAction(
   }
 }
 
-// CSVエクスポート用のデータ取得
-export async function exportProjectPropertiesToCSV(
+// エクスポート用のデータ取得
+export async function exportProjectProperties(
   projectId: string
-): Promise<{ data: string | null; error: string | null }> {
-  try {
-    const supabase = await createClient()
-    
+) {
+    const supabase = await createClient() 
     // 認証確認
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
-      return { data: null, error: '認証が必要です' }
+      throw new Error('認証が必要です')
     }
 
     // エクスポート用の関数を呼び出し
     const { data, error } = await supabase.rpc('get_project_export_data', {
       p_project_id: projectId
     })
-
-    if (error) {
+    if (error || !data) {
       console.error('エクスポートエラー:', error)
-      return { data: null, error: error.message }
+      throw new Error(error.message)
     }
 
-    // CSVフォーマットに変換
-    const headers = [
-      '物件住所',
-      '所有者名',
-      '所有者住所',
-      '所有者緯度',
-      '所有者経度',
-      '会社名',
-      '法人番号',
-      '役職',
-      '所有開始日',
-      'インポート日時',
-      '調査日時'
-    ]
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rows = data.map((row: any) => [
-      row.property_address || '',
-      row.owner_name || '',
-      row.owner_address || '',
-      row.owner_lat || '',
-      row.owner_lng || '',
-      row.company_1_name || '',
-      row.company_1_number || '',
-      row.company_1_position || '',
-      row.ownership_start || '',
-      row.import_date || '',
-      row.researched_date || ''
-    ])
-
-    const csv = [
-      headers.join(','),
-      ...rows.map((row: string[]) => row.map(cell => `"${cell}"`).join(','))
-    ].join('\n')
-
-    // BOMを追加（Excelでの文字化け対策）
-    const bom = '\uFEFF'
-    return { data: bom + csv, error: null }
-  } catch (error) {
-    console.error('予期せぬエラー:', error)
-    return { 
-      data: null, 
-      error: error instanceof Error ? error.message : '予期せぬエラーが発生しました' 
-    }
-  }
+    // データをそのまま返す（クライアント側でExcel形式に変換）
+    return data
 }
 
 // プロジェクト詳細を取得

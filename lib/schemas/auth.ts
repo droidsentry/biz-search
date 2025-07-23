@@ -22,7 +22,7 @@ import AwesomeDebouncePromise from "awesome-debounce-promise";
     message: "メールアドレスの形式で入力してください。",
   })
 
-  export const usernameWithUniquenessCheckSchema = z
+  const usernameWithUniquenessCheckSchema = z
   .string()
   .trim()
   .min(1, "ユーザー名を入力してください")

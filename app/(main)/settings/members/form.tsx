@@ -1,54 +1,63 @@
-'use client'
+"use client";
 
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Form,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
-  FormMessage
-} from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { inviteSchema } from '@/lib/schemas/invite'
-import { Invite } from '@/lib/types/invite'
-import { EnvelopeIcon } from '@heroicons/react/24/outline'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useTransition } from 'react'
-import { useForm } from 'react-hook-form'
-import { toast } from 'sonner'
-import { inviteMember } from './action'
-import { Loader2 } from 'lucide-react'
+} from "@/components/ui/select";
+import { inviteSchema } from "@/lib/schemas/invite";
+import { Invite } from "@/lib/types/invite";
+import { EnvelopeIcon } from "@heroicons/react/24/outline";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { inviteMember } from "./action";
+import { Loader2 } from "lucide-react";
 
 export function InviteMemberForm() {
-  const [isPending, startTransition] = useTransition()
+  const [isPending, startTransition] = useTransition();
   const form = useForm<Invite>({
     resolver: zodResolver(inviteSchema),
     defaultValues: {
-      email: '',
-      role: 'system_owner',
+      email: "",
+      role: "system_owner",
     },
-  })
+  });
 
-  const { isValid, isValidating, isSubmitting } = form.formState
+  const { isValid, isValidating, isSubmitting } = form.formState;
 
   const handleSendInvite = async (formData: Invite) => {
     startTransition(async () => {
-      await inviteMember(formData).then(() => {
-        toast.success('招待メールを送信しました')
-      }).catch((error: unknown) => {
-        toast.error('招待メールの送信に失敗しました')
-      })
-    })
-  }
+      await inviteMember(formData)
+        .then(() => {
+          toast.success("招待メールを送信しました");
+        })
+        .catch((error) => {
+          toast.error("招待メールの送信に失敗しました エラー:" + error.message);
+        });
+    });
+  };
 
   return (
     <Card>
@@ -96,9 +105,9 @@ export function InviteMemberForm() {
                     >
                       <FormControl>
                         <SelectTrigger className="w-full">
-                        <SelectValue placeholder="役割を選択">
-                            {field.value === 'user' && '通常ユーザー'}
-                            {field.value === 'system_owner' && 'システム管理者'}
+                          <SelectValue placeholder="役割を選択">
+                            {field.value === "user" && "通常ユーザー"}
+                            {field.value === "system_owner" && "システム管理者"}
                           </SelectValue>
                         </SelectTrigger>
                       </FormControl>
@@ -128,7 +137,10 @@ export function InviteMemberForm() {
             </div>
           </CardContent>
           <CardFooter className="flex justify-end border-t">
-            <Button type="submit" disabled={isPending || !isValid || isSubmitting || isValidating}>
+            <Button
+              type="submit"
+              disabled={isPending || !isValid || isSubmitting || isValidating}
+            >
               {isPending ? (
                 <>
                   <Loader2 className="animate-spin size-4  mr-2" />
@@ -145,5 +157,5 @@ export function InviteMemberForm() {
         </form>
       </Form>
     </Card>
-  )
+  );
 }

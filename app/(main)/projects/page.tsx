@@ -1,27 +1,28 @@
-import { getProjectsAction } from '@/app/(main)/projects/action'
-import { ProjectList } from './project-list'
+import { Metadata } from "next";
+import { getBaseURL } from "@/lib/base-url";
+import { getProjectsWithProgress } from "@/app/(main)/projects/action";
+import { ProjectList } from "./project-list";
 
-import { ProjectProvider } from '@/components/providers/project'
-import ProjectHeader from './components/project-header'
+import { ProjectProvider } from "@/components/providers/project";
+import ProjectHeader from "./components/project-header";
+
+export const metadata: Metadata = {
+  metadataBase: new URL(getBaseURL()),
+  title: "プロジェクト一覧 - BizSearch",
+  description: "BizSearchで管理しているプロジェクトの一覧です。各プロジェクトの進捗状況や物件数を確認し、新規プロジェクトの作成も行えます。",
+};
 
 export default async function ProjectsPage() {
-  const { data: projects, error } = await getProjectsAction()
+  const projectsWithProgress = await getProjectsWithProgress();
 
-  console.log("projects",projects)
+  // console.log("projects", projectsWithProgress);
 
   return (
     <ProjectProvider>
       <div className="mx-auto max-w-[1400px] px-2 md:px-4">
         <ProjectHeader />
-
-        {error ? (
-          <div className="rounded-md bg-red-50 dark:bg-red-900/10 p-4">
-            <p className="text-sm text-red-800 dark:text-red-400">{error}</p>
-          </div>
-        ) : (
-          <ProjectList projects={projects || []} />
-        )}
+        <ProjectList projects={projectsWithProgress || []} />
       </div>
     </ProjectProvider>
-  )
+  );
 }

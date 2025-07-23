@@ -1,10 +1,9 @@
-import { z } from "zod";
 import {
   createProjectSchema,
   propertyDataSchema,
   savePropertiesSchema,
 } from "@/lib/schemas/property";
-import { Tables } from "./database";
+import { z } from "zod";
 
 // プロジェクト作成フォームデータ型
 export type CreateProjectFormData = z.infer<typeof createProjectSchema>;
@@ -16,14 +15,14 @@ export type PropertyData = z.infer<typeof propertyDataSchema>;
 export type SavePropertiesData = z.infer<typeof savePropertiesSchema>;
 
 // データベーステーブルの型定義（Row型）
-export type Property = Tables<'properties'>;
-export type Owner = Tables<'owners'>;
-export type Project = Tables<'projects'>;
-export type PropertyOwnership = Tables<'property_ownerships'>;
-export type ProjectProperty = Tables<'project_properties'>;
-export type OwnerCompany = Tables<'owner_companies'>;
-export type Profile = Tables<'profiles'>;
-export type ProjectMember = Tables<'project_members'>;
+// export type Property = Tables<'properties'>;
+// export type Owner = Tables<'owners'>;
+// export type Project = Tables<'projects'>;
+// export type PropertyOwnership = Tables<'property_ownerships'>;
+// export type ProjectProperty = Tables<'project_properties'>;
+// export type OwnerCompany = Tables<'owner_companies'>;
+// export type Profile = Tables<'profiles'>;
+// export type ProjectMember = Tables<'project_members'>;
 
 // PDFインポート用の型定義
 export interface PDFPropertyData {

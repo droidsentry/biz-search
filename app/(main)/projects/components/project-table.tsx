@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import {
   Table,
@@ -7,18 +7,18 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import { Progress } from '@/components/ui/progress'
-import { format } from 'date-fns'
-import { ja } from 'date-fns/locale'
-import Link from 'next/link'
-import { ProjectWithProgress } from '@/app/(main)/projects/action'
+} from "@/components/ui/table";
+import { Progress } from "@/components/ui/progress";
+import { format } from "date-fns";
+import { ja } from "date-fns/locale";
+import Link from "next/link";
+import { ProjectWithProgress } from "@/lib/types/project";
 
-interface ProjectTableProps {
-  projects: ProjectWithProgress[]
-}
-
-export function ProjectTable({ projects }: ProjectTableProps) {
+export function ProjectTable({
+  projects,
+}: {
+  projects: ProjectWithProgress[];
+}) {
   return (
     <div className="rounded-lg border border-muted-foreground/20 bg-muted-foreground/5 overflow-x-auto">
       <Table>
@@ -34,7 +34,10 @@ export function ProjectTable({ projects }: ProjectTableProps) {
         <TableBody>
           {projects.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+              <TableCell
+                colSpan={5}
+                className="text-center text-muted-foreground py-8"
+              >
                 プロジェクトがありません
               </TableCell>
             </TableRow>
@@ -42,7 +45,7 @@ export function ProjectTable({ projects }: ProjectTableProps) {
             projects.map((project) => (
               <TableRow key={project.id} className="hover:bg-accent">
                 <TableCell className="font-medium">
-                  <Link 
+                  <Link
                     href={`/projects/${project.id}`}
                     className="text-foreground hover:underline"
                   >
@@ -51,12 +54,14 @@ export function ProjectTable({ projects }: ProjectTableProps) {
                 </TableCell>
                 <TableCell>
                   <span className="text-muted-foreground text-sm line-clamp-1">
-                    {project.description || '-'}
+                    {project.description || "-"}
                   </span>
                 </TableCell>
                 <TableCell>
                   <span className="text-muted-foreground text-sm">
-                    {format(new Date(project.created_at), 'yyyy/MM/dd', { locale: ja })}
+                    {format(new Date(project.created_at), "yyyy/MM/dd", {
+                      locale: ja,
+                    })}
                   </span>
                 </TableCell>
                 <TableCell className="text-center">
@@ -78,5 +83,5 @@ export function ProjectTable({ projects }: ProjectTableProps) {
         </TableBody>
       </Table>
     </div>
-  )
+  );
 }

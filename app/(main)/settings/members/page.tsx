@@ -1,5 +1,13 @@
+import { Metadata } from "next";
+import { getBaseURL } from "@/lib/base-url";
 import { InviteMemberForm } from './form'
 import { MemberList } from './member-list'
+
+export const metadata: Metadata = {
+  metadataBase: new URL(getBaseURL()),
+  title: "メンバー管理 - BizSearch",
+  description: "BizSearchのチームメンバーを管理します。新しいメンバーの招待、権限の設定、メンバーの削除などを行うことができます。",
+};
 
 export default function MembersPage() {
   return (

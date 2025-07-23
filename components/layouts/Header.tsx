@@ -1,28 +1,33 @@
-'use client'
+"use client";
 
-import { useScrollRange } from '@/hooks/use-scroll-range'
-import { cn } from '@/lib/utils'
-import logo from '@/public/logo.png'
-import Image from 'next/image'
-import Link from 'next/link'
-import AvatarMenu from './avatar-menu'
+import { useScrollRange } from "@/hooks/use-scroll-range";
+import { cn } from "@/lib/utils";
+import logo from "@/public/logo.png";
+import Image from "next/image";
+import Link from "next/link";
+import AvatarMenu from "./avatar-menu";
 
 export function Header() {
-  const logoScale = useScrollRange(0, 50, 1, 0.8)
-  const logoY = useScrollRange(0, 50, 0, -13) // スクロール時に8px上に移動
+  const logoScale = useScrollRange(0, 50, 1, 0.8);
+  const logoY = useScrollRange(0, 50, 0, -13); // スクロール時に8px上に移動
 
   return (
-    <header className={cn(
-      "flex h-16 min-h-[64px] items-center px-4 md:px-6 bg-muted",
-      "[&_a]:ease-[ease]",
-      "[&_a]:no-underline",
-      "[&_a]:transition-colors",
-      "[&_a]:duration-200"
-    )}>      {/* ロゴ（fixed position） */}
+    <header
+      className={cn(
+        "flex h-16 min-h-[64px] items-center px-4 md:px-6 bg-muted",
+        "[&_a]:ease-[ease]",
+        "[&_a]:no-underline",
+        "[&_a]:transition-colors",
+        "[&_a]:duration-200"
+      )}
+    >
+      {" "}
+      {/* ロゴ（fixed position） */}
       <Link href="/" aria-label="BizSearch logo" className="relative">
-        <span 
-          className={cn("fixed left-[35px] top-[14px] z-[100] inline-flex size-10",
-            "rounded-sm no-underline outline-offset-2 transition-transform duration-50 ease-linear origin-left",
+        <span
+          className={cn(
+            "fixed left-[35px] top-[14px] z-[100] inline-flex size-10",
+            "rounded-sm no-underline outline-offset-2 transition-transform duration-50 ease-linear origin-left"
           )}
           style={{
             transform: `scale(${logoScale}) translateY(${logoY}px)`,
@@ -31,7 +36,6 @@ export function Header() {
           <Image src={logo} alt="BizSearch Project" />
         </span>
       </Link>
-
       {/* メインナビゲーション */}
       <nav className="flex w-full items-center justify-between pl-16">
         {/* プロジェクトブレッドクラム */}
@@ -39,30 +43,18 @@ export function Header() {
           <li className="flex items-center gap-2">
             <span className="text-muted-foreground px-2">/</span>
             <div className="flex items-center gap-2">
-              <p className="text-sm font-medium text-foreground">BizSearch Project</p>
+              <p className="text-sm font-medium text-foreground">
+                BizSearch Project
+              </p>
             </div>
           </li>
         </ul>
 
         {/* 右側のアクション */}
         <div className="flex items-center gap-3">
-          <button className="relative h-8 w-40 cursor-text overflow-visible border-0 bg-transparent p-0">
-            <span className="absolute inset-0 rounded border border-border bg-background"></span>
-            <span className="relative flex items-center px-3">
-              <svg className="h-4 w-4 text-muted-foreground" viewBox="0 0 16 16" fill="currentColor">
-                <path fillRule="evenodd" clipRule="evenodd" d="M1.5 6.5C1.5 3.73858 3.73858 1.5 6.5 1.5C9.26142 1.5 11.5 3.73858 11.5 6.5C11.5 9.26142 9.26142 11.5 6.5 11.5C3.73858 11.5 1.5 9.26142 1.5 6.5ZM6.5 0C2.91015 0 0 2.91015 0 6.5C0 10.0899 2.91015 13 6.5 13C8.02469 13 9.42677 12.475 10.5353 11.596L13.9697 15.0303L14.5 15.5607L15.5607 14.5L15.0303 13.9697L11.596 10.5353C12.475 9.42677 13 8.02469 13 6.5C13 2.91015 10.0899 0 6.5 0Z" />
-              </svg>
-              <span className="ml-2 text-sm text-muted-foreground">Find...</span>
-            </span>
-          </button>
-
-          {/* <Avatar className="h-8 w-8">
-            <AvatarImage src="/avatar.png" alt="User" />
-            <AvatarFallback>U</AvatarFallback>
-          </Avatar> */}
           <AvatarMenu />
         </div>
       </nav>
     </header>
-  )
+  );
 }

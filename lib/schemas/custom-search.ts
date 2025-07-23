@@ -1,41 +1,46 @@
 import { z } from "zod";
-import { prefectures } from "../data/prefectures";
 
-export const matchTypeSchema = z.enum(['exact', 'partial']);
+export const matchTypeSchema = z.enum(["exact", "partial"]);
 export const keywordsSchema = z.object({
   value: z.string(),
   matchType: matchTypeSchema,
-})
+});
 
-const searchModeSchema = z.enum(['and', 'or']);
-
-const nameSchema = z.string().trim()
+const nameSchema = z
+  .string()
+  .trim()
   .min(1, { message: "1文字以上入力してください" })
   .max(256, { message: "256文字以内で入力してください" });
 
-const googleCustomSearchParamsSchema = z.object({
+export const googleCustomSearchParamsSchema = z.object({
   customerName: nameSchema,
   customerNameExactMatch: matchTypeSchema,
-  prefecture: z.enum(prefectures),
-  prefectureExactMatch: matchTypeSchema,
   address: z.string().trim().optional(),
   addressExactMatch: matchTypeSchema,
+  dateRestrict: z.enum(["all", "m6", "y1", "y3", "y5", "y10"]),
   isAdvancedSearchEnabled: z.boolean(),
   additionalKeywords: z.array(keywordsSchema),
-  additionalKeywordsSearchMode: searchModeSchema,
-  excludeKeywords: z.array(keywordsSchema),
   searchSites: z.array(z.string()),
-  siteSearchMode: z.enum(['any', 'specific', 'exclude']),
+  siteSearchMode: z.enum(["any", "specific", "exclude"]),
+  startPage: z.number().optional(), // 検索ページの開始位置
 });
 
-const searchPatternDescriptionSchema = z.string().trim().max(1000, { message: "1000文字以内で入力してください" }).optional();
+const searchPatternDescriptionSchema = z
+  .string()
+  .trim()
+  .max(1000, { message: "1000文字以内で入力してください" })
+  .nullable()
+  .optional();
 export const googleCustomSearchPatternSchema = z.object({
   id: z.string().optional(),
   userId: z.string().optional(),
   searchPatternName: nameSchema,
   searchPatternDescription: searchPatternDescriptionSchema,
   googleCustomSearchParams: googleCustomSearchParamsSchema,
-  createdAt: z.string(),
-  updatedAt: z.string(),
-  lastUsedAt: z.string(),
+  projectId: z.string().optional(),
+  patternId: z.uuid().optional(),
+  createdAt: z.string().nullable().optional(),
+  updatedAt: z.string().nullable().optional(),
+  lastUsedAt: z.string().nullable().optional(),
+  usageCount: z.number().nullable().optional(),
 });

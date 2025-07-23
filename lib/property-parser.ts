@@ -1,4 +1,4 @@
-export interface PropertyOwner {
+interface PropertyOwner {
   recordDate: string      // 記録日時（PDFからの情報）
   propertyAddress: string // 物件住所（部屋番号含む）
   ownerName: string      // 所有者名
@@ -98,50 +98,4 @@ function convertToHalfWidth(str: string): string {
   return str.replace(/[０-９]/g, (match) => {
     return String.fromCharCode(match.charCodeAt(0) - 0xFEE0)
   })
-}
-
-/**
- * 構造化データをテーブル形式の文字列に変換
- */
-export function formatPropertyDataAsTable(data: PropertyOwner[]): string {
-  if (data.length === 0) return 'データがありません'
-  
-  let output = `抽出件数: ${data.length}件\n\n`
-  output += '物件情報一覧\n'
-  output += '━'.repeat(80) + '\n\n'
-  
-  data.forEach((property, index) => {
-    output += `【物件 ${index + 1}】\n`
-    output += `記録日時: ${property.recordDate}\n`
-    output += `物件住所: ${property.propertyAddress}\n`
-    output += `所有者名: ${property.ownerName}\n`
-    output += `所有者住所: ${property.ownerAddress}\n`
-    output += '\n'
-  })
-  
-  return output
-}
-
-/**
- * 構造化データをCSV形式に変換
- */
-export function formatPropertyDataAsCSV(data: PropertyOwner[]): string {
-  const headers = ['記録日時', '物件住所', '所有者名', '所有者住所']
-  const rows = data.map(property => [
-    property.recordDate,
-    property.propertyAddress,
-    property.ownerName,
-    property.ownerAddress
-  ])
-  
-  return [
-    headers.join(','),
-    ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-  ].join('\n')
-}
-
-// 旧インターフェースとの互換性のため
-export interface ParsedPropertyData {
-  extractedAt: string
-  properties: PropertyOwner[]
 }
