@@ -53,7 +53,7 @@ export default function Home() {
             className="min-w-[200px] shadow-lg hover:shadow-xl transition-all duration-200"
             asChild
           >
-            <Link href="/login">検索を開始</Link>
+            <Link href="/dashboard">検索を開始</Link>
           </Button>
         </div>
       </div>
