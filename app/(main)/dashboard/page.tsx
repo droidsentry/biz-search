@@ -22,7 +22,8 @@ import {
 export const metadata: Metadata = {
   metadataBase: new URL(getBaseURL()),
   title: "ダッシュボード - BizSearch",
-  description: "BizSearchの利用状況や最新の活動を確認できるダッシュボードです。プロジェクトの概要、API利用状況、検索履歴などを一覧で表示します。",
+  description:
+    "BizSearchの利用状況や最新の活動を確認できるダッシュボードです。プロジェクトの概要、API利用状況、検索履歴などを一覧で表示します。",
 };
 
 export default async function DashboardPage() {
@@ -158,7 +159,7 @@ export default async function DashboardPage() {
       title: "検索パターン",
       value: searchPatternsCount?.count || 0,
       icon: Search,
-      href: "/search",
+      href: "/search/patterns",
       description: "保存済みパターン",
     },
   ];
@@ -285,7 +286,7 @@ export default async function DashboardPage() {
                 <p className="text-sm text-muted-foreground mb-4">
                   検索パターンがありません
                 </p>
-                <Link href="/search">
+                <Link href="/search/patterns">
                   <Button size="sm">検索を開始</Button>
                 </Link>
               </div>
@@ -293,7 +294,7 @@ export default async function DashboardPage() {
           </CardContent>
           <CardFooter>
             <Button variant="outline" size="sm" className="w-full" asChild>
-              <Link href="/search">検索パターンを管理</Link>
+              <Link href="/search/patterns">検索パターンを管理</Link>
             </Button>
           </CardFooter>
         </Card>
