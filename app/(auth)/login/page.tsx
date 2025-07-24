@@ -9,6 +9,10 @@ export const metadata: Metadata = {
     "BizSearchへログインして、効率的なビジネス情報検索を始めましょう。",
 };
 
-export default function LoginPage() {
-  return <LoginForm />;
+export default function LoginPage({
+  searchParams,
+}: {
+  searchParams: { error?: string; from?: string };
+}) {
+  return <LoginForm searchParams={searchParams} />;
 }

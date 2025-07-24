@@ -34,9 +34,19 @@ export default async function AppMiddleware(
   const isPrivateRoute = !isPublicRoute && !isGuestRoute;
   // ユーザーがアカウントを作成しているかどうかを確認（招待ユーザーがアカウントを作成していない場合、アカウント作成ページにリダイレクト）
   const isSignupCompleted = user?.user_metadata?.is_signup_completed;
+  // ユーザーのアカウントがアクティブかどうかを確認
+  const isAccountActive = user?.app_metadata?.is_active !== false;
+
+  // アカウントが停止されている場合、ログインページにリダイレクト
+  if (isLogin && !isAccountActive && !isGuestRoute && !isPublicRoute) {
+    // セッションをクリアしてログインページへ
+    return NextResponse.redirect(
+      new URL(`/login?error=account_suspended`, request.url)
+    );
+  }
 
   // ゲスト専用ルートにサインイン済みのユーザーがアクセスしようとした場合、アカウントページにリダイレクト
-  if (isGuestRoute && isLogin) {
+  if (isGuestRoute && isLogin && isAccountActive) {
     return NextResponse.redirect(new URL(`/dashboard`, request.url));
   }
 

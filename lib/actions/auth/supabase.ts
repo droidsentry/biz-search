@@ -104,6 +104,13 @@ async function loginWithEmail(formData: LoginWithEmailOrUsername) {
     const errorCode = error.code as SupabaseAuthErrorCode;
     throw new Error(await getSupabaseAuthErrorMessage(errorCode));
   }
+  
+  // app_metadataのis_activeをチェック
+  if (data.user?.app_metadata?.is_active === false) {
+    await supabase.auth.signOut();
+    throw new Error("アカウントが停止されています。管理者にお問い合わせください。");
+  }
+  
   return data;
 }
 async function loginWithUsername(formData: LoginWithEmailOrUsername) {
@@ -119,7 +126,7 @@ async function loginWithUsername(formData: LoginWithEmailOrUsername) {
     throw new Error("ユーザー名またはパスワードが違います");
   }
   const supabase = await createClient();
-  const { error: sigInError } = await supabase.auth.signInWithPassword({
+  const { data, error: sigInError } = await supabase.auth.signInWithPassword({
     email: user.email,
     password,
   });
@@ -127,6 +134,12 @@ async function loginWithUsername(formData: LoginWithEmailOrUsername) {
     console.error(sigInError.code);
     const errorCode = sigInError.code as SupabaseAuthErrorCode;
     throw new Error(await getSupabaseAuthErrorMessage(errorCode));
+  }
+  
+  // app_metadataのis_activeをチェック
+  if (data.user?.app_metadata?.is_active === false) {
+    await supabase.auth.signOut();
+    throw new Error("アカウントが停止されています。管理者にお問い合わせください。");
   }
 }
 

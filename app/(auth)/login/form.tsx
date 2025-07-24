@@ -25,18 +25,23 @@ import { LoginWithEmailOrUsername } from "@/lib/types/auth";
 
 import logo from "@/public/logo.png";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useTransition } from "react";
+import { useTransition, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
-export default function LoginForm() {
+export default function LoginForm({
+  searchParams: serverSearchParams,
+}: {
+  searchParams?: { error?: string; from?: string };
+}) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const returnUrl = searchParams.get("from");
+  const returnUrl = searchParams.get("from") || serverSearchParams?.from;
 
   const form = useForm<LoginWithEmailOrUsername>({
     mode: "onChange",
@@ -81,6 +86,14 @@ export default function LoginForm() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {serverSearchParams?.error === "account_suspended" && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                アカウントが停止されています。管理者にお問い合わせください。
+              </AlertDescription>
+            </Alert>
+          )}
           <FormProvider {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField

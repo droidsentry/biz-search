@@ -32,7 +32,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { inviteMember } from "./action";
+import { inviteMember } from "./actions";
 import { Loader2 } from "lucide-react";
 
 export function InviteMemberForm() {

@@ -107,8 +107,7 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
-          deactivated_at: string | null
-          deactivation_reason: string | null
+          deleted_at: string | null
           display_name: string | null
           email: string
           id: string
@@ -119,8 +118,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          deactivated_at?: string | null
-          deactivation_reason?: string | null
+          deleted_at?: string | null
           display_name?: string | null
           email: string
           id?: string
@@ -131,8 +129,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          deactivated_at?: string | null
-          deactivation_reason?: string | null
+          deleted_at?: string | null
           display_name?: string | null
           email?: string
           id?: string
