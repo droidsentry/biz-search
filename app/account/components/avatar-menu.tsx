@@ -22,8 +22,11 @@ export default function AvatarMenu({ user }: { user: User }) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
+  const display_name = user.user_metadata.display_name || "";
   const username = user.user_metadata.username || "";
-  const avatarText = username.substring(0, 2).toUpperCase();
+  const avatarText = display_name
+    ? display_name.substring(0, 2).toUpperCase()
+    : username.substring(0, 2).toUpperCase();
   const encodedUsername = encodeURIComponent(username);
   const avatarUrl = `https://avatar.vercel.sh/${encodedUsername}.svg?text=${avatarText}`;
 

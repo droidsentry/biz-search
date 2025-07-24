@@ -1,92 +1,97 @@
 "use client";
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { Button } from "@/components/ui/button";
+import { CardContent, CardDescription } from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { updateDisplayName } from "@/lib/actions/account";
 import { displayNameSchema } from "@/lib/schemas/account";
 import { DisplayNameFormData } from "@/lib/types/account";
-import { updateDisplayName } from "@/lib/actions/account";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
-import { CardContent, CardDescription, CardFooter } from "@/components/ui/card";
+import { useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 interface DisplayNameFormProps {
-  currentDisplayName?: string;
+  currentDisplayName?: string | null;
 }
 
 export function DisplayNameForm({ currentDisplayName }: DisplayNameFormProps) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   const form = useForm<DisplayNameFormData>({
+    mode: "onChange",
     resolver: zodResolver(displayNameSchema),
     defaultValues: {
       displayName: currentDisplayName || "",
     },
   });
 
+  const { isSubmitting, isValid, isValidating } = form.formState;
+
   const onSubmit = async (data: DisplayNameFormData) => {
-    setIsLoading(true);
-    setMessage(null);
-
-    try {
-      const result = await updateDisplayName(data);
-
-      if (result.error) {
-        setMessage({ type: "error", text: result.error });
-      } else {
-        setMessage({ type: "success", text: "表示名を更新しました" });
-      }
-    } catch (error) {
-      setMessage({ type: "error", text: "予期せぬエラーが発生しました" });
-    } finally {
-      setIsLoading(false);
-    }
+    startTransition(async () => {
+      await updateDisplayName(data)
+        .then(() => {
+          toast.success("表示名を更新しました");
+          form.reset(data);
+        })
+        .catch((error: Error) => {
+          toast.error(error.message);
+        });
+    });
   };
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="">
-      <CardContent>
-        <Input
-          id="displayName"
-          {...form.register("displayName")}
-          placeholder="表示名を入力"
-          disabled={isLoading}
-          className="w-2/5 mb-6"
-        />
-        {form.formState.errors.displayName && (
-          <p className="text-sm text-destructive">
-            {form.formState.errors.displayName.message}
-          </p>
-        )}
-
-        {message && (
-          <Alert variant={message.type === "error" ? "destructive" : "default"}>
-            <AlertDescription>{message.text}</AlertDescription>
-          </Alert>
-        )}
-      </CardContent>
-      <div className="flex justify-between items-center border-t px-7 pt-3">
-        <CardDescription className="text-sm">
-          最大10文字まで設定できます
-        </CardDescription>
-        <Button type="submit" disabled={isLoading} size="sm" className="w-15">
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              更新中...
-            </>
-          ) : (
-            "保存"
-          )}
-        </Button>
-      </div>
-    </form>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="">
+        <CardContent className="mb-6">
+          <FormField
+            control={form.control}
+            name="displayName"
+            render={({ field }) => (
+              <FormItem>
+                <FormControl>
+                  <Input
+                    placeholder="表示名を入力"
+                    disabled={isPending}
+                    className="w-2/5"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </CardContent>
+        <div className="flex justify-between items-center border-t px-7 pt-3 ">
+          <CardDescription className="text-sm">
+            最大10文字まで設定できます。先頭の2文字がアイコンに表示されます。
+          </CardDescription>
+          <Button
+            type="submit"
+            disabled={!isValid || isValidating || isSubmitting || isPending}
+            size="sm"
+            className="w-28"
+          >
+            {isPending ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" />
+                更新中...
+              </>
+            ) : (
+              "保存"
+            )}
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
 }

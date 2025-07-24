@@ -1,14 +1,14 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { LockIcon, UsersIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
-import { ChartBarIcon, UsersIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 const navigation = [
   { name: "全般", href: "/account/settings", icon: UsersIcon },
-  { name: "認証", href: "/account/auth", icon: ChartBarIcon },
+  { name: "認証", href: "/account/settings/authentication", icon: LockIcon },
 ];
 
 export function SettingsSidebar() {

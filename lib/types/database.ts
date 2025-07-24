@@ -109,6 +109,7 @@ export type Database = {
           created_at: string
           deactivated_at: string | null
           deactivation_reason: string | null
+          display_name: string | null
           email: string
           id: string
           is_active: boolean
@@ -120,6 +121,7 @@ export type Database = {
           created_at?: string
           deactivated_at?: string | null
           deactivation_reason?: string | null
+          display_name?: string | null
           email: string
           id?: string
           is_active?: boolean
@@ -131,6 +133,7 @@ export type Database = {
           created_at?: string
           deactivated_at?: string | null
           deactivation_reason?: string | null
+          display_name?: string | null
           email?: string
           id?: string
           is_active?: boolean

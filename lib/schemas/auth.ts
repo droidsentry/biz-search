@@ -22,45 +22,20 @@ import AwesomeDebouncePromise from "awesome-debounce-promise";
     message: "メールアドレスの形式で入力してください。",
   })
 
-  const usernameSchema = z
-  .string()
-  .trim()
-  .min(1, "ユーザー名を入力してください")
-  .max(255, "最大255文字までです")
-  .refine(
-    (username) => {
-      // @と.の文字を除外
-      return !username.includes('@') && !username.includes('.');
-    },
-    "ユーザー名に@と.は使用できません"
-  )
-
   const usernameWithUniquenessCheckSchema = z
   .string()
   .trim()
-  .min(1, "ユーザー名を入力してください")
-  .max(255, "最大255文字までです")
-  .refine(
-    (username) => {
-      // @と.の文字を除外
-      return !username.includes('@') && !username.includes('.');
-    },
-    "ユーザー名に@と.は使用できません"
-  )
+  .min(3, 'ユーザー名は3文字以上で入力してください')
+  .max(20, 'ユーザー名は20文字以内で入力してください')
+  .regex(/^[a-zA-Z0-9_-]+$/, 'ユーザー名は英数字、アンダースコア、ハイフンのみ使用できます')
   .refine((userName) => isUserNameUnique(userName));
 
   export const debouncedUsernameWithUniquenessCheckSchema = z
   .string()
   .trim()
-  .min(1, "ユーザー名を入力してください")
-  .max(255, "最大255文字までです")
-  .refine(
-    (username) => {
-      // @と.の文字を除外
-      return !username.includes('@') && !username.includes('.');
-    },
-    "ユーザー名に@と.は使用できません"
-  )
+  .min(3, 'ユーザー名は3文字以上で入力してください')
+  .max(20, 'ユーザー名は20文字以内で入力してください')
+  .regex(/^[a-zA-Z0-9_-]+$/, 'ユーザー名は英数字、アンダースコア、ハイフンのみ使用できます')
   .refine(
     AwesomeDebouncePromise(
       async (userName) => await isUserNameUnique(userName),
@@ -98,4 +73,10 @@ import AwesomeDebouncePromise from "awesome-debounce-promise";
   export const loginWithEmailOrUsernameSchema = z.object({
     emailOrUsername: z.string().trim().min(1).max(255), // メールアドレスかユーザー名を許容するため、特殊文字のチェックは行わない
     password: passwordSchema,
+  });
+  export const debouncedUsernameSchema = z.object({
+    username: debouncedUsernameWithUniquenessCheckSchema,
+  });
+  export const unDebouncedUsernameSchema = z.object({
+    username: usernameWithUniquenessCheckSchema,
   });

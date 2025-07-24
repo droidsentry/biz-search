@@ -1,10 +1,12 @@
 'use server'
 
-import { displayNameSchema, usernameSchema } from '@/lib/schemas/account'
+import { displayNameSchema } from '@/lib/schemas/account'
 import { createClient } from '@/lib/supabase/server'
 import { DisplayNameFormData, UsernameFormData } from '@/lib/types/account'
-import { Tables, TablesUpdate } from '@/lib/types/database'
+import { TablesUpdate } from '@/lib/types/database'
 import { revalidatePath } from 'next/cache'
+import { parsePropertyOwnerData } from '../property-parser';
+import { unDebouncedUsernameSchema} from '../schemas/auth'
 
 /**
  * 表示名（DisplayName）を更新
@@ -16,38 +18,35 @@ export async function updateDisplayName(formData: DisplayNameFormData) {
   const { data: { user } } = await supabase.auth.getUser()
   
   if (!user) {
-    return { error: '認証が必要です' }
+    throw new Error('ユーザーが見つかりません')
   }
 
   // バリデーション
-  const result = displayNameSchema.safeParse(formData)
-  
-  if (!result.success) {
-    return { 
-      error: '入力データが不正です',
-      details: result.error.flatten() 
+  const parsed = await displayNameSchema.safeParseAsync(formData)
+  if (parsed.success === false) {
+    console.error(parsed.error)
+    throw new Error('表示名の更新に失敗しました')
+  }
+  const {error:profileError} = await supabase.from('profiles').update({
+    display_name: parsed.data.displayName
+  }).eq('id', user.id)
+  if (profileError) {
+    console.error(profileError)
+    throw new Error('表示名の更新に失敗しました')
+  }
+  // user_metadataを更新
+  const { error } = await supabase.auth.updateUser({
+    data: {
+      display_name: parsed.data.displayName
     }
+  })
+
+  if (error) {
+    console.error('表示名更新エラー:', error.message)
+    throw new Error('表示名の更新に失敗しました')
   }
 
-  try {
-    // user_metadataを更新
-    const { error } = await supabase.auth.updateUser({
-      data: {
-        displayName: result.data.displayName
-      }
-    })
-
-    if (error) {
-      console.error('表示名更新エラー:', error)
-      return { error: '表示名の更新に失敗しました' }
-    }
-
-    revalidatePath('/account/settings')
-    return { success: true }
-  } catch (error) {
-    console.error('表示名更新エラー:', error)
-    return { error: '予期せぬエラーが発生しました' }
-  }
+  revalidatePath('/account/settings')
 }
 
 /**
@@ -60,52 +59,31 @@ export async function updateUsername(formData: UsernameFormData) {
   const { data: { user } } = await supabase.auth.getUser()
   
   if (!user) {
-    return { error: '認証が必要です' }
+    throw new Error('ユーザーが見つかりません')
   }
 
   // バリデーション
-  const result = usernameSchema.safeParse(formData)
+  const result = await unDebouncedUsernameSchema.safeParseAsync(formData)
   
-  if (!result.success) {
-    return { 
-      error: '入力データが不正です',
-      details: result.error.flatten() 
-    }
+  if (result.success === false) {
+    console.error(result.error)
+    throw new Error('ユーザー名の更新に失敗しました')
   }
 
-  try {
-    // ユーザー名の重複チェック
-    const { data: existingUser } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('username', result.data.username)
-      .neq('id', user.id)
-      .single()
-
-    if (existingUser) {
-      return { error: 'このユーザー名は既に使用されています' }
-    }
-
-    // profilesテーブルを更新
-    const updateData: TablesUpdate<'profiles'> = {
-      username: result.data.username,
-      updated_at: new Date().toISOString()
-    }
-
-    const { error } = await supabase
-      .from('profiles')
-      .update(updateData)
-      .eq('id', user.id)
-
-    if (error) {
-      console.error('ユーザー名更新エラー:', error)
-      return { error: 'ユーザー名の更新に失敗しました' }
-    }
-
-    revalidatePath('/account/settings')
-    return { success: true }
-  } catch (error) {
-    console.error('ユーザー名更新エラー:', error)
-    return { error: '予期せぬエラーが発生しました' }
+  // profilesテーブルを更新
+  const updateData: TablesUpdate<'profiles'> = {
+    username: result.data.username,
   }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update(updateData)
+    .eq('id', user.id)
+
+  if (error) {
+    console.error('ユーザー名更新エラー:', error.message)
+    throw new Error('ユーザー名の更新に失敗しました')
+  }
+
+  revalidatePath('/account/settings')
 }

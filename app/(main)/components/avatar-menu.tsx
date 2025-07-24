@@ -8,22 +8,24 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { signOut } from "@/lib/actions/auth/supabase";
+import { User } from "@supabase/supabase-js";
 import { Loader2Icon, LogOutIcon, Settings } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useTransition } from "react";
-import { User } from "@supabase/supabase-js";
+import { useTransition } from "react";
 
 export default function AvatarMenu({ user }: { user: User }) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
+  const display_name = user.user_metadata.display_name || "";
   const username = user.user_metadata.username || "";
-  const avatarText = username.substring(0, 2).toUpperCase();
+  const avatarText = display_name
+    ? display_name.substring(0, 2).toUpperCase()
+    : username.substring(0, 2).toUpperCase();
   const encodedUsername = encodeURIComponent(username);
   const avatarUrl = `https://avatar.vercel.sh/${encodedUsername}.svg?text=${avatarText}`;
 
@@ -32,30 +34,6 @@ export default function AvatarMenu({ user }: { user: User }) {
       await signOut();
     });
   };
-
-  // キーボードショートカットの実装
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // ⌘S (Cmd+S) で設定ページに移動
-      if (event.key === "s" && (event.metaKey || event.ctrlKey)) {
-        event.preventDefault();
-        router.push("/settings");
-      }
-
-      // ⇧⌘Q (Shift+Cmd+Q) でログアウト
-      if (
-        event.key === "Q" &&
-        (event.metaKey || event.ctrlKey) &&
-        event.shiftKey
-      ) {
-        event.preventDefault();
-        signOut();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [router]);
 
   return (
     <DropdownMenu>
@@ -79,7 +57,6 @@ export default function AvatarMenu({ user }: { user: User }) {
           <Link href="/account/settings" className="flex items-center w-full">
             <Settings className="mr-2 size-4" />
             <span>アカウント設定</span>
-            <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
           </Link>
         </DropdownMenuItem>
 
@@ -107,7 +84,6 @@ export default function AvatarMenu({ user }: { user: User }) {
               <span className="">ログアウト</span>
             </>
           )}
-          <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

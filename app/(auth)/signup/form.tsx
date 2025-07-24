@@ -136,7 +136,7 @@ export default function SignupForm({ user }: { user: User | null }) {
                     更新中...
                   </>
                 ) : (
-                  "パスワードを更新"
+                  "アカウントを作成"
                 )}
               </Button>
             </form>

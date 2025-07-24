@@ -15,17 +15,15 @@ import { passwordUpdateSchema } from "@/lib/schemas/auth";
 import { PasswordUpdate } from "@/lib/types/auth";
 import logo from "@/public/logo.png";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { User } from "@supabase/supabase-js";
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-export default function PasswordUpdateForm({ user }: { user: User | null }) {
+export default function PasswordUpdateForm() {
   const [isPending, startTransition] = useTransition();
-  const [showPassword, setShowPassword] = useState(false);
   const searchParams = useSearchParams();
   const fromPath = searchParams.get("from");
   const router = useRouter();
