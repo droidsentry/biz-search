@@ -30,7 +30,7 @@ interface CompactSearchFormProps {
 }
 
 export function CompactSearchForm({ onSave }: CompactSearchFormProps) {
-  const { handleSearch, isLoading, isValidating, isNewSearch } =
+  const { handleSearch, isLoading, isValidating, isNewSearch, data } =
     useGoogleCustomSearchForm();
   const form = useFormContext<GoogleCustomSearchPattern>();
   const advancedEnabled = form.watch(
@@ -62,6 +62,7 @@ export function CompactSearchForm({ onSave }: CompactSearchFormProps) {
       toast.success("名前をクリップボードにコピーしました");
     }
   };
+  console.log("data", data);
 
   return (
     <Form {...form}>
@@ -74,7 +75,7 @@ export function CompactSearchForm({ onSave }: CompactSearchFormProps) {
         {/* ヘッダー */}
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-medium">検索条件</h2>
-          {isNewSearch && (
+          {isNewSearch && data && (
             <Button
               type="button"
               size="sm"
