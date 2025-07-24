@@ -9,6 +9,9 @@ import {
   ServerIcon,
   ArrowTrendingUpIcon
 } from '@heroicons/react/24/outline'
+import { useEffect, useState } from 'react'
+import { getApiUsageStats } from '../actions/api-usage'
+import type { DailyApiUsage, MonthlyApiUsage } from '../actions/api-usage'
 
 interface ApiMetric {
   name: string
@@ -20,45 +23,63 @@ interface ApiMetric {
   description: string
 }
 
-const apiMetrics: ApiMetric[] = [
-  {
+export function ApiUsage() {
+  const [googleSearchMetric, setGoogleSearchMetric] = useState<ApiMetric>({
     name: 'Google Custom Search API',
     icon: DocumentMagnifyingGlassIcon,
-    used: 8432,
+    used: 0,
     limit: 10000,
     unit: 'リクエスト',
-    status: 'warning',
-    description: '月間検索リクエスト数'
-  },
-  {
-    name: 'PDF解析API',
-    icon: ChartBarIcon,
-    used: 245,
-    limit: 1000,
-    unit: 'ファイル',
-    status: 'active',
-    description: 'PDF処理件数'
-  },
-  {
-    name: 'ストレージ使用量',
-    icon: ServerIcon,
-    used: 3.2,
-    limit: 10,
-    unit: 'GB',
-    status: 'active',
-    description: 'ファイルストレージ'
-  }
-]
+    status: 'inactive',
+    description: '本日の検索リクエスト数'
+  })
+  const [monthlyStats, setMonthlyStats] = useState<MonthlyApiUsage[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-const monthlyStats = [
-  { month: '1月', requests: 6500 },
-  { month: '2月', requests: 7200 },
-  { month: '3月', requests: 8100 },
-  { month: '4月', requests: 7800 },
-  { month: '5月', requests: 8432 },
-]
+  useEffect(() => {
+    const fetchUsage = async () => {
+      try {
+        const { daily, monthly } = await getApiUsageStats()
+        
+        setGoogleSearchMetric(prev => ({
+          ...prev,
+          used: daily.used,
+          limit: daily.limit,
+          status: daily.status
+        }))
+        
+        setMonthlyStats(monthly)
+      } catch (error) {
+        console.error('API使用状況の取得に失敗しました:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-export function ApiUsage() {
+    fetchUsage()
+  }, [])
+
+  const apiMetrics: ApiMetric[] = [
+    googleSearchMetric,
+    {
+      name: 'PDF解析API',
+      icon: ChartBarIcon,
+      used: 245,
+      limit: 1000,
+      unit: 'ファイル',
+      status: 'active',
+      description: 'PDF処理件数'
+    },
+    {
+      name: 'ストレージ使用量',
+      icon: ServerIcon,
+      used: 3.2,
+      limit: 10,
+      unit: 'GB',
+      status: 'active',
+      description: 'ファイルストレージ'
+    }
+  ]
   // const getStatusColor = (status: ApiMetric['status']) => {
   //   switch (status) {
   //     case 'active':
@@ -158,26 +179,32 @@ export function ApiUsage() {
             <div className="text-sm text-gray-600 dark:text-gray-400">
               Google Custom Search API - 過去5ヶ月
             </div>
-            <div className="space-y-3">
-              {monthlyStats.map((stat) => (
-                <div key={stat.month} className="flex items-center space-x-4">
-                  <div className="w-12 text-sm text-gray-600 dark:text-gray-400">
-                    {stat.month}
-                  </div>
-                  <div className="flex-1">
-                    <div className="h-6 bg-gray-100 dark:bg-gray-800 rounded-md overflow-hidden">
-                      <div 
-                        className="h-full bg-gray-900 dark:bg-gray-100 transition-all duration-500"
-                        style={{ width: `${(stat.requests / 10000) * 100}%` }}
-                      />
+            {isLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100"></div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {monthlyStats.map((stat) => (
+                  <div key={stat.month} className="flex items-center space-x-4">
+                    <div className="w-12 text-sm text-gray-600 dark:text-gray-400">
+                      {stat.month}
+                    </div>
+                    <div className="flex-1">
+                      <div className="h-6 bg-gray-100 dark:bg-gray-800 rounded-md overflow-hidden">
+                        <div 
+                          className="h-full bg-gray-900 dark:bg-gray-100 transition-all duration-500"
+                          style={{ width: `${Math.min((stat.requests / 10000) * 100, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                    <div className="w-20 text-right text-sm font-medium">
+                      {stat.requests.toLocaleString()}
                     </div>
                   </div>
-                  <div className="w-20 text-right text-sm font-medium">
-                    {stat.requests.toLocaleString()}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
