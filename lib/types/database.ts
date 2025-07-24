@@ -24,7 +24,7 @@ export type Database = {
           position: string | null
           rank: number
           researched_at: string
-          researched_by: string
+          researched_by: string | null
           source_url: string
           updated_at: string
         }
@@ -37,7 +37,7 @@ export type Database = {
           position?: string | null
           rank: number
           researched_at?: string
-          researched_by: string
+          researched_by?: string | null
           source_url: string
           updated_at?: string
         }
@@ -50,7 +50,7 @@ export type Database = {
           position?: string | null
           rank?: number
           researched_at?: string
-          researched_by?: string
+          researched_by?: string | null
           source_url?: string
           updated_at?: string
         }
@@ -60,6 +60,13 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "owners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_companies_researched_by_fkey"
+            columns: ["researched_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -100,34 +107,43 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          deactivated_at: string | null
+          deactivation_reason: string | null
           email: string
           id: string
+          is_active: boolean
           role: string
           updated_at: string
-          username: string
+          username: string | null
         }
         Insert: {
           created_at?: string
+          deactivated_at?: string | null
+          deactivation_reason?: string | null
           email: string
           id?: string
+          is_active?: boolean
           role?: string
           updated_at?: string
-          username: string
+          username?: string | null
         }
         Update: {
           created_at?: string
+          deactivated_at?: string | null
+          deactivation_reason?: string | null
           email?: string
           id?: string
+          is_active?: boolean
           role?: string
           updated_at?: string
-          username?: string
+          username?: string | null
         }
         Relationships: []
       }
       project_members: {
         Row: {
           added_at: string
-          added_by: string
+          added_by: string | null
           id: string
           project_id: string
           role: string
@@ -135,7 +151,7 @@ export type Database = {
         }
         Insert: {
           added_at?: string
-          added_by: string
+          added_by?: string | null
           id?: string
           project_id: string
           role: string
@@ -143,7 +159,7 @@ export type Database = {
         }
         Update: {
           added_at?: string
-          added_by?: string
+          added_by?: string | null
           id?: string
           project_id?: string
           role?: string
@@ -151,10 +167,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "project_members_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "project_members_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -162,7 +192,7 @@ export type Database = {
       project_properties: {
         Row: {
           added_at: string
-          added_by: string
+          added_by: string | null
           id: string
           import_source_file: string | null
           project_id: string
@@ -170,7 +200,7 @@ export type Database = {
         }
         Insert: {
           added_at?: string
-          added_by: string
+          added_by?: string | null
           id?: string
           import_source_file?: string | null
           project_id: string
@@ -178,13 +208,20 @@ export type Database = {
         }
         Update: {
           added_at?: string
-          added_by?: string
+          added_by?: string | null
           id?: string
           import_source_file?: string | null
           project_id?: string
           property_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "project_properties_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "project_properties_project_id_fkey"
             columns: ["project_id"]
@@ -204,7 +241,7 @@ export type Database = {
       projects: {
         Row: {
           created_at: string
-          created_by: string
+          created_by: string | null
           description: string | null
           id: string
           name: string
@@ -212,7 +249,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          created_by: string
+          created_by?: string | null
           description?: string | null
           id?: string
           name: string
@@ -220,13 +257,21 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           description?: string | null
           id?: string
           name?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "projects_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       properties: {
         Row: {
@@ -258,7 +303,7 @@ export type Database = {
           ownership_end: string | null
           ownership_start: string
           property_id: string
-          recorded_by: string
+          recorded_by: string | null
           source: string | null
           updated_at: string
         }
@@ -270,7 +315,7 @@ export type Database = {
           ownership_end?: string | null
           ownership_start?: string
           property_id: string
-          recorded_by: string
+          recorded_by?: string | null
           source?: string | null
           updated_at?: string
         }
@@ -282,7 +327,7 @@ export type Database = {
           ownership_end?: string | null
           ownership_start?: string
           property_id?: string
-          recorded_by?: string
+          recorded_by?: string | null
           source?: string | null
           updated_at?: string
         }
@@ -299,6 +344,13 @@ export type Database = {
             columns: ["property_id"]
             isOneToOne: false
             referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_ownerships_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -361,6 +413,13 @@ export type Database = {
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "search_api_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       search_patterns: {
@@ -397,20 +456,32 @@ export type Database = {
           usage_count?: number | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "search_patterns_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      cached_uid: {
-        Args: Record<PropertyKey, never>
-        Returns: string
+      deactivate_user_account: {
+        Args: { user_id: string; reason?: string }
+        Returns: undefined
       }
       delete_old_search_api_logs: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      get_active_profile_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       get_project_api_usage: {
         Args: { p_project_id: string; p_period?: unknown }

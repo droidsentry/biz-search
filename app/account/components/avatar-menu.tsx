@@ -74,17 +74,6 @@ export default function AvatarMenu({ user }: { user: User }) {
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel>マイアカウント</DropdownMenuLabel>
         <DropdownMenuSeparator />
-
-        <DropdownMenuItem asChild>
-          <Link href="/account/settings" className="flex items-center w-full">
-            <Settings className="mr-2 size-4" />
-            <span>アカウント設定</span>
-            <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
-          </Link>
-        </DropdownMenuItem>
-
-        <DropdownMenuSeparator />
-
         <DropdownMenuItem
           className="text-red-600 dark:text-red-400"
           onSelect={(event) => {

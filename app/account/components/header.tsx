@@ -16,12 +16,13 @@ export function Header({ user }: { user: User }) {
     <header
       className={cn(
         "flex h-16 min-h-[64px] items-center px-4 md:px-6 bg-muted",
-        "[&_a]:ease-[ease]", // アニメーションの設定
-        "[&_a]:no-underline", // アンダーラインの削除
-        "[&_a]:transition-colors", // 色の変化のアニメーション
-        "[&_a]:duration-200" // アニメーションの速度
+        "[&_a]:ease-[ease]",
+        "[&_a]:no-underline",
+        "[&_a]:transition-colors",
+        "[&_a]:duration-200"
       )}
     >
+      {" "}
       {/* ロゴ（fixed position） */}
       <Link href="/" aria-label="BizSearch logo" className="relative">
         <span

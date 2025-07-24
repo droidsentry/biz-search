@@ -1,23 +1,6 @@
 "use client";
 
-import { signIn } from "@/lib/actions/auth/supabase";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { loginSchema } from "@/lib/schemas/auth";
-import { Login } from "@/lib/types/auth";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
-import {
-  Form as FormProvider,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import PasswordForm from "@/components/auth/password-form";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -27,30 +10,48 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import Image from "next/image";
-import logo from "@/public/logo.png";
+import {
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  Form as FormProvider,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { loginWithEmailOrUsername } from "@/lib/actions/auth/supabase";
+import { loginWithEmailOrUsernameSchema } from "@/lib/schemas/auth";
+import { LoginWithEmailOrUsername } from "@/lib/types/auth";
 
-export function Form() {
+import logo from "@/public/logo.png";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
+import Image from "next/image";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+
+export default function LoginForm() {
   const [isPending, startTransition] = useTransition();
-  const [passwordVisible, setPasswordVisible] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnUrl = searchParams.get("from");
 
-  const form = useForm<Login>({
+  const form = useForm<LoginWithEmailOrUsername>({
     mode: "onChange",
-    resolver: zodResolver(loginSchema),
+    resolver: zodResolver(loginWithEmailOrUsernameSchema),
     defaultValues: {
-      email: "",
+      emailOrUsername: "",
       password: "",
     },
   });
 
   const { isSubmitting, isValid } = form.formState;
 
-  const onSubmit = async (data: Login) => {
+  const onSubmit = async (data: LoginWithEmailOrUsername) => {
     startTransition(async () => {
-      await signIn(data)
+      await loginWithEmailOrUsername(data)
         .then(() => {
           toast.success("ログインしました");
           if (returnUrl) {
@@ -84,15 +85,15 @@ export function Form() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="email"
+                name="emailOrUsername"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>メールアドレス</FormLabel>
+                    <FormLabel>メールアドレスまたはユーザー名</FormLabel>
                     <FormControl>
                       <Input
-                        type="email"
-                        placeholder="user@example.com"
-                        autoComplete="email"
+                        type="text"
+                        placeholder="メールアドレスまたはユーザー名を入力"
+                        autoComplete="emailOrUsername"
                         {...field}
                       />
                     </FormControl>
@@ -101,45 +102,10 @@ export function Form() {
                 )}
               />
 
-              <FormField
-                control={form.control}
+              <PasswordForm
+                form={form}
                 name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>パスワード</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          type={passwordVisible ? "text" : "password"}
-                          autoComplete="new-password"
-                          placeholder="••••••••"
-                          minLength={6}
-                          className="pr-10"
-                          {...field}
-                        />
-                        <Button
-                          size="icon"
-                          type="button"
-                          className="absolute top-0 right-0"
-                          variant="ghost"
-                          onClick={() => setPasswordVisible((v) => !v)}
-                        >
-                          {passwordVisible ? (
-                            <Eye size={18} />
-                          ) : (
-                            <EyeOff size={18} />
-                          )}
-                          <span className="sr-only">
-                            {passwordVisible
-                              ? "パスワードを非表示にする"
-                              : "パスワードを表示する"}
-                          </span>
-                        </Button>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                autoComplete="current-password"
               />
 
               <Button

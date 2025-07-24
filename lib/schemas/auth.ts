@@ -22,11 +22,31 @@ import AwesomeDebouncePromise from "awesome-debounce-promise";
     message: "メールアドレスの形式で入力してください。",
   })
 
+  const usernameSchema = z
+  .string()
+  .trim()
+  .min(1, "ユーザー名を入力してください")
+  .max(255, "最大255文字までです")
+  .refine(
+    (username) => {
+      // @と.の文字を除外
+      return !username.includes('@') && !username.includes('.');
+    },
+    "ユーザー名に@と.は使用できません"
+  )
+
   const usernameWithUniquenessCheckSchema = z
   .string()
   .trim()
   .min(1, "ユーザー名を入力してください")
   .max(255, "最大255文字までです")
+  .refine(
+    (username) => {
+      // @と.の文字を除外
+      return !username.includes('@') && !username.includes('.');
+    },
+    "ユーザー名に@と.は使用できません"
+  )
   .refine((userName) => isUserNameUnique(userName));
 
   export const debouncedUsernameWithUniquenessCheckSchema = z
@@ -34,6 +54,13 @@ import AwesomeDebouncePromise from "awesome-debounce-promise";
   .trim()
   .min(1, "ユーザー名を入力してください")
   .max(255, "最大255文字までです")
+  .refine(
+    (username) => {
+      // @と.の文字を除外
+      return !username.includes('@') && !username.includes('.');
+    },
+    "ユーザー名に@と.は使用できません"
+  )
   .refine(
     AwesomeDebouncePromise(
       async (userName) => await isUserNameUnique(userName),
@@ -43,25 +70,32 @@ import AwesomeDebouncePromise from "awesome-debounce-promise";
       message: "このユーザー名は既に使用されています",
     }
   );
+
+
   /**
-   * ユーザー名バリデーション
-   * 通信パフォーマンスを上げるためDebounceを使用しない関数。
-   * 主にサーバーアクションでユーザー名の重複チェックを行う。
+   * サインアップ
    */
-  export const passwordUpdateSchema = z.object({
+  export const signupSchema = z.object({
     email: emailSchema,
     username: usernameWithUniquenessCheckSchema,
     password: passwordSchema,
   });
   /**
-   * ユーザー名バリデーション
-   * 主にフロントエンドでユーザー名の重複チェックを行う。
+   * サインアップ（ユーザー名バリデーション）
    */
-  export const extendedSignUpSchema = passwordUpdateSchema.extend({
+  export const extendedSignupSchema = signupSchema.extend({
     username: debouncedUsernameWithUniquenessCheckSchema,
   });
-
-  export const loginSchema = z.object({
-    email: emailSchema,
+  /**
+   * パスワード更新
+   */
+  export const passwordUpdateSchema = z.object({
+    password: passwordSchema,
+  });
+  /**
+   * ログイン
+   */
+  export const loginWithEmailOrUsernameSchema = z.object({
+    emailOrUsername: z.string().trim().min(1).max(255), // メールアドレスかユーザー名を許容するため、特殊文字のチェックは行わない
     password: passwordSchema,
   });

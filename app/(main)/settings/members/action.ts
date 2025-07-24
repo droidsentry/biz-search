@@ -13,7 +13,7 @@ import { Invite } from "@/lib/types/invite"
  */
 export async function inviteMember(formData: Invite) {
   const supabase = await createClient()
-  const { data: user } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     throw new Error('ユーザーが見つかりません')
   }
@@ -24,6 +24,8 @@ export async function inviteMember(formData: Invite) {
   }
   const { email, role } = data
   const baseUrl = getBaseURL()
+  console.log('user', user)
+  console.log('user.email', user.email)
   const supabaseAdmin = createAdminClient()
   await supabaseAdmin.auth.admin.inviteUserByEmail(
     email,
@@ -31,9 +33,10 @@ export async function inviteMember(formData: Invite) {
       redirectTo: `${baseUrl}/auth/confirm`,
       data: {
         pending_role: role, // ユーザーのメタデータにpending_roleを保存
+        added_by: user.email,
       }
     }
-  ).then(async ({error }) => {
+  ).then(async ({error}) => {
     if (error) {
       console.error(error.message)
       const errorCode = error.code as SupabaseAuthErrorCode
