@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { getSupabaseAuthErrorMessage, SupabaseAuthErrorCode } from "@/lib/supabase/error-code-ja"
 import { createClient } from "@/lib/supabase/server"
 import { Invite } from "@/lib/types/invite"
+import { sendMagicLink } from "@/lib/actions/auth/supabase"
 
 /**
  * メンバー招待
@@ -193,5 +194,34 @@ export async function deleteAccountAction(formData: { userId: string }) {
   } catch (error) {
     console.error('予期せぬエラー:', error)
     return { error: '予期せぬエラーが発生しました' }
+  }
+}
+
+/**
+ * 認証メール（Magic Link）を送信
+ * @param formData メンバー情報
+ */
+export async function sendAuthEmailAction(formData: { userId: string; email: string }) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) {
+    return { error: '認証が必要です' }
+  }
+
+  const { userId, email } = formData
+
+  if (!userId || !email) {
+    return { error: '必要なデータが不足しています' }
+  }
+
+  try {
+    // Magic Linkを送信
+    await sendMagicLink(email)
+    
+    return { success: true, message: '認証メールを送信しました' }
+  } catch (error) {
+    console.error('認証メール送信エラー:', error)
+    return { error: '認証メールの送信に失敗しました' }
   }
 }

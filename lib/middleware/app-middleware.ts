@@ -15,6 +15,7 @@ const publicRoutes = [
 // ゲスト専用ルート(ログインしている人はアクセスできない)
 const guestRoutes = [
   "/login",
+  "/signup",
 ];
 
 export default async function AppMiddleware(
@@ -45,8 +46,15 @@ export default async function AppMiddleware(
     );
   }
 
-  // ゲスト専用ルートにサインイン済みのユーザーがアクセスしようとした場合、アカウントページにリダイレクト
+  // ゲスト専用ルートにサインイン済みのユーザーがアクセスしようとした場合
   if (isGuestRoute && isLogin && isAccountActive) {
+    // 特別なケース: 招待ユーザーが/signupにアクセスする場合は許可
+    if (path === "/signup" && !isSignupCompleted) {
+      // アカウント作成が完了していない招待ユーザーは/signupへのアクセスを許可
+      return supabaseResponse;
+    }
+    
+    // それ以外のゲスト専用ルートへのアクセスはリダイレクト
     return NextResponse.redirect(new URL(`/dashboard`, request.url));
   }
 

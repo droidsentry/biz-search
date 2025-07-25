@@ -187,3 +187,27 @@ export async function updatePassword(formData: PasswordUpdate) {
     }
   });
 }
+
+/**
+ * パスワードレスメール（Magic Link）を送信
+ * @param email メールアドレス
+ * @param redirectTo リダイレクト先URL
+ */
+export async function sendMagicLink(email: string, redirectTo?: string) {
+  const supabase = await createClient();
+  
+  const { data, error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      shouldCreateUser: false, // 新規ユーザーの自動作成を防止
+      emailRedirectTo: redirectTo || `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`,
+    },
+  });
+  
+  if (error) {
+    console.error('Magic Link送信エラー:', error.message);
+    throw new Error(error.message);
+  }
+  
+  return data;
+}

@@ -10,12 +10,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tables } from "@/lib/types/database";
-import { MoreVertical, UserCog, UserMinus, UserX2Icon } from "lucide-react";
+import { Mail, MoreVertical, UserCog, UserMinus, UserX2Icon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ChangeRoleDialog } from "./change-role-dialog";
 import { DeleteAccountDialog } from "./delete-account-dialog";
 import { SuspendAccountDialog } from "./suspend-account-dialog";
+import { SendAuthEmailDialog } from "./send-auth-email-dialog";
 
 type Profile = Tables<"profiles">;
 
@@ -33,6 +34,7 @@ export function MemberListClient({
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [showSuspendDialog, setShowSuspendDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showAuthEmailDialog, setShowAuthEmailDialog] = useState(false);
   const getRoleLabel = (role: string) => {
     switch (role) {
       case "system_owner":
@@ -76,6 +78,11 @@ export function MemberListClient({
     setShowDeleteDialog(true);
   };
 
+  const handleSendAuthEmail = (profile: Profile) => {
+    setSelectedProfile(profile);
+    setShowAuthEmailDialog(true);
+  };
+
   const handleRoleDialogClose = (open: boolean) => {
     if (!open) {
       setShowRoleDialog(false);
@@ -95,6 +102,14 @@ export function MemberListClient({
   const handleDeleteDialogClose = (open: boolean) => {
     if (!open) {
       setShowDeleteDialog(false);
+      setSelectedProfile(null);
+      router.refresh(); // データを再取得
+    }
+  };
+
+  const handleAuthEmailDialogClose = (open: boolean) => {
+    if (!open) {
+      setShowAuthEmailDialog(false);
       setSelectedProfile(null);
       router.refresh(); // データを再取得
     }
@@ -203,6 +218,12 @@ export function MemberListClient({
                       <span>役割を変更する</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
+                      onSelect={() => handleSendAuthEmail(profile)}
+                    >
+                      <Mail className="mr-2 size-4" />
+                      <span>認証メールを送信</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
                       className={
                         profile.is_active ? "text-red-400" : "text-green-600"
                       }
@@ -253,6 +274,15 @@ export function MemberListClient({
         <DeleteAccountDialog
           open={showDeleteDialog}
           onOpenChange={handleDeleteDialogClose}
+          profile={selectedProfile}
+        />
+      )}
+
+      {/* 認証メール送信ダイアログ */}
+      {selectedProfile && (
+        <SendAuthEmailDialog
+          open={showAuthEmailDialog}
+          onOpenChange={handleAuthEmailDialogClose}
           profile={selectedProfile}
         />
       )}
