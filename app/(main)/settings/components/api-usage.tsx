@@ -2,21 +2,26 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AppConfig } from '@/app.config'
-import { Progress } from '@/components/ui/progress'
 import { 
-  DocumentMagnifyingGlassIcon
+  DocumentMagnifyingGlassIcon,
+  DocumentTextIcon,
+  MapPinIcon
 } from '@heroicons/react/24/outline'
 import { useEffect, useState } from 'react'
-import { getApiUsageStats } from '../actions/api-usage'
-import type { DailyApiUsage, MonthlyApiUsage } from '../actions/api-usage'
+import { getApiUsageStats, getAllApiUsageStats } from '../actions/api-usage'
+import type { DailyApiUsage, MonthlyApiUsage, ApiStats } from '../actions/api-usage'
 import { createClient } from '@/lib/supabase/client'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 import { toast } from 'sonner'
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { GoogleSearchUsageChart } from './google-search-usage-chart'
+import { PdfUsageChart } from './pdf-usage-chart'
+import { GeocodingUsageChart } from './geocoding-usage-chart'
 
 interface ApiMetric {
   name: string
+  apiName?: string
   icon: React.ComponentType<{ className?: string }>
   used: number
   limit: number
@@ -26,18 +31,14 @@ interface ApiMetric {
 }
 
 export function ApiUsage() {
-  const [googleSearchMetric, setGoogleSearchMetric] = useState<ApiMetric>({
-    name: 'Google Custom Search API',
-    icon: DocumentMagnifyingGlassIcon,
-    used: 0,
-    limit: AppConfig.api.googleCustomSearch.dailyLimit,
-    unit: 'リクエスト',
-    status: 'inactive',
-    description: '本日の検索リクエスト数'
-  })
-  const [monthlyStats, setMonthlyStats] = useState<MonthlyApiUsage[]>([])
+  const [apiStats, setApiStats] = useState<ApiStats[]>([])
+  const [selectedApi, setSelectedApi] = useState<string>('google_custom_search')
   const [isLoading, setIsLoading] = useState(true)
-  const [isRealtimeConnected, setIsRealtimeConnected] = useState(false)
+  const [realtimeStatus, setRealtimeStatus] = useState({
+    search: false,
+    pdf: false,
+    geocoding: false
+  })
   
   // 今日の時間別データ（デモ用）
   const [hourlyData] = useState(() => {
@@ -57,16 +58,8 @@ export function ApiUsage() {
   useEffect(() => {
     const fetchUsage = async () => {
       try {
-        const { daily, monthly } = await getApiUsageStats()
-        
-        setGoogleSearchMetric(prev => ({
-          ...prev,
-          used: daily.used,
-          limit: daily.limit,
-          status: daily.status
-        }))
-        
-        setMonthlyStats(monthly)
+        const stats = await getAllApiUsageStats()
+        setApiStats(stats)
       } catch (error) {
         console.error('API使用状況の取得に失敗しました:', error)
       } finally {
@@ -79,138 +72,134 @@ export function ApiUsage() {
     // Supabaseリアルタイム接続を設定
     const supabase = createClient()
     
-    // search_api_logsテーブルの変更を監視
-    const channel = supabase
-      .channel('api-usage-monitor')
+    // 複数のテーブルの変更を監視
+    const channels: RealtimeChannel[] = []
+    
+    // Google Custom Search APIの監視（search_api_logs）
+    const searchChannel = supabase
+      .channel('search-logs-monitor')
       .on(
         'postgres_changes',
         { 
           event: 'INSERT', 
           schema: 'public', 
-          table: 'search_api_logs',
-          filter: 'status_code=eq.200'
+          table: 'search_api_logs'
         },
         (payload) => {
-          console.log('新しいAPI呼び出しを検知:', payload)
-          
-          // 新しいレコードが今日のものか確認
-          const createdAt = new Date(payload.new.created_at)
-          const today = new Date()
-          
-          if (
-            createdAt.getFullYear() === today.getFullYear() &&
-            createdAt.getMonth() === today.getMonth() &&
-            createdAt.getDate() === today.getDate()
-          ) {
-            // 本日の使用状況を更新
-            setGoogleSearchMetric(prev => {
-              const newUsed = prev.used + 1
-              const percentage = (newUsed / prev.limit) * 100
-              
-              let newStatus: 'active' | 'warning' | 'danger' | 'inactive' = 'active'
-              if (percentage >= 90) {
-                newStatus = 'danger'
-                // 90%超えた場合は警告
-                if (prev.status !== 'danger') {
-                  toast.error('API使用率が90%を超えました！')
-                }
-              } else if (percentage >= 70) {
-                newStatus = 'warning'
-                // 70%超えた場合は注意
-                if (prev.status !== 'warning' && prev.status !== 'danger') {
-                  toast.warning('API使用率が70%を超えました')
-                }
-              }
-              
-              return {
-                ...prev,
-                used: newUsed,
-                status: newStatus
-              }
-            })
-
-            // 月間統計も更新
-            const currentMonth = today.getMonth()
-            setMonthlyStats(prev => 
-              prev.map((stat, index) => {
-                // 現在の月のインデックスを計算（過去5ヶ月の最後が現在月）
-                if (index === prev.length - 1) {
-                  return {
-                    ...stat,
-                    requests: stat.requests + 1
-                  }
-                }
-                return stat
-              })
-            )
-          }
+          console.log('Google Search APIログが追加されました:', payload)
+          fetchUsage()
         }
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          setIsRealtimeConnected(true)
-          console.log('リアルタイム接続が確立されました')
+          setRealtimeStatus(prev => ({ ...prev, search: true }))
+          console.log('Google Search APIリアルタイム接続が確立されました')
         }
       })
+    channels.push(searchChannel)
+
+    // PDF解析処理の監視（pdf_processing_logs）
+    const pdfChannel = supabase
+      .channel('pdf-logs-monitor')
+      .on(
+        'postgres_changes',
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'pdf_processing_logs'
+        },
+        (payload) => {
+          console.log('PDF処理ログが追加されました:', payload)
+          fetchUsage()
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          setRealtimeStatus(prev => ({ ...prev, pdf: true }))
+          console.log('PDF処理リアルタイム接続が確立されました')
+        }
+      })
+    channels.push(pdfChannel)
+
+    // Google Maps Geocoding APIの監視（geocoding_logs）
+    const geocodingChannel = supabase
+      .channel('geocoding-logs-monitor')
+      .on(
+        'postgres_changes',
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'geocoding_logs'
+        },
+        (payload) => {
+          console.log('Geocodingログが追加されました:', payload)
+          fetchUsage()
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          setRealtimeStatus(prev => ({ ...prev, geocoding: true }))
+          console.log('Geocoding APIリアルタイム接続が確立されました')
+        }
+      })
+    channels.push(geocodingChannel)
+
+    // api_global_usageテーブルも監視（全体的な変更を検知）
+    const globalUsageChannel = supabase
+      .channel('global-usage-monitor')
+      .on(
+        'postgres_changes',
+        { 
+          event: '*', // INSERT, UPDATE, DELETE全てを監視
+          schema: 'public', 
+          table: 'api_global_usage'
+        },
+        (payload) => {
+          console.log('api_global_usage が更新されました:', payload)
+          fetchUsage()
+        }
+      )
+      .subscribe((status) => {
+        console.log('api_global_usage リアルタイムステータス:', status)
+      })
+    channels.push(globalUsageChannel)
 
     // クリーンアップ
     return () => {
-      setIsRealtimeConnected(false)
-      supabase.removeChannel(channel)
+      setRealtimeStatus({ search: false, pdf: false, geocoding: false })
+      channels.forEach(channel => supabase.removeChannel(channel))
     }
   }, [])
 
-  const apiMetrics: ApiMetric[] = [
-    googleSearchMetric,
-    {
-      name: 'Coming Soon 1',
-      icon: DocumentMagnifyingGlassIcon,
-      used: 0,
-      limit: 0,
-      unit: '',
-      status: 'inactive',
-      description: '新機能を準備中です'
-    },
-    {
-      name: 'Coming Soon 2',
-      icon: DocumentMagnifyingGlassIcon,
-      used: 0,
-      limit: 0,
-      unit: '',
-      status: 'inactive',
-      description: '新機能を準備中です'
-    }
-  ]
-  const getStatusBadge = (status: ApiMetric['status']) => {
-    switch (status) {
-      case 'active':
-        return (
-          <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 dark:text-green-400">
-            <div className="h-1.5 w-1.5 bg-green-500 rounded-full" />
-            正常
-          </span>
-        )
-      case 'warning':
-        return (
-          <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400">
-            <div className="h-1.5 w-1.5 bg-amber-500 rounded-full" />
-            注意
-          </span>
-        )
-      case 'danger':
-        return (
-          <span className="inline-flex items-center gap-1 text-xs font-medium text-red-700 dark:text-red-400">
-            <div className="h-1.5 w-1.5 bg-red-500 rounded-full" />
-            警告
-          </span>
-        )
-      case 'inactive':
-        return (
-          <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400">
-            <div className="h-1.5 w-1.5 bg-gray-400 rounded-full" />
-            待機中
-          </span>
-        )
+  // APIアイコンのマッピング
+  const apiIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+    'google_custom_search': DocumentMagnifyingGlassIcon,
+    'pdf_parsing': DocumentTextIcon,
+    'google_maps_geocoding': MapPinIcon
+  }
+
+  // APIメトリクスの生成
+  const apiMetrics: ApiMetric[] = apiStats.map(stat => ({
+    name: stat.displayName,
+    apiName: stat.apiName,
+    icon: apiIcons[stat.apiName] || DocumentMagnifyingGlassIcon,
+    used: stat.daily.used,
+    limit: stat.daily.limit,
+    unit: stat.apiName === 'pdf_parsing' ? 'ファイル' : 'リクエスト',
+    status: stat.daily.status,
+    description: getApiDescription(stat.apiName)
+  }))
+
+  function getApiDescription(apiName: string): string {
+    switch (apiName) {
+      case 'google_custom_search':
+        return '本日の検索リクエスト数'
+      case 'pdf_parsing':
+        return '本日のPDF処理ファイル数'
+      case 'google_maps_geocoding':
+        return '本日のジオコーディング数'
+      default:
+        return '本日の使用数'
     }
   }
 
@@ -241,7 +230,9 @@ export function ApiUsage() {
                       </p>
                     )}
                   </div>
-                  {metric.name === 'Google Custom Search API' && isRealtimeConnected && (
+                  {((metric.name === 'Google Custom Search API' && realtimeStatus.search) ||
+                    (metric.name === 'PDF解析処理' && realtimeStatus.pdf) ||
+                    (metric.name === 'Google Maps Geocoding API' && realtimeStatus.geocoding)) && (
                     <div className="flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400">
                       <span className="relative flex h-2 w-2">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -269,40 +260,19 @@ export function ApiUsage() {
                     <p className="text-sm font-medium text-gray-500 dark:text-gray-400">新機能を準備中</p>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">近日公開予定</p>
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex items-baseline justify-between">
-                      <div>
-                        <span className="text-3xl font-light text-gray-900 dark:text-gray-100">
-                          {metric.used.toLocaleString()}
-                        </span>
-                        <span className="text-sm text-gray-500 dark:text-gray-400 ml-1">
-                          / {metric.limit.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-light text-gray-900 dark:text-gray-100">
-                          {percentage.toFixed(0)}%
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <div className="relative">
-                        <Progress 
-                          value={percentage} 
-                          className="h-2 bg-gray-100 dark:bg-gray-800"
-                        />
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          {metric.unit}
-                        </span>
-                        {getStatusBadge(metric.status)}
-                      </div>
-                    </div>
-                  </div>
-                )}
+                ) : metric.name === 'PDF解析処理' ? (
+                  <PdfUsageChart 
+                    used={metric.used}
+                    limit={metric.limit}
+                    status={metric.status}
+                  />
+                ) : metric.name === 'Google Maps Geocoding API' ? (
+                  <GeocodingUsageChart 
+                    used={metric.used}
+                    limit={metric.limit}
+                    status={metric.status}
+                  />
+                ) : null}
               </CardContent>
             </Card>
           )
@@ -313,13 +283,26 @@ export function ApiUsage() {
       <Card className="group relative transition-all duration-200 hover:shadow-lg">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-gray-50/50 dark:to-gray-900/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg pointer-events-none" />
         <CardHeader className="pb-3">
-          <div>
-            <CardTitle className="text-base font-medium text-gray-900 dark:text-gray-100">
-              月間使用履歴
-            </CardTitle>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              Google Custom Search API - 過去5ヶ月
-            </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-medium text-gray-900 dark:text-gray-100">
+                月間使用履歴
+              </CardTitle>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                過去5ヶ月
+              </p>
+            </div>
+            <select
+              value={selectedApi}
+              onChange={(e) => setSelectedApi(e.target.value)}
+              className="text-sm border rounded-md px-2 py-1 bg-white dark:bg-gray-800"
+            >
+              {apiStats.map(stat => (
+                <option key={stat.apiName} value={stat.apiName}>
+                  {stat.displayName}
+                </option>
+              ))}
+            </select>
           </div>
         </CardHeader>
         <CardContent className="pt-2 pb-4">
@@ -329,111 +312,123 @@ export function ApiUsage() {
             </div>
           ) : (
             <div className="space-y-3">
-              <ChartContainer
-                config={{
-                  requests: {
-                    label: "リクエスト数",
-                    color: "#3b82f6",
-                  },
-                }}
-                className="h-[250px] w-full"
-              >
-                <AreaChart
-                  accessibilityLayer
-                  data={monthlyStats}
-                  margin={{
-                    left: 12,
-                    right: 12,
-                  }}
-                >
-                  <CartesianGrid vertical={false} />
-                  <XAxis
-                    dataKey="month"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                  />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    tickCount={5}
-                  />
-                  <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-                  <defs>
-                    <linearGradient id="fillRequests" x1="0" y1="0" x2="0" y2="1">
-                      <stop
-                        offset="5%"
-                        stopColor="#3b82f6"
-                        stopOpacity={0.8}
-                      />
-                      <stop
-                        offset="95%"
-                        stopColor="#3b82f6"
-                        stopOpacity={0.1}
-                      />
-                    </linearGradient>
-                  </defs>
-                  <Area
-                    dataKey="requests"
-                    type="natural"
-                    fill="url(#fillRequests)"
-                    fillOpacity={0.4}
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                  />
-                </AreaChart>
-              </ChartContainer>
-              <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-2 text-sm">
-                      {(() => {
-                        const currentMonth = monthlyStats[monthlyStats.length - 1]
-                        const previousMonth = monthlyStats[monthlyStats.length - 2]
-                        if (currentMonth && previousMonth) {
-                          const change = ((currentMonth.requests - previousMonth.requests) / previousMonth.requests) * 100
-                          return (
-                            <>
-                              {change > 0 ? (
-                                <div className="flex items-center gap-1">
-                                  <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-                                  </svg>
-                                  <span className="text-green-600 dark:text-green-400 font-medium">
-                                    {change.toFixed(1)}%
-                                  </span>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-1">
-                                  <svg className="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                                  </svg>
-                                  <span className="text-red-600 dark:text-red-400 font-medium">
-                                    {Math.abs(change).toFixed(1)}%
-                                  </span>
-                                </div>
-                              )}
-                            </>
-                          )
-                        }
-                        return null
-                      })()}
+              {(() => {
+                const selectedStats = apiStats.find(s => s.apiName === selectedApi)
+                if (!selectedStats) return null
+                
+                return (
+                  <>
+                    <ChartContainer
+                      config={{
+                        requests: {
+                          label: selectedApi === 'pdf_parsing' ? "処理数" : "リクエスト数",
+                          color: "#3b82f6",
+                        },
+                      }}
+                      className="h-[250px] w-full"
+                    >
+                      <AreaChart
+                        accessibilityLayer
+                        data={selectedStats.monthly}
+                        margin={{
+                          left: 12,
+                          right: 12,
+                        }}
+                      >
+                        <CartesianGrid vertical={false} />
+                        <XAxis
+                          dataKey="month"
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={8}
+                        />
+                        <YAxis
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={8}
+                          tickCount={5}
+                        />
+                        <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+                        <defs>
+                          <linearGradient id="fillRequests" x1="0" y1="0" x2="0" y2="1">
+                            <stop
+                              offset="5%"
+                              stopColor="#3b82f6"
+                              stopOpacity={0.8}
+                            />
+                            <stop
+                              offset="95%"
+                              stopColor="#3b82f6"
+                              stopOpacity={0.1}
+                            />
+                          </linearGradient>
+                        </defs>
+                        <Area
+                          dataKey="requests"
+                          type="natural"
+                          fill="url(#fillRequests)"
+                          fillOpacity={0.4}
+                          stroke="#3b82f6"
+                          strokeWidth={2}
+                        />
+                      </AreaChart>
+                    </ChartContainer>
+                    <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-2 text-sm">
+                            {(() => {
+                              const currentMonth = selectedStats.monthly[selectedStats.monthly.length - 1]
+                              const previousMonth = selectedStats.monthly[selectedStats.monthly.length - 2]
+                              if (currentMonth && previousMonth && previousMonth.requests > 0) {
+                                const change = ((currentMonth.requests - previousMonth.requests) / previousMonth.requests) * 100
+                                return (
+                                  <>
+                                    {change > 0 ? (
+                                      <div className="flex items-center gap-1">
+                                        <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                                        </svg>
+                                        <span className="text-green-600 dark:text-green-400 font-medium">
+                                          {change.toFixed(1)}%
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center gap-1">
+                                        <svg className="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                        </svg>
+                                        <span className="text-red-600 dark:text-red-400 font-medium">
+                                          {Math.abs(change).toFixed(1)}%
+                                        </span>
+                                      </div>
+                                    )}
+                                  </>
+                                )
+                              }
+                              return <span className="text-gray-500">-</span>
+                            })()}
+                          </div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            前月比
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            月間上限
+                          </p>
+                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                            {(() => {
+                              const limit = apiStats.find(s => s.apiName === selectedApi)?.daily.limit || 0
+                              return (limit * 30).toLocaleString()
+                            })()}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      前月比
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      月間上限
-                    </p>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                      {AppConfig.api.googleCustomSearch.monthlyLimit.toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              </div>
+                  </>
+                )
+              })()}
             </div>
           )}
         </CardContent>

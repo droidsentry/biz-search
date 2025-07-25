@@ -35,11 +35,22 @@ export async function getCustomerInfoFromGoogleCustomSearch(
     throw new Error('API制限の確認中にエラーが発生しました');
   }
   
-  if (!limitCheck.allowed) {
+  // RPCの戻り値をキャスト
+  interface LimitCheckResult {
+    allowed: boolean
+    daily_used: number
+    daily_limit: number
+    monthly_used: number
+    monthly_limit: number
+  }
+  
+  const limitResult = limitCheck as unknown as LimitCheckResult
+  
+  if (!limitResult.allowed) {
     const error = new Error(
-      `API制限に達しました。本日: ${limitCheck.daily_used}/${limitCheck.daily_limit}回、今月: ${limitCheck.monthly_used}/${limitCheck.monthly_limit}回`
+      `API制限に達しました。本日: ${limitResult.daily_used}/${limitResult.daily_limit}回、今月: ${limitResult.monthly_used}/${limitResult.monthly_limit}回`
     );
-    (error as any).rateLimitInfo = limitCheck;
+    (error as any).rateLimitInfo = limitResult;
     throw error;
   }
   

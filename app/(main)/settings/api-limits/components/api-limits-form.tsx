@@ -67,7 +67,7 @@ export function ApiLimitsForm({ limits }: ApiLimitsFormProps) {
           daily_limit: data.daily_limit,
           monthly_limit: data.monthly_limit,
         })
-        .eq('api_name', 'google_custom_search')
+        .eq('api_name', limits?.api_name || 'google_custom_search')
         
       if (error) {
         console.error('制限更新エラー:', error)
@@ -90,7 +90,7 @@ export function ApiLimitsForm({ limits }: ApiLimitsFormProps) {
       <CardHeader>
         <CardTitle>制限設定</CardTitle>
         <CardDescription>
-          Google Custom Search APIの利用制限を設定します
+          API利用制限を設定します
         </CardDescription>
       </CardHeader>
       <CardContent>

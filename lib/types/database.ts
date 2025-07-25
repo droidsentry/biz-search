@@ -14,6 +14,110 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_global_limits: {
+        Row: {
+          api_name: string
+          daily_limit: number
+          is_active: boolean
+          monthly_limit: number
+          updated_at: string
+        }
+        Insert: {
+          api_name: string
+          daily_limit?: number
+          is_active?: boolean
+          monthly_limit?: number
+          updated_at?: string
+        }
+        Update: {
+          api_name?: string
+          daily_limit?: number
+          is_active?: boolean
+          monthly_limit?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      api_global_usage: {
+        Row: {
+          api_name: string
+          blocked_until: string | null
+          daily_count: number
+          daily_date: string
+          is_blocked: boolean
+          monthly_count: number
+          monthly_date: string
+          updated_at: string
+        }
+        Insert: {
+          api_name: string
+          blocked_until?: string | null
+          daily_count?: number
+          daily_date?: string
+          is_blocked?: boolean
+          monthly_count?: number
+          monthly_date?: string
+          updated_at?: string
+        }
+        Update: {
+          api_name?: string
+          blocked_until?: string | null
+          daily_count?: number
+          daily_date?: string
+          is_blocked?: boolean
+          monthly_count?: number
+          monthly_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      geocoding_logs: {
+        Row: {
+          address: string
+          api_response_time: number | null
+          created_at: string
+          error_message: string | null
+          id: string
+          lat: number | null
+          lng: number | null
+          street_view_available: boolean | null
+          success: boolean
+          user_id: string | null
+        }
+        Insert: {
+          address: string
+          api_response_time?: number | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          street_view_available?: boolean | null
+          success: boolean
+          user_id?: string | null
+        }
+        Update: {
+          address?: string
+          api_response_time?: number | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          street_view_available?: boolean | null
+          success?: boolean
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "geocoding_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       owner_companies: {
         Row: {
           company_name: string
@@ -103,6 +207,44 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      pdf_processing_logs: {
+        Row: {
+          created_at: string
+          error_count: number
+          file_count: number
+          id: string
+          processing_time: number | null
+          success_count: number
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_count?: number
+          file_count: number
+          id?: string
+          processing_time?: number | null
+          success_count?: number
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_count?: number
+          file_count?: number
+          id?: string
+          processing_time?: number | null
+          success_count?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdf_processing_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -471,6 +613,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_global_api_limit: {
+        Args: { p_api_name: string; p_increment?: number }
+        Returns: Json
+      }
       deactivate_user_account: {
         Args: { user_id: string; reason?: string }
         Returns: undefined
@@ -482,6 +628,18 @@ export type Database = {
       get_active_profile_id: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_global_api_usage_stats: {
+        Args: { p_api_name?: string }
+        Returns: {
+          api_name: string
+          daily_used: number
+          daily_limit: number
+          monthly_used: number
+          monthly_limit: number
+          is_blocked: boolean
+          blocked_until: string
+        }[]
       }
       get_project_api_usage: {
         Args: { p_project_id: string; p_period?: unknown }

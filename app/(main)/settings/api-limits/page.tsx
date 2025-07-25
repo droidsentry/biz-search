@@ -3,6 +3,19 @@ import { redirect } from 'next/navigation'
 import { ApiLimitsForm } from './components/api-limits-form'
 import { ApiUsageStats } from './components/api-usage-stats'
 
+function getApiDisplayName(apiName: string): string {
+  switch (apiName) {
+    case 'google_custom_search':
+      return 'Google Custom Search API'
+    case 'pdf_parsing':
+      return 'PDF解析処理'
+    case 'google_maps_geocoding':
+      return 'Google Maps Geocoding API'
+    default:
+      return apiName
+  }
+}
+
 export default async function ApiLimitsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -22,19 +35,17 @@ export default async function ApiLimitsPage() {
     redirect('/settings')
   }
   
-  // 現在の制限設定を取得
-  const { data: limits } = await supabase
+  // すべてのAPIの制限設定を取得
+  const { data: allLimits } = await supabase
     .from('api_global_limits')
     .select('*')
-    .eq('api_name', 'google_custom_search')
-    .single()
+    .order('api_name')
     
-  // 使用状況を取得
-  const { data: usage } = await supabase
+  // すべてのAPIの使用状況を取得
+  const { data: allUsage } = await supabase
     .from('api_global_usage')
     .select('*')
-    .eq('api_name', 'google_custom_search')
-    .single()
+    .order('api_name')
   
   return (
     <div className="container mx-auto py-8">
@@ -46,9 +57,21 @@ export default async function ApiLimitsPage() {
           </p>
         </div>
         
-        <div className="grid gap-8 md:grid-cols-2">
-          <ApiLimitsForm limits={limits} />
-          <ApiUsageStats usage={usage} limits={limits} />
+        <div className="space-y-8">
+          {allLimits?.map((limit) => {
+            const usage = allUsage?.find(u => u.api_name === limit.api_name)
+            const displayName = getApiDisplayName(limit.api_name)
+            
+            return (
+              <div key={limit.api_name} className="border rounded-lg p-6">
+                <h2 className="text-xl font-semibold mb-4">{displayName}</h2>
+                <div className="grid gap-8 md:grid-cols-2">
+                  <ApiLimitsForm limits={limit} />
+                  <ApiUsageStats usage={usage} limits={limit} />
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
     </div>
