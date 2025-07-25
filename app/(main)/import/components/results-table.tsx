@@ -302,6 +302,21 @@ export function ResultsTable({
             variant="outline"
             size="sm"
             onClick={() => {
+              // 所有者住所が取得できない物件をチェック
+              const propertiesWithoutOwnerAddress = tableRows.filter(
+                (row) => row.property && !row.property.ownerAddress
+              );
+              
+              if (propertiesWithoutOwnerAddress.length > 0) {
+                toast.error(
+                  `${propertiesWithoutOwnerAddress.length}件の物件で所有者住所が取得できていません。\nPDFから所有者住所が正しく読み取れていない可能性があります。\n\n所有者住所がない物件は保存できません。`,
+                  {
+                    duration: 5000,
+                  }
+                );
+                return;
+              }
+              
               // 位置情報が取得されていない物件をチェック
               const propertiesWithoutLocation = tableRows.filter(
                 (row) => row.property && !geocodingResults.get(row.rowKey)?.lat
