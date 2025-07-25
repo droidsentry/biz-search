@@ -36,6 +36,7 @@ import { batchGeocodeAddresses } from "@/lib/actions/location/batch-geocoding";
 import Link from "next/link";
 import { CopyCell } from "@/components/ui/copy-cell";
 import { SavePropertiesDialog } from "./save-properties-dialog";
+import { NavigationConfirmDialog } from "./navigation-confirm-dialog";
 import { PropertyData as PropertyDataType } from "@/lib/types/property";
 import { Database } from "lucide-react";
 
@@ -68,6 +69,13 @@ export function ResultsTable({
 
   // 保存ダイアログの状態管理
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  
+  // 遷移確認ダイアログの状態管理
+  const [navigationDialogOpen, setNavigationDialogOpen] = useState(false);
+  const [savedProjectInfo, setSavedProjectInfo] = useState<{
+    savedCount: number;
+    projectName?: string;
+  }>({ savedCount: 0 });
 
   // URL生成関数
   const generateMapsUrl = (lat: number, lng: number) => {
@@ -293,7 +301,22 @@ export function ResultsTable({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setSaveDialogOpen(true)}
+            onClick={() => {
+              // 位置情報が取得されていない物件をチェック
+              const propertiesWithoutLocation = tableRows.filter(
+                (row) => row.property && !geocodingResults.get(row.rowKey)?.lat
+              );
+              
+              if (propertiesWithoutLocation.length > 0) {
+                const confirmMessage = `${propertiesWithoutLocation.length}件の物件で位置情報が取得されていません。\n位置情報なしで保存しますか？\n\n位置情報がない場合、地図表示やストリートビューが利用できません。`;
+                
+                if (!window.confirm(confirmMessage)) {
+                  return;
+                }
+              }
+              
+              setSaveDialogOpen(true);
+            }}
             disabled={totalProperties === 0}
             className="text-zinc-400 hover:text-white border-zinc-700"
           >
@@ -660,10 +683,23 @@ export function ResultsTable({
           })}
         onSaveComplete={(response) => {
           if (response.success) {
-            // 保存成功後の処理（必要に応じて）
+            // 保存成功後の処理
             console.log("保存完了:", response);
+            setSavedProjectInfo({
+              savedCount: response.savedCount,
+              projectName: response.projectName,
+            });
+            setNavigationDialogOpen(true);
           }
         }}
+      />
+
+      {/* 遷移確認ダイアログ */}
+      <NavigationConfirmDialog
+        open={navigationDialogOpen}
+        onOpenChange={setNavigationDialogOpen}
+        savedCount={savedProjectInfo.savedCount}
+        projectName={savedProjectInfo.projectName}
       />
     </div>
   );

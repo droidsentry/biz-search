@@ -49,6 +49,7 @@ export interface ImportResult {
 export interface SavePropertiesResponse {
   success: boolean;
   projectId: string;
+  projectName?: string;
   savedCount: number;
   errors?: Array<{
     index: number;

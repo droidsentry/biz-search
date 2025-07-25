@@ -99,8 +99,14 @@ export function SavePropertiesDialog({
             : undefined,
         });
 
+        // プロジェクト名を含めてコールバックを呼び出す
+        const completeResponse = {
+          ...saveResult,
+          projectName: data.name,
+        };
+
         if (onSaveComplete) {
-          onSaveComplete(saveResult);
+          onSaveComplete(completeResponse);
         }
 
         // ダイアログを閉じる
