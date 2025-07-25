@@ -12,6 +12,10 @@ import {
 import { useEffect, useState } from 'react'
 import { getApiUsageStats } from '../actions/api-usage'
 import type { DailyApiUsage, MonthlyApiUsage } from '../actions/api-usage'
+import { createClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis, RadialBar, RadialBarChart, PolarRadiusAxis, Label, PolarGrid } from 'recharts'
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 
 interface ApiMetric {
   name: string
@@ -28,13 +32,29 @@ export function ApiUsage() {
     name: 'Google Custom Search API',
     icon: DocumentMagnifyingGlassIcon,
     used: 0,
-    limit: 10000,
+    limit: 100,
     unit: 'リクエスト',
     status: 'inactive',
     description: '本日の検索リクエスト数'
   })
   const [monthlyStats, setMonthlyStats] = useState<MonthlyApiUsage[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState(false)
+  
+  // 今日の時間別データ（デモ用）
+  const [hourlyData] = useState(() => {
+    const hours = []
+    const now = new Date()
+    const currentHour = now.getHours()
+    
+    for (let i = 0; i <= currentHour; i++) {
+      hours.push({
+        hour: `${i}時`,
+        requests: Math.floor(Math.random() * 50) + 10
+      })
+    }
+    return hours
+  })
 
   useEffect(() => {
     const fetchUsage = async () => {
@@ -57,6 +77,89 @@ export function ApiUsage() {
     }
 
     fetchUsage()
+
+    // Supabaseリアルタイム接続を設定
+    const supabase = createClient()
+    
+    // search_api_logsテーブルの変更を監視
+    const channel = supabase
+      .channel('api-usage-monitor')
+      .on(
+        'postgres_changes',
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'search_api_logs',
+          filter: 'status_code=eq.200'
+        },
+        (payload) => {
+          console.log('新しいAPI呼び出しを検知:', payload)
+          
+          // 新しいレコードが今日のものか確認
+          const createdAt = new Date(payload.new.created_at)
+          const today = new Date()
+          
+          if (
+            createdAt.getFullYear() === today.getFullYear() &&
+            createdAt.getMonth() === today.getMonth() &&
+            createdAt.getDate() === today.getDate()
+          ) {
+            // 本日の使用状況を更新
+            setGoogleSearchMetric(prev => {
+              const newUsed = prev.used + 1
+              const percentage = (newUsed / prev.limit) * 100
+              
+              let newStatus: 'active' | 'warning' | 'danger' | 'inactive' = 'active'
+              if (percentage >= 90) {
+                newStatus = 'danger'
+                // 90%超えた場合は警告
+                if (prev.status !== 'danger') {
+                  toast.error('API使用率が90%を超えました！')
+                }
+              } else if (percentage >= 70) {
+                newStatus = 'warning'
+                // 70%超えた場合は注意
+                if (prev.status !== 'warning' && prev.status !== 'danger') {
+                  toast.warning('API使用率が70%を超えました')
+                }
+              }
+              
+              return {
+                ...prev,
+                used: newUsed,
+                status: newStatus
+              }
+            })
+
+            // 月間統計も更新
+            const currentMonth = today.getMonth()
+            setMonthlyStats(prev => 
+              prev.map((stat, index) => {
+                // 現在の月のインデックスを計算（過去5ヶ月の最後が現在月）
+                if (index === prev.length - 1) {
+                  return {
+                    ...stat,
+                    requests: stat.requests + 1
+                  }
+                }
+                return stat
+              })
+            )
+          }
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          setIsRealtimeConnected(true)
+          console.log('リアルタイム接続が確立されました')
+        }
+      })
+
+    // クリーンアップ
+    return () => {
+      setIsRealtimeConnected(false)
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   const apiMetrics: ApiMetric[] = [
@@ -96,13 +199,33 @@ export function ApiUsage() {
   const getStatusBadge = (status: ApiMetric['status']) => {
     switch (status) {
       case 'active':
-        return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">アクティブ</Badge>
+        return (
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 dark:text-green-400">
+            <div className="h-1.5 w-1.5 bg-green-500 rounded-full" />
+            正常
+          </span>
+        )
       case 'warning':
-        return <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">警告</Badge>
+        return (
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400">
+            <div className="h-1.5 w-1.5 bg-amber-500 rounded-full" />
+            注意
+          </span>
+        )
       case 'danger':
-        return <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">制限間近</Badge>
+        return (
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-red-700 dark:text-red-400">
+            <div className="h-1.5 w-1.5 bg-red-500 rounded-full" />
+            警告
+          </span>
+        )
       case 'inactive':
-        return <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">非アクティブ</Badge>
+        return (
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+            <div className="h-1.5 w-1.5 bg-gray-400 rounded-full" />
+            待機中
+          </span>
+        )
     }
   }
 
@@ -119,47 +242,183 @@ export function ApiUsage() {
           const Icon = metric.icon
           
           return (
-            <Card key={metric.name} className="relative overflow-hidden">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Icon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                    <CardTitle className="text-base font-medium">
+            <Card key={metric.name} className="shadow-border relative overflow-hidden">
+              <CardHeader className="border-b pb-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Icon className="h-5 w-5 text-gray-600 dark:text-gray-400 flex-shrink-0" />
+                    <CardTitle className="text-base font-normal text-gray-900 dark:text-gray-100 truncate">
                       {metric.name}
                     </CardTitle>
                   </div>
-                  {getStatusBadge(metric.status)}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {metric.description}
-                    </p>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium">
-                        {metric.used.toLocaleString()} / {metric.limit.toLocaleString()} {metric.unit}
-                      </span>
-                      <span className="text-gray-600 dark:text-gray-400">
-                        {percentage.toFixed(1)}%
+                  {metric.name === 'Google Custom Search API' && isRealtimeConnected && (
+                    <div className="flex items-center gap-1.5 rounded-full bg-green-50 dark:bg-green-900/20 px-2 py-0.5 flex-shrink-0">
+                      <div className="h-1.5 w-1.5 bg-green-500 rounded-full animate-pulse" />
+                      <span className="text-xs font-medium text-green-700 dark:text-green-400">
+                        Live
                       </span>
                     </div>
-                    <Progress 
-                      value={percentage} 
-                      className="h-2"
-                    />
-                  </div>
-                  
-                  {metric.status === 'warning' && (
-                    <p className="text-xs text-yellow-600 dark:text-yellow-400">
-                      残り{metric.limit - metric.used}リクエスト
-                    </p>
                   )}
                 </div>
+              </CardHeader>
+              <CardContent className="pt-4 pb-3">
+                {metric.name === 'Google Custom Search API' ? (() => {
+                  const percentage = calculatePercentage(metric.used, metric.limit)
+                  const chartData = [{
+                    usage: percentage,
+                    fill: percentage > 90 ? "var(--color-danger)" : percentage > 75 ? "var(--color-warning)" : "var(--color-success)"
+                  }]
+                  
+                  return (
+                    <div className="flex flex-col items-center">
+                      <div className="mx-auto aspect-square max-h-[250px] w-full">
+                        <ChartContainer
+                          config={{
+                            usage: {
+                              label: "使用率",
+                            },
+                            success: {
+                              label: "正常",
+                              color: "hsl(142, 76%, 36%)",
+                            },
+                            warning: {
+                              label: "注意",
+                              color: "hsl(38, 92%, 50%)",
+                            },
+                            danger: {
+                              label: "危険",
+                              color: "hsl(0, 84%, 60%)",
+                            },
+                          }}
+                          className="h-full w-full"
+                        >
+                          <RadialBarChart
+                            data={chartData}
+                            width={250}
+                            height={250}
+                            startAngle={90}
+                            endAngle={90 + (percentage / 100) * 360}
+                            innerRadius={60}
+                            outerRadius={100}
+                          >
+                          <PolarGrid
+                            gridType="circle"
+                            radialLines={false}
+                            stroke="none"
+                            className="first:fill-muted last:fill-background"
+                            polarRadius={[66, 54]}
+                          />
+                          <RadialBar 
+                            dataKey="usage" 
+                            background 
+                            cornerRadius={10}
+                            fill={chartData[0].fill}
+                          />
+                          <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
+                            <Label
+                              content={({ viewBox }) => {
+                                if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                                  return (
+                                    <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
+                                      <tspan 
+                                        x={viewBox.cx} 
+                                        y={(viewBox.cy || 0) - 10} 
+                                        className="fill-foreground text-3xl font-bold"
+                                      >
+                                        {metric.used.toLocaleString()}
+                                      </tspan>
+                                      <tspan 
+                                        x={viewBox.cx} 
+                                        y={(viewBox.cy || 0) + 10} 
+                                        className="fill-muted-foreground text-sm"
+                                      >
+                                        / {metric.limit.toLocaleString()}
+                                      </tspan>
+                                      <tspan 
+                                        x={viewBox.cx} 
+                                        y={(viewBox.cy || 0) + 28} 
+                                        className="fill-muted-foreground text-xs"
+                                      >
+                                        API呼び出し
+                                      </tspan>
+                                    </text>
+                                  )
+                                }
+                              }}
+                            />
+                          </PolarRadiusAxis>
+                        </RadialBarChart>
+                      </ChartContainer>
+                    </div>
+                      
+                      <div className="mt-4 space-y-3 w-full">
+                        <div className="flex justify-center">
+                          <Badge 
+                            variant={percentage > 90 ? "destructive" : percentage > 75 ? "secondary" : "default"}
+                            className="text-sm"
+                          >
+                            {percentage.toFixed(1)}% 使用中
+                          </Badge>
+                        </div>
+                        
+                        <div className="flex items-center justify-between text-sm px-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">残り使用可能:</span>
+                            <span className="font-medium">{(metric.limit - metric.used).toLocaleString()}回</span>
+                          </div>
+                          {getStatusBadge(metric.status)}
+                        </div>
+                        
+                        {percentage > 90 && (
+                          <div className="flex items-center gap-2 text-destructive text-xs font-medium px-2">
+                            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            使用制限に近づいています。ご注意ください。
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })() : (
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                        {metric.description}
+                      </p>
+                      <div className="flex items-baseline justify-between">
+                        <div>
+                          <span className="text-3xl font-light text-gray-900 dark:text-gray-100">
+                            {metric.used.toLocaleString()}
+                          </span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400 ml-1">
+                            / {metric.limit.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-light text-gray-900 dark:text-gray-100">
+                            {percentage.toFixed(0)}%
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="relative">
+                        <Progress 
+                          value={percentage} 
+                          className="h-2 bg-gray-100 dark:bg-gray-800"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {metric.unit}
+                        </span>
+                        {getStatusBadge(metric.status)}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )
@@ -167,45 +426,134 @@ export function ApiUsage() {
       </div>
 
       {/* 月間使用履歴 */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center space-x-2">
-            <ArrowTrendingUpIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-            <CardTitle>月間使用履歴</CardTitle>
+      <Card className="shadow-border">
+        <CardHeader className="border-b pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ArrowTrendingUpIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+              <CardTitle className="text-base font-normal text-gray-900 dark:text-gray-100">
+                月間使用履歴
+              </CardTitle>
+            </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              Google Custom Search API - 過去5ヶ月
+        <CardContent className="pt-4 pb-3">
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-200 border-t-gray-900 dark:border-gray-700 dark:border-t-gray-100"></div>
             </div>
-            {isLoading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100"></div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {monthlyStats.map((stat) => (
-                  <div key={stat.month} className="flex items-center space-x-4">
-                    <div className="w-12 text-sm text-gray-600 dark:text-gray-400">
-                      {stat.month}
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Google Custom Search API - 過去5ヶ月
+              </p>
+              <ChartContainer
+                config={{
+                  requests: {
+                    label: "リクエスト数",
+                    color: "#3b82f6",
+                  },
+                }}
+                className="h-[250px] w-full"
+              >
+                <AreaChart
+                  accessibilityLayer
+                  data={monthlyStats}
+                  margin={{
+                    left: 12,
+                    right: 12,
+                  }}
+                >
+                  <CartesianGrid vertical={false} />
+                  <XAxis
+                    dataKey="month"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                  />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    tickCount={5}
+                  />
+                  <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+                  <defs>
+                    <linearGradient id="fillRequests" x1="0" y1="0" x2="0" y2="1">
+                      <stop
+                        offset="5%"
+                        stopColor="#3b82f6"
+                        stopOpacity={0.8}
+                      />
+                      <stop
+                        offset="95%"
+                        stopColor="#3b82f6"
+                        stopOpacity={0.1}
+                      />
+                    </linearGradient>
+                  </defs>
+                  <Area
+                    dataKey="requests"
+                    type="natural"
+                    fill="url(#fillRequests)"
+                    fillOpacity={0.4}
+                    stroke="#3b82f6"
+                    strokeWidth={2}
+                  />
+                </AreaChart>
+              </ChartContainer>
+              <div className="pt-3 border-t border-gray-100 dark:border-gray-800">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      {(() => {
+                        const currentMonth = monthlyStats[monthlyStats.length - 1]
+                        const previousMonth = monthlyStats[monthlyStats.length - 2]
+                        if (currentMonth && previousMonth) {
+                          const change = ((currentMonth.requests - previousMonth.requests) / previousMonth.requests) * 100
+                          return (
+                            <>
+                              {change > 0 ? (
+                                <>
+                                  <span className="text-green-600 dark:text-green-400">
+                                    前月比 +{change.toFixed(1)}%
+                                  </span>
+                                  <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                                  </svg>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="text-red-600 dark:text-red-400">
+                                    前月比 {change.toFixed(1)}%
+                                  </span>
+                                  <svg className="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+                                  </svg>
+                                </>
+                              )}
+                            </>
+                          )
+                        }
+                        return null
+                      })()}
                     </div>
-                    <div className="flex-1">
-                      <div className="h-6 bg-gray-100 dark:bg-gray-800 rounded-md overflow-hidden">
-                        <div 
-                          className="h-full bg-gray-900 dark:bg-gray-100 transition-all duration-500"
-                          style={{ width: `${Math.min((stat.requests / 10000) * 100, 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                    <div className="w-20 text-right text-sm font-medium">
-                      {stat.requests.toLocaleString()}
-                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {monthlyStats[0]?.month} - {monthlyStats[monthlyStats.length - 1]?.month}
+                    </p>
                   </div>
-                ))}
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      月間上限
+                    </p>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      10,000
+                    </p>
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
