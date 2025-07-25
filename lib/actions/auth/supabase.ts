@@ -78,7 +78,7 @@ export async function signup(formData: Signup) {
   // ユーザーのメタデータからpending_roleを取得（デフォルトは'system_owner' 臨時で招待メールを発行した時のため）
   const pendingRole = user.user_metadata?.pending_role || 'system_owner';
   //profilesテーブルを作成
-  const { error: profileError } = await supabase.from("profiles").upsert({
+  const { error: profileError } = await supabase.from("profiles").upsert({ //既に登録済みユーザーがいためupsertを使用
     email: email,
     username: username,
     role: pendingRole, 
@@ -186,4 +186,28 @@ export async function updatePassword(formData: PasswordUpdate) {
       throw new Error(await getSupabaseAuthErrorMessage(errorCode));
     }
   });
+}
+
+/**
+ * パスワードレスメール（Magic Link）を送信
+ * @param email メールアドレス
+ * @param redirectTo リダイレクト先URL
+ */
+export async function sendMagicLink(email: string, redirectTo?: string) {
+  const supabase = await createClient();
+  
+  const { data, error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      shouldCreateUser: false, // 新規ユーザーの自動作成を防止
+      emailRedirectTo: redirectTo || `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`,
+    },
+  });
+  
+  if (error) {
+    console.error('Magic Link送信エラー:', error.message);
+    throw new Error(error.message);
+  }
+  
+  return data;
 }

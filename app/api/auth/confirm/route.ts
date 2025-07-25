@@ -3,16 +3,32 @@ import { type NextRequest, NextResponse } from 'next/server'
 
 import { createClient } from '@/lib/supabase/server'
 
-// Creating a handler to a GET request to route /auth/confirm
+/**
+ * プロファイル作成を別関数として分離
+ * 
+ */
+async function createUserProfile(email: string) {
+  const supabase = await createClient()
+  
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .insert({ email })
+      
+    if (error) {
+      console.error('Failed to create profile:', error)
+    }
+  } catch (error) {
+    console.error('Unexpected error during profile creation:', error)
+  }
+  // プロファイル作成に失敗してもユーザー認証は成功しているため、エラーをthrowしない
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const token_hash = searchParams.get('token_hash')
   const type = searchParams.get('type') as EmailOtpType | null
   const next = searchParams.get("next") || '/'
-
-  // console.log("token_hash", token_hash) // token_hash 1234567890
-  // console.log("type", type) // type email
-  // console.log("next", next) // next http://localhost:3001/account
 
   // Create redirect link without the secret token
   const redirectTo = request.nextUrl.clone()
@@ -20,35 +36,41 @@ export async function GET(request: NextRequest) {
   redirectTo.searchParams.delete('token_hash')
   redirectTo.searchParams.delete('type')
 
-  if (token_hash && type) {
-    const supabase = await createClient()
-    const { error } = await supabase.auth.verifyOtp({
-      type,
-      token_hash,
-    })
-    if (!error) {
-      // ユーザー情報を取得
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (user?.email) {
-        // profilesテーブルにレコードを作成（重複時は無視）
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            email: user.email,
-          })
-        if (profileError) {
-          console.error('Failed to create profile:', profileError)
-          // プロファイル作成に失敗してもユーザー認証は成功しているため続行
-        }
-      }
-      
-      redirectTo.searchParams.delete('next')
-      return NextResponse.redirect(`${next}/signup`)
-    }
+  // ガード節: 必須パラメータのチェック
+  if (!token_hash || !type) {
+    redirectTo.pathname = '/error'
+    return NextResponse.redirect(redirectTo)
   }
 
-  // return the user to an error page with some instructions
-  redirectTo.pathname = '/error'
-  return NextResponse.redirect(redirectTo)
+  // OTP検証
+  const supabase = await createClient()
+  const { error: otpError } = await supabase.auth.verifyOtp({
+    type,
+    token_hash,
+  })
+
+  // ガード節: OTP検証エラー
+  if (otpError) {
+    redirectTo.pathname = '/error'
+    return NextResponse.redirect(redirectTo)
+  }
+
+  // エンドユーザーの操作性向上のため、バリデーションを外す
+  // ユーザー情報取得
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+
+  if (userError) {
+    console.error('Failed to get user:', userError)
+  } else if (!user) {
+    console.error('ユーザーが見つかりませんでした。')
+  } else if (!user.email) {
+    console.error('ユーザーのメールアドレスが見つかりませんでした')
+  } else {
+    // プロファイル作成（非同期で実行、結果を待つ必要がない）
+    await createUserProfile(user.email)
+  }
+
+  // 成功時のリダイレクト
+  redirectTo.searchParams.delete('next')
+  return NextResponse.redirect(`${next}/signup`)
 }

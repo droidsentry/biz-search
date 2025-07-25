@@ -25,21 +25,23 @@ import AwesomeDebouncePromise from "awesome-debounce-promise";
   const usernameWithUniquenessCheckSchema = z
   .string()
   .trim()
-  .min(3, 'ユーザー名は3文字以上で入力してください')
+  .min(1, 'ユーザー名は1文字以上で入力してください')
   .max(20, 'ユーザー名は20文字以内で入力してください')
-  .regex(/^[a-zA-Z0-9_-]+$/, 'ユーザー名は英数字、アンダースコア、ハイフンのみ使用できます')
+  // .regex(/^[a-zA-Z0-9_-]+$/, 'ユーザー名は英数字、アンダースコア、ハイフンのみ使用できます') // エンドユーザーの操作性向上のため、バリデーションを外す
+  .regex(/^[^.@]+$/, 'ユーザー名に「.」と「@」は使用できません')
   .refine((userName) => isUserNameUnique(userName));
 
   export const debouncedUsernameWithUniquenessCheckSchema = z
   .string()
   .trim()
-  .min(3, 'ユーザー名は3文字以上で入力してください')
+  .min(1, 'ユーザー名は1文字以上で入力してください')
   .max(20, 'ユーザー名は20文字以内で入力してください')
-  .regex(/^[a-zA-Z0-9_-]+$/, 'ユーザー名は英数字、アンダースコア、ハイフンのみ使用できます')
+  // .regex(/^[a-zA-Z0-9_-]+$/, 'ユーザー名は英数字、アンダースコア、ハイフンのみ使用できます') // エンドユーザーの操作性向上のため、バリデーションを外す
+  .regex(/^[^.@]+$/, 'ユーザー名に「.」と「@」は使用できません')
   .refine(
     AwesomeDebouncePromise(
       async (userName) => await isUserNameUnique(userName),
-      800
+      500
     ),
     {
       message: "このユーザー名は既に使用されています",
