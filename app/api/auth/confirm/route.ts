@@ -3,23 +3,26 @@ import { type NextRequest, NextResponse } from 'next/server'
 
 import { createClient } from '@/lib/supabase/server'
 
-// プロファイル作成を別関数として分離
-async function createUserProfile(email: string) {
-  const supabase = await createClient()
+/**
+ * プロファイル作成を別関数として分離
+ * 
+ */
+// async function createUserProfile(email: string) {
+//   const supabase = await createClient()
   
-  try {
-    const { error } = await supabase
-      .from('profiles')
-      .insert({ email })
+//   try {
+//     const { error } = await supabase
+//       .from('profiles')
+//       .insert({ email })
       
-    if (error) {
-      console.error('Failed to create profile:', error)
-    }
-  } catch (error) {
-    console.error('Unexpected error during profile creation:', error)
-  }
-  // プロファイル作成に失敗してもユーザー認証は成功しているため、エラーをthrowしない
-}
+//     if (error) {
+//       console.error('Failed to create profile:', error)
+//     }
+//   } catch (error) {
+//     console.error('Unexpected error during profile creation:', error)
+//   }
+//   // プロファイル作成に失敗してもユーザー認証は成功しているため、エラーをthrowしない
+// }
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -52,19 +55,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(redirectTo)
   }
 
-  // ユーザー情報取得
-  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  // エンドユーザーの操作性向上のため、バリデーションを外す
+  // // ユーザー情報取得
+  // const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-  if (userError) {
-    console.error('Failed to get user:', userError)
-  } else if (!user) {
-    console.error('ユーザーが見つかりませんでした。')
-  } else if (!user.email) {
-    console.error('ユーザーのメールアドレスが見つかりませんでした')
-  } else {
-    // プロファイル作成（非同期で実行、結果を待つ必要がない）
-    await createUserProfile(user.email)
-  }
+  // if (userError) {
+  //   console.error('Failed to get user:', userError)
+  // } else if (!user) {
+  //   console.error('ユーザーが見つかりませんでした。')
+  // } else if (!user.email) {
+  //   console.error('ユーザーのメールアドレスが見つかりませんでした')
+  // } else {
+  //   // プロファイル作成（非同期で実行、結果を待つ必要がない）
+  //   await createUserProfile(user.email)
+  // }
 
   // 成功時のリダイレクト
   redirectTo.searchParams.delete('next')

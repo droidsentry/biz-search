@@ -78,7 +78,7 @@ export async function signup(formData: Signup) {
   // ユーザーのメタデータからpending_roleを取得（デフォルトは'system_owner' 臨時で招待メールを発行した時のため）
   const pendingRole = user.user_metadata?.pending_role || 'system_owner';
   //profilesテーブルを作成
-  const { error: profileError } = await supabase.from("profiles").upsert({
+  const { error: profileError } = await supabase.from("profiles").upsert({ //既に登録済みユーザーがいためupsertを使用
     email: email,
     username: username,
     role: pendingRole, 

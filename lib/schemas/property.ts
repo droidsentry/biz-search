@@ -19,7 +19,7 @@ const descriptionSchema = z
 const projectNameWithUniquenessCheckSchema = z
   .string()
   .trim()
-  .min(3, "プロジェクト名は3文字以上で入力してください")
+  .min(1, "プロジェクト名は1文字以上で入力してください") // エンドユーザーの操作性向上のため、制限を１文字に変更
   .max(100, "プロジェクト名は100文字以内で入力してください")
   .refine(async (name) => await checkProjectName(name),{
     message: "このプロジェクト名は既に使用されています",
@@ -31,12 +31,12 @@ const projectNameWithUniquenessCheckSchema = z
 const debouncedProjectNameWithUniquenessCheckSchema = z
   .string()
   .trim()
-  .min(3, "プロジェクト名は3文字以上で入力してください")
+  .min(1, "プロジェクト名は1文字以上で入力してください") // エンドユーザーの操作性向上のため、制限を１文字に変更
   .max(100, "プロジェクト名は100文字以内で入力してください")
   .refine(
     AwesomeDebouncePromise(
       async (name) => await checkProjectName(name),
-      800
+      500 // エンドユーザーの操作性向上のため、デバウンスを500msに変更
     ),
     {
       message: "このプロジェクト名は既に使用されています",

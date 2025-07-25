@@ -51,7 +51,7 @@ export default function SignupForm({ user }: { user: User | null }) {
     startTransition(async () => {
       await signup(data)
         .then(() => {
-          toast.success("アカウントを作成しました。");
+          toast.success("アカウント登録が完了しました。");
           if (fromPath) {
             router.push(fromPath);
           } else {
