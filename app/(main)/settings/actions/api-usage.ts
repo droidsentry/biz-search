@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { AppConfig } from '@/app.config'
 
 export interface DailyApiUsage {
   used: number
@@ -21,7 +22,7 @@ export async function getDailyApiUsage(): Promise<DailyApiUsage> {
   const { data: { user } } = await supabase.auth.getUser()
   
   if (!user) {
-    return { used: 0, limit: 100, status: 'inactive' }
+    return { used: 0, limit: AppConfig.api.googleCustomSearch.dailyLimit, status: 'inactive' }
   }
 
   // 本日の開始と終了時刻を取得（日本時間を考慮）
@@ -40,11 +41,11 @@ export async function getDailyApiUsage(): Promise<DailyApiUsage> {
 
   if (error) {
     console.error('API使用状況取得エラー:', error)
-    return { used: 0, limit: 100, status: 'inactive' }
+    return { used: 0, limit: AppConfig.api.googleCustomSearch.dailyLimit, status: 'inactive' }
   }
 
   const used = count || 0
-  const limit = 100
+  const limit = AppConfig.api.googleCustomSearch.dailyLimit
   const percentage = (used / limit) * 100
 
   let status: 'active' | 'warning' | 'danger' | 'inactive' = 'active'

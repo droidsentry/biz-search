@@ -1,12 +1,10 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { AppConfig } from '@/app.config'
 import { Progress } from '@/components/ui/progress'
-import { Badge } from '@/components/ui/badge'
 import { 
-  ChartBarIcon, 
   DocumentMagnifyingGlassIcon,
-  ServerIcon,
   ArrowTrendingUpIcon
 } from '@heroicons/react/24/outline'
 import { useEffect, useState } from 'react'
@@ -14,8 +12,9 @@ import { getApiUsageStats } from '../actions/api-usage'
 import type { DailyApiUsage, MonthlyApiUsage } from '../actions/api-usage'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis, RadialBar, RadialBarChart, PolarRadiusAxis, Label, PolarGrid } from 'recharts'
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
+import { GoogleSearchUsageChart } from './google-search-usage-chart'
 
 interface ApiMetric {
   name: string
@@ -32,7 +31,7 @@ export function ApiUsage() {
     name: 'Google Custom Search API',
     icon: DocumentMagnifyingGlassIcon,
     used: 0,
-    limit: 100,
+    limit: AppConfig.api.googleCustomSearch.dailyLimit,
     unit: 'リクエスト',
     status: 'inactive',
     description: '本日の検索リクエスト数'
@@ -163,39 +162,8 @@ export function ApiUsage() {
   }, [])
 
   const apiMetrics: ApiMetric[] = [
-    googleSearchMetric,
-    {
-      name: 'PDF解析API',
-      icon: ChartBarIcon,
-      used: 245,
-      limit: 1000,
-      unit: 'ファイル',
-      status: 'active',
-      description: 'PDF処理件数'
-    },
-    {
-      name: 'ストレージ使用量',
-      icon: ServerIcon,
-      used: 3.2,
-      limit: 10,
-      unit: 'GB',
-      status: 'active',
-      description: 'ファイルストレージ'
-    }
+    googleSearchMetric
   ]
-  // const getStatusColor = (status: ApiMetric['status']) => {
-  //   switch (status) {
-  //     case 'active':
-  //       return 'bg-green-500'
-  //     case 'warning':
-  //       return 'bg-yellow-500'
-  //     case 'danger':
-  //       return 'bg-red-500'
-  //     case 'inactive':
-  //       return 'bg-gray-400'
-  //   }
-  // }
-
   const getStatusBadge = (status: ApiMetric['status']) => {
     switch (status) {
       case 'active':
@@ -262,125 +230,13 @@ export function ApiUsage() {
                 </div>
               </CardHeader>
               <CardContent className="pt-4 pb-3">
-                {metric.name === 'Google Custom Search API' ? (() => {
-                  const percentage = calculatePercentage(metric.used, metric.limit)
-                  const chartData = [{
-                    usage: percentage,
-                    fill: percentage > 90 ? "var(--color-danger)" : percentage > 75 ? "var(--color-warning)" : "var(--color-success)"
-                  }]
-                  
-                  return (
-                    <div className="flex flex-col items-center">
-                      <div className="mx-auto aspect-square max-h-[250px] w-full">
-                        <ChartContainer
-                          config={{
-                            usage: {
-                              label: "使用率",
-                            },
-                            success: {
-                              label: "正常",
-                              color: "hsl(142, 76%, 36%)",
-                            },
-                            warning: {
-                              label: "注意",
-                              color: "hsl(38, 92%, 50%)",
-                            },
-                            danger: {
-                              label: "危険",
-                              color: "hsl(0, 84%, 60%)",
-                            },
-                          }}
-                          className="h-full w-full"
-                        >
-                          <RadialBarChart
-                            data={chartData}
-                            width={250}
-                            height={250}
-                            startAngle={90}
-                            endAngle={90 + (percentage / 100) * 360}
-                            innerRadius={60}
-                            outerRadius={100}
-                          >
-                          <PolarGrid
-                            gridType="circle"
-                            radialLines={false}
-                            stroke="none"
-                            className="first:fill-muted last:fill-background"
-                            polarRadius={[66, 54]}
-                          />
-                          <RadialBar 
-                            dataKey="usage" 
-                            background 
-                            cornerRadius={10}
-                            fill={chartData[0].fill}
-                          />
-                          <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
-                            <Label
-                              content={({ viewBox }) => {
-                                if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                                  return (
-                                    <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
-                                      <tspan 
-                                        x={viewBox.cx} 
-                                        y={(viewBox.cy || 0) - 10} 
-                                        className="fill-foreground text-3xl font-bold"
-                                      >
-                                        {metric.used.toLocaleString()}
-                                      </tspan>
-                                      <tspan 
-                                        x={viewBox.cx} 
-                                        y={(viewBox.cy || 0) + 10} 
-                                        className="fill-muted-foreground text-sm"
-                                      >
-                                        / {metric.limit.toLocaleString()}
-                                      </tspan>
-                                      <tspan 
-                                        x={viewBox.cx} 
-                                        y={(viewBox.cy || 0) + 28} 
-                                        className="fill-muted-foreground text-xs"
-                                      >
-                                        API呼び出し
-                                      </tspan>
-                                    </text>
-                                  )
-                                }
-                              }}
-                            />
-                          </PolarRadiusAxis>
-                        </RadialBarChart>
-                      </ChartContainer>
-                    </div>
-                      
-                      <div className="mt-4 space-y-3 w-full">
-                        <div className="flex justify-center">
-                          <Badge 
-                            variant={percentage > 90 ? "destructive" : percentage > 75 ? "secondary" : "default"}
-                            className="text-sm"
-                          >
-                            {percentage.toFixed(1)}% 使用中
-                          </Badge>
-                        </div>
-                        
-                        <div className="flex items-center justify-between text-sm px-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground">残り使用可能:</span>
-                            <span className="font-medium">{(metric.limit - metric.used).toLocaleString()}回</span>
-                          </div>
-                          {getStatusBadge(metric.status)}
-                        </div>
-                        
-                        {percentage > 90 && (
-                          <div className="flex items-center gap-2 text-destructive text-xs font-medium px-2">
-                            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
-                            使用制限に近づいています。ご注意ください。
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })() : (
+                {metric.name === 'Google Custom Search API' ? (
+                  <GoogleSearchUsageChart 
+                    used={metric.used}
+                    limit={metric.limit}
+                    status={metric.status}
+                  />
+                ) : (
                   <div className="space-y-4">
                     <div>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
@@ -547,7 +403,7 @@ export function ApiUsage() {
                       月間上限
                     </p>
                     <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      10,000
+                      {AppConfig.api.googleCustomSearch.monthlyLimit.toLocaleString()}
                     </p>
                   </div>
                 </div>
