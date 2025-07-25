@@ -47,10 +47,13 @@ export async function getCustomerInfoFromGoogleCustomSearch(
   const limitResult = limitCheck as unknown as LimitCheckResult
   
   if (!limitResult.allowed) {
-    const error = new Error(
+    interface RateLimitError extends Error {
+      rateLimitInfo?: LimitCheckResult;
+    }
+    const error: RateLimitError = new Error(
       `API制限に達しました。本日: ${limitResult.daily_used}/${limitResult.daily_limit}回、今月: ${limitResult.monthly_used}/${limitResult.monthly_limit}回`
     );
-    (error as any).rateLimitInfo = limitResult;
+    error.rateLimitInfo = limitResult;
     throw error;
   }
   
@@ -102,7 +105,7 @@ export async function getCustomerInfoFromGoogleCustomSearch(
     console.error("Search error:", error);
     
     // レート制限エラーの場合はそのまま再スロー
-    if ((error as any).rateLimitInfo) {
+    if (error instanceof Error && 'rateLimitInfo' in error) {
       throw error;
     }
     

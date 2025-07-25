@@ -46,6 +46,7 @@ export function DeleteAccountDialog({
         onOpenChange(false);
       }
     } catch (error) {
+      console.error(error);
       toast.error("アカウントの削除に失敗しました");
     } finally {
       setIsLoading(false);
@@ -69,9 +70,12 @@ export function DeleteAccountDialog({
           <AlertDialogDescription asChild>
             <div className="space-y-3">
               <p>
-                <span className="font-semibold">{profile.display_name || profile.username}</span> のアカウントを削除します。
+                <span className="font-semibold">
+                  {profile.display_name || profile.username}
+                </span>{" "}
+                のアカウントを削除します。
               </p>
-              
+
               <Alert className="bg-amber-50 border-amber-200">
                 <AlertCircle className="h-4 w-4 text-amber-600" />
                 <AlertDescription className="text-amber-800">

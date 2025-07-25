@@ -15,14 +15,16 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
+  Label,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
+  TooltipProps,
   XAxis,
   YAxis,
-  ReferenceLine,
-  Cell,
 } from "recharts";
-import { cn } from "@/lib/utils";
+import { ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
 
 interface ApiUsageChartProps {
   data: {
@@ -38,17 +40,24 @@ export function ApiUsageChart({ data }: ApiUsageChartProps) {
     dayOfWeek: format(new Date(item.date), "E", { locale: ja }),
   }));
 
-  const maxCount = Math.max(...data.map(d => d.count));
-  const avgCount = Math.round(data.reduce((sum, d) => sum + d.count, 0) / data.length);
+  const maxCount = Math.max(...data.map((d) => d.count));
+  const avgCount = Math.round(
+    data.reduce((sum, d) => sum + d.count, 0) / data.length
+  );
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
+  const CustomTooltip = ({ active, payload, label }: TooltipProps<ValueType, NameType>) => {
+    if (active && payload && payload.length && payload[0].payload) {
+      const data = payload[0].payload as typeof formattedData[0];
       return (
         <div className="bg-popover border rounded-lg shadow-lg p-3">
-          <p className="text-sm font-medium">{label} ({data.dayOfWeek})</p>
+          <p className="text-sm font-medium">
+            {label} ({data.dayOfWeek})
+          </p>
           <p className="text-sm text-muted-foreground mt-1">
-            API呼び出し: <span className="font-semibold text-foreground">{data.count}回</span>
+            API呼び出し:{" "}
+            <span className="font-semibold text-foreground">
+              {data.count}回
+            </span>
           </p>
         </div>
       );
@@ -59,7 +68,10 @@ export function ApiUsageChart({ data }: ApiUsageChartProps) {
   return (
     <div className="h-[350px] w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={formattedData} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
+        <AreaChart
+          data={formattedData}
+          margin={{ top: 10, right: 10, left: 10, bottom: 10 }}
+        >
           <defs>
             <linearGradient id="colorApi" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
@@ -110,7 +122,7 @@ export function ApiUsageChart({ data }: ApiUsageChartProps) {
               },
             }}
           />
-          <Tooltip 
+          <Tooltip
             content={<CustomTooltip />}
             cursor={{
               stroke: "#3b82f6",
@@ -118,22 +130,18 @@ export function ApiUsageChart({ data }: ApiUsageChartProps) {
               strokeDasharray: "3 3",
             }}
           />
-          <ReferenceLine 
-            y={avgCount} 
-            stroke="hsl(var(--muted-foreground))" 
-            strokeDasharray="5 5" 
+          <ReferenceLine
+            y={avgCount}
+            stroke="hsl(var(--muted-foreground))"
+            strokeDasharray="5 5"
             opacity={0.5}
           >
-            <label
-              x="98%"
-              y={0}
-              offset={-5}
+            <Label
+              position="right"
+              value={`平均: ${avgCount}回`}
               fill="hsl(var(--muted-foreground))"
               fontSize={10}
-              textAnchor="end"
-            >
-              平均: {avgCount}回
-            </label>
+            />
           </ReferenceLine>
           <Area
             type="monotone"
@@ -161,7 +169,7 @@ interface ApiUsageByPatternChartProps {
 
 export function ApiUsageByPatternChart({ data }: ApiUsageByPatternChartProps) {
   const sortedData = [...data].sort((a, b) => b.count - a.count).slice(0, 5);
-  const maxCount = Math.max(...sortedData.map(d => d.count));
+  const maxCount = Math.max(...sortedData.map((d) => d.count));
 
   const colors = [
     "hsl(var(--chart-1))",
@@ -171,16 +179,26 @@ export function ApiUsageByPatternChart({ data }: ApiUsageByPatternChartProps) {
     "hsl(var(--chart-5))",
   ];
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
+  const CustomTooltip = ({ active, payload, label }: TooltipProps<ValueType, NameType>) => {
+    if (active && payload && payload.length && payload[0].value) {
+      const value = Number(payload[0].value);
       return (
         <div className="bg-popover border rounded-lg shadow-lg p-3">
           <p className="text-sm font-medium truncate max-w-[200px]">{label}</p>
           <p className="text-sm text-muted-foreground mt-1">
-            使用回数: <span className="font-semibold text-foreground">{payload[0].value}回</span>
+            使用回数:{" "}
+            <span className="font-semibold text-foreground">
+              {value}回
+            </span>
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            全体の{((payload[0].value / sortedData.reduce((sum, d) => sum + d.count, 0)) * 100).toFixed(1)}%
+            全体の
+            {(
+              (value /
+                sortedData.reduce((sum, d) => sum + d.count, 0)) *
+              100
+            ).toFixed(1)}
+            %
           </p>
         </div>
       );
@@ -197,8 +215,8 @@ export function ApiUsageByPatternChart({ data }: ApiUsageByPatternChartProps) {
       <CardContent>
         <div className="h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart 
-              data={sortedData} 
+            <BarChart
+              data={sortedData}
               margin={{ top: 20, right: 20, bottom: 60, left: 20 }}
               layout="horizontal"
             >
@@ -230,17 +248,20 @@ export function ApiUsageByPatternChart({ data }: ApiUsageByPatternChartProps) {
                 axisLine={{ stroke: "hsl(var(--border))" }}
                 domain={[0, Math.ceil(maxCount * 1.1)]}
               />
-              <Tooltip 
+              <Tooltip
                 content={<CustomTooltip />}
                 cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }}
               />
-              <Bar 
-                dataKey="count" 
+              <Bar
+                dataKey="count"
                 radius={[8, 8, 0, 0]}
                 animationDuration={1000}
               >
                 {sortedData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={colors[index % colors.length]}
+                  />
                 ))}
               </Bar>
             </BarChart>
@@ -248,17 +269,22 @@ export function ApiUsageByPatternChart({ data }: ApiUsageByPatternChartProps) {
         </div>
         <div className="mt-4 space-y-2">
           {sortedData.map((pattern, index) => (
-            <div key={index} className="flex items-center justify-between text-sm">
+            <div
+              key={index}
+              className="flex items-center justify-between text-sm"
+            >
               <div className="flex items-center gap-2">
-                <div 
-                  className="w-3 h-3 rounded" 
+                <div
+                  className="w-3 h-3 rounded"
                   style={{ backgroundColor: colors[index % colors.length] }}
                 />
                 <span className="text-muted-foreground truncate max-w-[200px]">
                   {pattern.pattern_name}
                 </span>
               </div>
-              <span className="font-medium tabular-nums">{pattern.count}回</span>
+              <span className="font-medium tabular-nums">
+                {pattern.count}回
+              </span>
             </div>
           ))}
         </div>

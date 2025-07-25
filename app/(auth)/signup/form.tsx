@@ -20,7 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { signup } from "@/lib/actions/auth/supabase";
 import { extendedSignupSchema } from "@/lib/schemas/auth";
-import { PasswordUpdate, Signup } from "@/lib/types/auth";
+import { Signup } from "@/lib/types/auth";
 import logo from "@/public/logo.png";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { User } from "@supabase/supabase-js";

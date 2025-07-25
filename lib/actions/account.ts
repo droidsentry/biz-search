@@ -5,8 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { DisplayNameFormData, UsernameFormData } from '@/lib/types/account'
 import { TablesUpdate } from '@/lib/types/database'
 import { revalidatePath } from 'next/cache'
-import { parsePropertyOwnerData } from '../property-parser';
-import { unDebouncedUsernameSchema} from '../schemas/auth'
+import { unDebouncedUsernameSchema } from '../schemas/auth'
 
 /**
  * 表示名（DisplayName）を更新

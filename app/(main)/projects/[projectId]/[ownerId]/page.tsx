@@ -11,6 +11,7 @@ import { MapView } from "./components/map-view";
 import { OwnerInfo } from "./components/owner-info";
 import { OwnerSearch } from "./components/owner-search";
 import { StreetView } from "./components/street-view";
+import { InvestigationStatusButton } from "./components/investigation-status-button";
 
 export async function generateMetadata({
   params,
@@ -59,13 +60,21 @@ export default async function OwnerDetailPage({
           </Link>
         </div>
 
-        <h1 className="text-3xl font-bold text-foreground">{owner.name}</h1>
-        <div className="mt-2 space-y-1">
-          {owner.properties.length > 0 && (
-            <p className="text-sm text-muted-foreground">
-              所有物件: {owner.properties[0].address}
-            </p>
-          )}
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">{owner.name}</h1>
+            <div className="mt-2 space-y-1">
+              {owner.properties.length > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  所有物件: {owner.properties[0].address}
+                </p>
+              )}
+            </div>
+          </div>
+          <InvestigationStatusButton 
+            ownerId={owner.id} 
+            initialStatus={owner.investigation_completed || false} 
+          />
         </div>
       </div>
 

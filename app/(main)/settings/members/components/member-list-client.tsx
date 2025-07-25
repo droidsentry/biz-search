@@ -9,19 +9,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Mail,
-  MoreVertical,
-  UserCog,
-  UserMinus,
-  UserX2Icon,
-} from "lucide-react";
 import { Tables } from "@/lib/types/database";
+import { MoreVertical, UserCog, UserMinus, UserX2Icon } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ChangeRoleDialog } from "./change-role-dialog";
-import { SuspendAccountDialog } from "./suspend-account-dialog";
 import { DeleteAccountDialog } from "./delete-account-dialog";
-import { useRouter } from "next/navigation";
+import { SuspendAccountDialog } from "./suspend-account-dialog";
 
 type Profile = Tables<"profiles">;
 
@@ -166,17 +160,29 @@ export function MemberListClient({
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {profile.deleted_at ? (
-                    <>削除日: {new Date(profile.deleted_at).toLocaleDateString("ja-JP", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}</>
+                    <>
+                      削除日:{" "}
+                      {new Date(profile.deleted_at).toLocaleDateString(
+                        "ja-JP",
+                        {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        }
+                      )}
+                    </>
                   ) : (
-                    <>登録日: {new Date(profile.created_at).toLocaleDateString("ja-JP", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}</>
+                    <>
+                      登録日:{" "}
+                      {new Date(profile.created_at).toLocaleDateString(
+                        "ja-JP",
+                        {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        }
+                      )}
+                    </>
                   )}
                 </p>
               </div>
@@ -197,15 +203,19 @@ export function MemberListClient({
                       <span>役割を変更する</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className={profile.is_active ? "text-red-400" : "text-green-600"}
+                      className={
+                        profile.is_active ? "text-red-400" : "text-green-600"
+                      }
                       onSelect={() => handleSuspendAccount(profile)}
                     >
                       <UserX2Icon className="mr-2 size-4" />
                       <span>
-                        {profile.is_active ? "アカウントを停止する" : "アカウントを再開する"}
+                        {profile.is_active
+                          ? "アカウントを停止する"
+                          : "アカウントを再開する"}
                       </span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem 
+                    <DropdownMenuItem
                       className="text-red-500"
                       onSelect={() => handleDeleteAccount(profile)}
                     >

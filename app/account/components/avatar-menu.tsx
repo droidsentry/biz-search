@@ -12,11 +12,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { signOut } from "@/lib/actions/auth/supabase";
-import { Loader2Icon, LogOutIcon, Settings } from "lucide-react";
-import Link from "next/link";
+import { User } from "@supabase/supabase-js";
+import { Loader2Icon, LogOutIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useTransition } from "react";
-import { User } from "@supabase/supabase-js";
 
 export default function AvatarMenu({ user }: { user: User }) {
   const [isPending, startTransition] = useTransition();

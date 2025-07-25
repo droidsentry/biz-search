@@ -40,18 +40,39 @@ export async function getProjectsWithProgress() {
           }
         }
 
-        // TODO: 完了した物件数を取得する（現在は仮の実装）
-        // 実際の実装では、物件の調査ステータスなどを基に計算する
-        const completedProperties = Math.floor((totalProperties || 0) * 0.3) // 仮の実装：30%完了
+        // 調査完了した物件数を取得
+        // project_properties -> properties -> property_ownerships -> owners の順でJOINし、
+        // investigation_completed = true の数をカウント
+        const { count: completedProperties, error: completedError } = await supabase
+          .from('project_properties')
+          .select(`
+            id,
+            property:properties!inner (
+              id,
+              property_ownerships!inner (
+                is_current,
+                owner:owners!inner (
+                  investigation_completed
+                )
+              )
+            )
+          `, { count: 'exact', head: true })
+          .eq('project_id', project.id)
+          .eq('property.property_ownerships.is_current', true)
+          .eq('property.property_ownerships.owner.investigation_completed', true)
+
+        if (completedError) {
+          console.error('完了物件数取得エラー:', completedError)
+        }
 
         const progress = totalProperties && totalProperties > 0 
-          ? Math.round((completedProperties / totalProperties) * 100)
+          ? Math.round(((completedProperties || 0) / totalProperties) * 100)
           : 0
 
         return {
           ...project,
           totalProperties: totalProperties || 0,
-          completedProperties,
+          completedProperties: completedProperties || 0,
           progress
         }
       })

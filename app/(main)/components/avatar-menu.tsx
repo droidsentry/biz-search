@@ -14,12 +14,10 @@ import { signOut } from "@/lib/actions/auth/supabase";
 import { User } from "@supabase/supabase-js";
 import { Loader2Icon, LogOutIcon, Settings } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 
 export default function AvatarMenu({ user }: { user: User }) {
   const [isPending, startTransition] = useTransition();
-  const router = useRouter();
 
   const display_name = user.user_metadata.display_name || "";
   const username = user.user_metadata.username || "";

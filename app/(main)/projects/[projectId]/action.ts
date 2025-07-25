@@ -19,9 +19,11 @@ export type PropertyWithOwnerAndCompany = {
       lat: number | null
       lng: number | null
       street_view_available: boolean | null
+      investigation_completed: boolean | null
       created_at: string
       updated_at: string
       company?: Tables<'owner_companies'> | null
+      companies_count?: number
     }
   } | null
 }
@@ -80,6 +82,7 @@ export async function getProjectPropertiesAction(
               lat,
               lng,
               street_view_available,
+              investigation_completed,
               created_at,
               updated_at
             )
@@ -88,7 +91,7 @@ export async function getProjectPropertiesAction(
           .eq('is_current', true)
           .single()
 
-        // 所有者の会社情報を取得（rank=1のみ）
+        // 所有者の会社情報を取得（rank=1のみ）と会社数をカウント
         let ownerWithCompany = null
         if (ownershipData?.owner) {
           const { data: companyData } = await supabase
@@ -98,11 +101,18 @@ export async function getProjectPropertiesAction(
             .eq('rank', 1)
             .single()
 
+          // 会社数をカウント
+          const { count: companiesCount } = await supabase
+            .from('owner_companies')
+            .select('*', { count: 'exact', head: true })
+            .eq('owner_id', ownershipData.owner.id)
+
           ownerWithCompany = {
             ...ownershipData.owner,
             created_at: ownershipData.owner.created_at || new Date().toISOString(),
             updated_at: ownershipData.owner.updated_at || new Date().toISOString(),
-            company: companyData
+            company: companyData,
+            companies_count: companiesCount || 0
           }
         }
 

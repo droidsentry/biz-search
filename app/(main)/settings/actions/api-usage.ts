@@ -1,7 +1,6 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { AppConfig } from '@/app.config'
 
 export interface DailyApiUsage {
   used: number
@@ -77,20 +76,17 @@ export async function getMonthlyApiUsage(apiName: string): Promise<MonthlyApiUsa
   const now = new Date()
 
   // APIごとに異なるテーブルを使用
-  let tableName: string
-  let whereClause: any = {}
+  let tableName: 'search_api_logs' | 'pdf_processing_logs' | 'geocoding_logs'
   
   switch (apiName) {
     case 'google_custom_search':
       tableName = 'search_api_logs'
-      whereClause = { status_code: 200 }
       break
     case 'pdf_parsing':
       tableName = 'pdf_processing_logs'
       break
     case 'google_maps_geocoding':
       tableName = 'geocoding_logs'
-      whereClause = { success: true }
       break
     default:
       return []

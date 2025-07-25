@@ -23,25 +23,20 @@ import { loginWithEmailOrUsername } from "@/lib/actions/auth/supabase";
 import { loginWithEmailOrUsernameSchema } from "@/lib/schemas/auth";
 import { LoginWithEmailOrUsername } from "@/lib/types/auth";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import logo from "@/public/logo.png";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, AlertCircle } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 import Image from "next/image";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useTransition, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
-export default function LoginForm({
-  searchParams: serverSearchParams,
-}: {
-  searchParams?: { error?: string; from?: string };
-}) {
+export default function LoginForm({ from }: { from?: string }) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const returnUrl = searchParams.get("from") || serverSearchParams?.from;
+  const returnUrl = from;
 
   const form = useForm<LoginWithEmailOrUsername>({
     mode: "onChange",
@@ -86,7 +81,7 @@ export default function LoginForm({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {serverSearchParams?.error === "account_suspended" && (
+          {from === "account_suspended" && (
             <Alert variant="destructive" className="mb-4">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>

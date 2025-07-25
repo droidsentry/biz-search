@@ -67,7 +67,7 @@ export default async function ApiLimitsPage() {
                 <h2 className="text-xl font-semibold mb-4">{displayName}</h2>
                 <div className="grid gap-8 md:grid-cols-2">
                   <ApiLimitsForm limits={limit} />
-                  <ApiUsageStats usage={usage} limits={limit} />
+                  <ApiUsageStats usage={usage || null} limits={limit} />
                 </div>
               </div>
             )

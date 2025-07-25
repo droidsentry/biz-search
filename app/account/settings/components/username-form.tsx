@@ -1,24 +1,23 @@
 "use client";
 
-import { useTransition } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { UsernameFormData } from "@/lib/types/account";
-import { updateUsername } from "@/lib/actions/account";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Loader2 } from "lucide-react";
 import { CardContent, CardDescription } from "@/components/ui/card";
 import {
+  Form,
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
-  Form,
 } from "@/components/ui/form";
-import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { updateUsername } from "@/lib/actions/account";
 import { debouncedUsernameSchema } from "@/lib/schemas/auth";
+import { UsernameFormData } from "@/lib/types/account";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
+import { useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 interface UsernameFormProps {
   currentUsername?: string | null;
