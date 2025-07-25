@@ -28,20 +28,27 @@ export async function GET(request: NextRequest) {
     })
     if (!error) {
       // ユーザー情報を取得
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user },error: userError } = await supabase.auth.getUser()
       
-      if (user?.email) {
+      if (user) {
+        if (user.email) {
         // profilesテーブルにレコードを作成（重複時は無視）
         const { error: profileError } = await supabase
           .from('profiles')
           .insert({
             email: user.email,
           })
-        if (profileError) {
-          console.error('Failed to create profile:', profileError)
-          // プロファイル作成に失敗してもユーザー認証は成功しているため続行
+          if (profileError) {
+            console.error('Failed to create profile:', profileError)
+            // プロファイル作成に失敗してもユーザー認証は成功しているため続行
+          }
+        }else{
+          console.error("ユーザーのメールアドレスが見つかりませんでした")
         }
+      } else {
+        console.error("ユーザーが見つかりませんでした。")
       }
+
       
       redirectTo.searchParams.delete('next')
       return NextResponse.redirect(`${next}/signup`)
