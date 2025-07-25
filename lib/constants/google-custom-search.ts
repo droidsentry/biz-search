@@ -15,15 +15,7 @@ export const DEFAULT_GOOGLE_CUSTOM_SEARCH_PATTERN: GoogleCustomSearchPattern = {
     additionalKeywords: [
       {
         value: "代表取締役",
-        matchType: "exact",
-      },
-      {
-        value: "社長",
-        matchType: "exact",
-      },
-      {
-        value: "専務",
-        matchType: "exact",
+        matchType: "partial",
       },
     ],
     searchSites: ["facebook.com", "linkedin.com", "nikkei.com"],

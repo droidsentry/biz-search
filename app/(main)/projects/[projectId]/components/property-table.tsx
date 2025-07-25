@@ -87,15 +87,41 @@ export function PropertyTable({ properties, projectId }: PropertyTableProps) {
                   {property.current_ownership?.owner.company?.position || '-'}
                 </TableCell>
                 <TableCell>
-                  {property.current_ownership?.owner.company ? (
-                    <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/20">
-                      調査済み
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary" className="bg-muted-foreground/10 text-muted-foreground hover:bg-muted-foreground/20">
-                      未調査
-                    </Badge>
-                  )}
+                  {(() => {
+                    const owner = property.current_ownership?.owner
+                    if (!owner) {
+                      return (
+                        <Badge variant="secondary" className="bg-muted-foreground/10 text-muted-foreground hover:bg-muted-foreground/20">
+                          未調査
+                        </Badge>
+                      )
+                    }
+                    
+                    // 調査完了フラグが立っている場合
+                    if (owner.investigation_completed) {
+                      return (
+                        <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/20">
+                          調査済み
+                        </Badge>
+                      )
+                    }
+                    
+                    // 会社情報がある場合は調査中
+                    if (owner.companies_count && owner.companies_count > 0) {
+                      return (
+                        <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-900/20">
+                          調査中
+                        </Badge>
+                      )
+                    }
+                    
+                    // それ以外は未調査
+                    return (
+                      <Badge variant="secondary" className="bg-muted-foreground/10 text-muted-foreground hover:bg-muted-foreground/20">
+                        未調査
+                      </Badge>
+                    )
+                  })()}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {property.current_ownership

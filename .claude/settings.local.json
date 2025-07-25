@@ -7,7 +7,9 @@
       "mcp__supabase__search_docs",
       "WebFetch(domain:github.com)",
       "mcp__supabase__list_extensions",
-      "mcp__supabase__get_project"
+      "mcp__supabase__get_project",
+      "mcp__supabase__get_logs",
+      "WebFetch(domain:supabase.com)"
     ],
     "deny": []
   }

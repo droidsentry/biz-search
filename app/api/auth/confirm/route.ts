@@ -22,17 +22,29 @@ export async function GET(request: NextRequest) {
 
   if (token_hash && type) {
     const supabase = await createClient()
-
     const { error } = await supabase.auth.verifyOtp({
       type,
       token_hash,
     })
-    if (!error) {      
-      // console.log("redirectTo after", redirectTo)
+    if (!error) {
+      // ユーザー情報を取得
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (user?.email) {
+        // profilesテーブルにレコードを作成（重複時は無視）
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            email: user.email,
+          })
+        if (profileError) {
+          console.error('Failed to create profile:', profileError)
+          // プロファイル作成に失敗してもユーザー認証は成功しているため続行
+        }
+      }
+      
       redirectTo.searchParams.delete('next')
-      // console.log("redirectTo after delete next", redirectTo)
-      // console.log("redirect", `${next}/password-update`)
-      return NextResponse.redirect(`${next}/password-update`)
+      return NextResponse.redirect(`${next}/signup`)
     }
   }
 

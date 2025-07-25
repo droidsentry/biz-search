@@ -32,11 +32,21 @@ export default async function AppMiddleware(
   const isGuestRoute = guestRoutes.includes(path);
   // パスがプライベートルートかどうかを確認.プライベートルートであれば、true.
   const isPrivateRoute = !isPublicRoute && !isGuestRoute;
-  // ユーザーがパスワードを設定しているかどうかを確認（招待ユーザーがパスワードを設定していない場合、パスワードリセットページにリダイレクト）
-  const isPasswordSet = user?.user_metadata?.is_password_set;
+  // ユーザーがアカウントを作成しているかどうかを確認（招待ユーザーがアカウントを作成していない場合、アカウント作成ページにリダイレクト）
+  const isSignupCompleted = user?.user_metadata?.is_signup_completed;
+  // ユーザーのアカウントがアクティブかどうかを確認
+  const isAccountActive = user?.app_metadata?.is_active !== false;
+
+  // アカウントが停止されている場合、ログインページにリダイレクト
+  if (isLogin && !isAccountActive && !isGuestRoute && !isPublicRoute) {
+    // セッションをクリアしてログインページへ
+    return NextResponse.redirect(
+      new URL(`/login?error=account_suspended`, request.url)
+    );
+  }
 
   // ゲスト専用ルートにサインイン済みのユーザーがアクセスしようとした場合、アカウントページにリダイレクト
-  if (isGuestRoute && isLogin) {
+  if (isGuestRoute && isLogin && isAccountActive) {
     return NextResponse.redirect(new URL(`/dashboard`, request.url));
   }
 
@@ -48,9 +58,9 @@ export default async function AppMiddleware(
       );
     }
 
-    // パスワード設定チェック（/password-reset以外のプライベートルートの場合のみ）
-    if (!isPasswordSet && path !== `/password-update`) {
-      return NextResponse.redirect(new URL("/password-update", request.url));
+    // アカウント作成チェック（/signup以外のプライベートルートの場合のみ）
+    if (!isSignupCompleted && path !== `/signup`) {
+      return NextResponse.redirect(new URL("/signup", request.url));
     }
 
   }

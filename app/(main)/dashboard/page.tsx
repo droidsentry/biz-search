@@ -12,12 +12,11 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { format, subDays } from "date-fns";
 import { ja } from "date-fns/locale";
-import { Building2, FolderOpen, Search, Users } from "lucide-react";
+import { Building2, FolderOpen, Search, Users, TrendingUp, Activity, AlertCircle } from "lucide-react";
 import Link from "next/link";
-import {
-  ApiUsageByPatternChart,
-  ApiUsageChart,
-} from "./components/api-usage-chart";
+import { ApiUsageChart } from "./components/api-usage-chart";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 
 export const metadata: Metadata = {
   metadataBase: new URL(getBaseURL()),
@@ -98,41 +97,26 @@ export default async function DashboardPage() {
       return acc;
     }, {} as Record<string, number>) || {};
 
-  // 過去7日間のデータを生成（デモデータを含む）
+  // 過去7日間のデータを生成
   const apiUsageChartData = Array.from({ length: 7 }, (_, i) => {
     const date = subDays(new Date(), 6 - i);
     const dateStr = format(date, "yyyy-MM-dd");
-    // デモデータ：実際のデータがない場合はランダムな値を生成
-    const actualCount = apiUsageByDate[dateStr] || 0;
-    const demoCount = Math.floor(Math.random() * 20) + 5;
+    const count = apiUsageByDate[dateStr] || 0;
     return {
       date: dateStr,
-      count: actualCount > 0 ? actualCount : demoCount,
+      count,
     };
   });
 
-  // パターン別の使用回数を取得
-  const { data: patternUsageData } = await supabase
-    .from("search_patterns")
-    .select("name, usage_count")
-    .eq("user_id", user.id)
-    .gt("usage_count", 0)
-    .order("usage_count", { ascending: false });
+  // 統計情報の計算
+  const totalApiCalls = apiUsageChartData.reduce((sum, day) => sum + day.count, 0);
+  const averageApiCalls = Math.round(totalApiCalls / 7);
+  const todayApiCalls = apiUsageChartData[apiUsageChartData.length - 1]?.count || 0;
+  const yesterdayApiCalls = apiUsageChartData[apiUsageChartData.length - 2]?.count || 0;
+  const apiCallsGrowth = yesterdayApiCalls > 0 
+    ? Math.round(((todayApiCalls - yesterdayApiCalls) / yesterdayApiCalls) * 100)
+    : 0;
 
-  // パターン別のデータ（デモデータを含む）
-  const apiUsageByPatternData =
-    patternUsageData && patternUsageData.length > 0
-      ? patternUsageData.map((pattern) => ({
-          pattern_name: pattern.name,
-          count: pattern.usage_count || 0,
-        }))
-      : [
-          { pattern_name: "基本検索パターン", count: 45 },
-          { pattern_name: "詳細検索（住所含む）", count: 32 },
-          { pattern_name: "会社情報検索", count: 28 },
-          { pattern_name: "役職者検索", count: 15 },
-          { pattern_name: "地域限定検索", count: 10 },
-        ];
   const stats = [
     {
       title: "プロジェクト数",
@@ -167,10 +151,19 @@ export default async function DashboardPage() {
   return (
     <div className="mx-auto max-w-[1400px] px-2 md:px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground mb-2">
-          ダッシュボード
-        </h1>
-        <p className="text-muted-foreground">プロジェクトと検索の概要</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground mb-2">
+              ダッシュボード
+            </h1>
+            <p className="text-muted-foreground">プロジェクトと検索の概要</p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-muted-foreground">
+              {format(new Date(), "yyyy年M月d日 (E)", { locale: ja })}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
@@ -178,12 +171,14 @@ export default async function DashboardPage() {
           const Icon = stat.icon;
           return (
             <Link key={stat.title} href={stat.href}>
-              <Card className="hover:shadow-md transition-shadow">
+              <Card className="hover:shadow-lg transition-all duration-200 hover:border-primary/50 group">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
                     {stat.title}
                   </CardTitle>
-                  <Icon className="h-4 w-4 text-muted-foreground" />
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg group-hover:bg-blue-200 dark:group-hover:bg-blue-900/30 transition-colors">
+                    <Icon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
@@ -198,10 +193,61 @@ export default async function DashboardPage() {
           );
         })}
       </div>
-      <div className="grid gap-6 md:grid-cols-2 mb-8">
-        <ApiUsageChart data={apiUsageChartData} />
-        <ApiUsageByPatternChart data={apiUsageByPatternData} />
-      </div>
+      {/* API使用状況セクション */}
+      <Card className="mb-8">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-xl">Google Custom Search API 使用状況</CardTitle>
+              <CardDescription>過去7日間のAPI呼び出し履歴と統計</CardDescription>
+            </div>
+            <Badge variant={todayApiCalls > 90 ? "destructive" : todayApiCalls > 70 ? "secondary" : "default"}>
+              本日: {todayApiCalls}回
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-4 mb-6">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Activity className="h-4 w-4 text-muted-foreground" />
+                <p className="text-sm font-medium">7日間合計</p>
+              </div>
+              <p className="text-2xl font-bold">{totalApiCalls}回</p>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                <p className="text-sm font-medium">日平均</p>
+              </div>
+              <p className="text-2xl font-bold">{averageApiCalls}回</p>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                <p className="text-sm font-medium">前日比</p>
+              </div>
+              <p className="text-2xl font-bold">
+                <span className={apiCallsGrowth >= 0 ? "text-green-600" : "text-red-600"}>
+                  {apiCallsGrowth >= 0 ? "+" : ""}{apiCallsGrowth}%
+                </span>
+              </p>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Search className="h-4 w-4 text-muted-foreground" />
+                <p className="text-sm font-medium">本日の使用率</p>
+              </div>
+              <div className="space-y-1">
+                <Progress value={(todayApiCalls / 100) * 100} className="h-2" />
+                <p className="text-xs text-muted-foreground">{todayApiCalls} / 100</p>
+              </div>
+            </div>
+          </div>
+          <ApiUsageChart data={apiUsageChartData} />
+        </CardContent>
+      </Card>
+
       <div className="grid gap-6 md:grid-cols-2 mb-8">
         <Card>
           <CardHeader>

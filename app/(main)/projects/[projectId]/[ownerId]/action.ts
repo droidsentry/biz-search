@@ -10,6 +10,7 @@ export type OwnerWithCompaniesAndProperties = {
   lat: number | null
   lng: number | null
   street_view_available: boolean | null
+  investigation_completed: boolean | null
   created_at: string
   updated_at: string
   companies: Tables<'owner_companies'>[]

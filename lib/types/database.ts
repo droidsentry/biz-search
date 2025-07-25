@@ -14,6 +14,110 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_global_limits: {
+        Row: {
+          api_name: string
+          daily_limit: number
+          is_active: boolean
+          monthly_limit: number
+          updated_at: string
+        }
+        Insert: {
+          api_name: string
+          daily_limit?: number
+          is_active?: boolean
+          monthly_limit?: number
+          updated_at?: string
+        }
+        Update: {
+          api_name?: string
+          daily_limit?: number
+          is_active?: boolean
+          monthly_limit?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      api_global_usage: {
+        Row: {
+          api_name: string
+          blocked_until: string | null
+          daily_count: number
+          daily_date: string
+          is_blocked: boolean
+          monthly_count: number
+          monthly_date: string
+          updated_at: string
+        }
+        Insert: {
+          api_name: string
+          blocked_until?: string | null
+          daily_count?: number
+          daily_date?: string
+          is_blocked?: boolean
+          monthly_count?: number
+          monthly_date?: string
+          updated_at?: string
+        }
+        Update: {
+          api_name?: string
+          blocked_until?: string | null
+          daily_count?: number
+          daily_date?: string
+          is_blocked?: boolean
+          monthly_count?: number
+          monthly_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      geocoding_logs: {
+        Row: {
+          address: string
+          api_response_time: number | null
+          created_at: string
+          error_message: string | null
+          id: string
+          lat: number | null
+          lng: number | null
+          street_view_available: boolean | null
+          success: boolean
+          user_id: string | null
+        }
+        Insert: {
+          address: string
+          api_response_time?: number | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          street_view_available?: boolean | null
+          success: boolean
+          user_id?: string | null
+        }
+        Update: {
+          address?: string
+          api_response_time?: number | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          street_view_available?: boolean | null
+          success?: boolean
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "geocoding_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       owner_companies: {
         Row: {
           company_name: string
@@ -24,7 +128,7 @@ export type Database = {
           position: string | null
           rank: number
           researched_at: string
-          researched_by: string
+          researched_by: string | null
           source_url: string
           updated_at: string
         }
@@ -37,7 +141,7 @@ export type Database = {
           position?: string | null
           rank: number
           researched_at?: string
-          researched_by: string
+          researched_by?: string | null
           source_url: string
           updated_at?: string
         }
@@ -50,7 +154,7 @@ export type Database = {
           position?: string | null
           rank?: number
           researched_at?: string
-          researched_by?: string
+          researched_by?: string | null
           source_url?: string
           updated_at?: string
         }
@@ -62,6 +166,13 @@ export type Database = {
             referencedRelation: "owners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "owner_companies_researched_by_fkey"
+            columns: ["researched_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       owners: {
@@ -69,6 +180,7 @@ export type Database = {
           address: string
           created_at: string
           id: string
+          investigation_completed: boolean | null
           lat: number | null
           lng: number | null
           name: string
@@ -79,6 +191,7 @@ export type Database = {
           address: string
           created_at?: string
           id?: string
+          investigation_completed?: boolean | null
           lat?: number | null
           lng?: number | null
           name: string
@@ -89,6 +202,7 @@ export type Database = {
           address?: string
           created_at?: string
           id?: string
+          investigation_completed?: boolean | null
           lat?: number | null
           lng?: number | null
           name?: string
@@ -97,37 +211,84 @@ export type Database = {
         }
         Relationships: []
       }
-      profiles: {
+      pdf_processing_logs: {
         Row: {
           created_at: string
-          email: string
+          error_count: number
+          file_count: number
           id: string
-          role: string
-          updated_at: string
-          username: string
+          processing_time: number | null
+          success_count: number
+          user_id: string | null
         }
         Insert: {
           created_at?: string
-          email: string
+          error_count?: number
+          file_count: number
           id?: string
-          role?: string
-          updated_at?: string
-          username: string
+          processing_time?: number | null
+          success_count?: number
+          user_id?: string | null
         }
         Update: {
           created_at?: string
-          email?: string
+          error_count?: number
+          file_count?: number
           id?: string
+          processing_time?: number | null
+          success_count?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdf_processing_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          display_name: string | null
+          email: string
+          id: string
+          is_active: boolean
+          role: string
+          updated_at: string
+          username: string | null
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          display_name?: string | null
+          email: string
+          id?: string
+          is_active?: boolean
           role?: string
           updated_at?: string
-          username?: string
+          username?: string | null
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          display_name?: string | null
+          email?: string
+          id?: string
+          is_active?: boolean
+          role?: string
+          updated_at?: string
+          username?: string | null
         }
         Relationships: []
       }
       project_members: {
         Row: {
           added_at: string
-          added_by: string
+          added_by: string | null
           id: string
           project_id: string
           role: string
@@ -135,7 +296,7 @@ export type Database = {
         }
         Insert: {
           added_at?: string
-          added_by: string
+          added_by?: string | null
           id?: string
           project_id: string
           role: string
@@ -143,7 +304,7 @@ export type Database = {
         }
         Update: {
           added_at?: string
-          added_by?: string
+          added_by?: string | null
           id?: string
           project_id?: string
           role?: string
@@ -151,10 +312,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "project_members_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "project_members_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -162,7 +337,7 @@ export type Database = {
       project_properties: {
         Row: {
           added_at: string
-          added_by: string
+          added_by: string | null
           id: string
           import_source_file: string | null
           project_id: string
@@ -170,7 +345,7 @@ export type Database = {
         }
         Insert: {
           added_at?: string
-          added_by: string
+          added_by?: string | null
           id?: string
           import_source_file?: string | null
           project_id: string
@@ -178,13 +353,20 @@ export type Database = {
         }
         Update: {
           added_at?: string
-          added_by?: string
+          added_by?: string | null
           id?: string
           import_source_file?: string | null
           project_id?: string
           property_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "project_properties_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "project_properties_project_id_fkey"
             columns: ["project_id"]
@@ -204,7 +386,7 @@ export type Database = {
       projects: {
         Row: {
           created_at: string
-          created_by: string
+          created_by: string | null
           description: string | null
           id: string
           name: string
@@ -212,7 +394,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          created_by: string
+          created_by?: string | null
           description?: string | null
           id?: string
           name: string
@@ -220,13 +402,21 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           description?: string | null
           id?: string
           name?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "projects_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       properties: {
         Row: {
@@ -258,7 +448,7 @@ export type Database = {
           ownership_end: string | null
           ownership_start: string
           property_id: string
-          recorded_by: string
+          recorded_by: string | null
           source: string | null
           updated_at: string
         }
@@ -270,7 +460,7 @@ export type Database = {
           ownership_end?: string | null
           ownership_start?: string
           property_id: string
-          recorded_by: string
+          recorded_by?: string | null
           source?: string | null
           updated_at?: string
         }
@@ -282,7 +472,7 @@ export type Database = {
           ownership_end?: string | null
           ownership_start?: string
           property_id?: string
-          recorded_by?: string
+          recorded_by?: string | null
           source?: string | null
           updated_at?: string
         }
@@ -299,6 +489,13 @@ export type Database = {
             columns: ["property_id"]
             isOneToOne: false
             referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_ownerships_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -361,6 +558,13 @@ export type Database = {
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "search_api_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       search_patterns: {
@@ -397,20 +601,48 @@ export type Database = {
           usage_count?: number | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "search_patterns_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      cached_uid: {
-        Args: Record<PropertyKey, never>
-        Returns: string
+      check_global_api_limit: {
+        Args: { p_api_name: string; p_increment?: number }
+        Returns: Json
+      }
+      deactivate_user_account: {
+        Args: { user_id: string; reason?: string }
+        Returns: undefined
       }
       delete_old_search_api_logs: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      get_active_profile_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_global_api_usage_stats: {
+        Args: { p_api_name?: string }
+        Returns: {
+          api_name: string
+          daily_used: number
+          daily_limit: number
+          monthly_used: number
+          monthly_limit: number
+          is_blocked: boolean
+          blocked_until: string
+        }[]
       }
       get_project_api_usage: {
         Args: { p_project_id: string; p_period?: unknown }

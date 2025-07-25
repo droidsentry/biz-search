@@ -25,15 +25,17 @@ import AwesomeDebouncePromise from "awesome-debounce-promise";
   const usernameWithUniquenessCheckSchema = z
   .string()
   .trim()
-  .min(1, "ユーザー名を入力してください")
-  .max(255, "最大255文字までです")
+  .min(3, 'ユーザー名は3文字以上で入力してください')
+  .max(20, 'ユーザー名は20文字以内で入力してください')
+  .regex(/^[a-zA-Z0-9_-]+$/, 'ユーザー名は英数字、アンダースコア、ハイフンのみ使用できます')
   .refine((userName) => isUserNameUnique(userName));
 
   export const debouncedUsernameWithUniquenessCheckSchema = z
   .string()
   .trim()
-  .min(1, "ユーザー名を入力してください")
-  .max(255, "最大255文字までです")
+  .min(3, 'ユーザー名は3文字以上で入力してください')
+  .max(20, 'ユーザー名は20文字以内で入力してください')
+  .regex(/^[a-zA-Z0-9_-]+$/, 'ユーザー名は英数字、アンダースコア、ハイフンのみ使用できます')
   .refine(
     AwesomeDebouncePromise(
       async (userName) => await isUserNameUnique(userName),
@@ -43,25 +45,38 @@ import AwesomeDebouncePromise from "awesome-debounce-promise";
       message: "このユーザー名は既に使用されています",
     }
   );
+
+
   /**
-   * ユーザー名バリデーション
-   * 通信パフォーマンスを上げるためDebounceを使用しない関数。
-   * 主にサーバーアクションでユーザー名の重複チェックを行う。
+   * サインアップ
    */
-  export const passwordUpdateSchema = z.object({
+  export const signupSchema = z.object({
     email: emailSchema,
     username: usernameWithUniquenessCheckSchema,
     password: passwordSchema,
   });
   /**
-   * ユーザー名バリデーション
-   * 主にフロントエンドでユーザー名の重複チェックを行う。
+   * サインアップ（ユーザー名バリデーション）
    */
-  export const extendedSignUpSchema = passwordUpdateSchema.extend({
+  export const extendedSignupSchema = signupSchema.extend({
     username: debouncedUsernameWithUniquenessCheckSchema,
   });
-
-  export const loginSchema = z.object({
-    email: emailSchema,
+  /**
+   * パスワード更新
+   */
+  export const passwordUpdateSchema = z.object({
     password: passwordSchema,
+  });
+  /**
+   * ログイン
+   */
+  export const loginWithEmailOrUsernameSchema = z.object({
+    emailOrUsername: z.string().trim().min(1).max(255), // メールアドレスかユーザー名を許容するため、特殊文字のチェックは行わない
+    password: passwordSchema,
+  });
+  export const debouncedUsernameSchema = z.object({
+    username: debouncedUsernameWithUniquenessCheckSchema,
+  });
+  export const unDebouncedUsernameSchema = z.object({
+    username: usernameWithUniquenessCheckSchema,
   });

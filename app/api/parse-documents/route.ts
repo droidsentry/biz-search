@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import PDFParser from 'pdf2json'
 import { parsePropertyOwnerData } from '@/lib/property-parser'
+import { createClient } from '@/lib/supabase/server'
 
 // 型定義
 interface PDFMetadata {
@@ -48,6 +49,8 @@ const MAX_TOTAL_SIZE = 10 * 1024 * 1024  // 合計10MB
 const RESPONSE_SIZE_LIMIT = 4 * 1024 * 1024  // 4MB
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now()
+  
   try {
     const formData = await request.formData()
     const files = formData.getAll('pdfs') as File[]
@@ -57,6 +60,52 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'ファイルが選択されていません' },
         { status: 400 }
+      )
+    }
+
+    // Supabaseクライアントを作成して認証確認
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      return NextResponse.json(
+        { error: '認証が必要です' },
+        { status: 401 }
+      )
+    }
+
+    // API制限チェック（PDF処理）
+    const { data: limitCheck, error: limitCheckError } = await supabase
+      .rpc('check_global_api_limit', {
+        p_api_name: 'pdf_parsing',
+        p_increment: files.length
+      })
+
+    if (limitCheckError) {
+      console.error('API制限確認エラー:', limitCheckError)
+      return NextResponse.json(
+        { error: 'API制限の確認中にエラーが発生しました' },
+        { status: 500 }
+      )
+    }
+
+    // RPCの戻り値をキャスト
+    interface LimitCheckResult {
+      allowed: boolean
+      daily_used: number
+      daily_limit: number
+      monthly_used: number
+      monthly_limit: number
+    }
+    
+    const limitResult = limitCheck as unknown as LimitCheckResult
+
+    if (!limitResult.allowed) {
+      return NextResponse.json(
+        { 
+          error: `PDF処理制限に達しました。本日: ${limitResult.daily_used}/${limitResult.daily_limit}件、今月: ${limitResult.monthly_used}/${limitResult.monthly_limit}件` 
+        },
+        { status: 429 }
       )
     }
 
@@ -146,6 +195,23 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    // 処理ログを記録（エラーは無視）
+    const processingTime = Date.now() - startTime
+    supabase
+      .from('pdf_processing_logs')
+      .insert({
+        user_id: user.id,
+        file_count: files.length,
+        success_count: successCount,
+        error_count: errorCount,
+        processing_time: processingTime
+      })
+      .then(({ error }) => {
+        if (error) {
+          console.error('PDF処理ログ記録エラー:', error)
+        }
+      })
 
     return NextResponse.json(response)
 

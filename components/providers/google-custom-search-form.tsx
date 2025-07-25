@@ -16,6 +16,7 @@ import {
   useContext,
   useEffect,
   useState,
+  useCallback,
 } from "react";
 import { useForm } from "react-hook-form";
 import { Form } from "../ui/form";
@@ -103,22 +104,26 @@ export function GoogleCustomSearchFormProvider({
     );
   };
 
-  const handleSearch = async (formData: GoogleCustomSearchPattern) => {
-    setIsSearching(true);
+  const handleSearch = useCallback(
+    async (formData: GoogleCustomSearchPattern) => {
+      setIsSearching(true);
 
-    // パターンが変更されている場合はpatternIdをnullに設定
-    if (formData.patternId && dynamicSelectedPattern) {
-      if (isPatternModified(formData, dynamicSelectedPattern)) {
-        formData.patternId = undefined;
+      // パターンが変更されている場合はpatternIdをnullに設定
+      if (formData.patternId && dynamicSelectedPattern) {
+        if (isPatternModified(formData, dynamicSelectedPattern)) {
+          formData.patternId = undefined;
+        }
       }
-    }
 
-    setGoogleCustomSearchPattern(formData);
-  };
+      setGoogleCustomSearchPattern(formData);
+    },
+    [dynamicSelectedPattern]
+  );
 
   const { data, isLoading, isValidating, error } = useGoogleCustomSearch({
     formData: googleCustomSearchPattern,
   });
+  
 
   // 検索結果に基づくモード切り替え
   useEffect(() => {
@@ -138,7 +143,7 @@ export function GoogleCustomSearchFormProvider({
       currentFormValues.googleCustomSearchParams.startPage = parseInt(page);
       setGoogleCustomSearchPattern(currentFormValues);
     }
-  }, [searchParams]);
+  }, [searchParams, form, googleCustomSearchPattern]);
 
   // 動的にselectedPatternを更新
   useEffect(() => {
@@ -148,7 +153,7 @@ export function GoogleCustomSearchFormProvider({
     ) {
       setCurrentSelectedPattern(dynamicSelectedPattern);
     }
-  }, [dynamicSelectedPattern, urlPatternId]);
+  }, [dynamicSelectedPattern, urlPatternId, currentSelectedPattern?.id]);
 
   // パターンIDの変更を検知して読み込み
   useEffect(() => {

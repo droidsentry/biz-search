@@ -21,10 +21,6 @@ const projectNameWithUniquenessCheckSchema = z
   .trim()
   .min(3, "プロジェクト名は3文字以上で入力してください")
   .max(100, "プロジェクト名は100文字以内で入力してください")
-  .regex(
-    /^[a-zA-Z0-9ぁ-んァ-ヶー一-龠々〆〤〥〦〧〨〩〪〭〮〫〬\s\-_]+$/,
-    "使用できない文字が含まれています"
-  )
   .refine(async (name) => await checkProjectName(name),{
     message: "このプロジェクト名は既に使用されています",
   });
@@ -37,10 +33,6 @@ const debouncedProjectNameWithUniquenessCheckSchema = z
   .trim()
   .min(3, "プロジェクト名は3文字以上で入力してください")
   .max(100, "プロジェクト名は100文字以内で入力してください")
-  .regex(
-    /^[a-zA-Z0-9ぁ-んァ-ヶー一-龠々〆〤〥〦〧〨〩〪〭〮〫〬\s\-_]+$/,
-    "使用できない文字が含まれています"
-  )
   .refine(
     AwesomeDebouncePromise(
       async (name) => await checkProjectName(name),

@@ -1,6 +1,5 @@
-import { Metadata } from "next";
 import { getBaseURL } from "@/lib/base-url";
-import { createClient } from "@/lib/supabase/server";
+import { Metadata } from "next";
 import PasswordUpdateForm from "./form";
 
 export const metadata: Metadata = {
@@ -10,13 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default async function Page() {
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  return (
-    <PasswordUpdateForm user={user}/>
-  );
+  return <PasswordUpdateForm />;
 }

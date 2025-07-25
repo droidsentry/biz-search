@@ -42,6 +42,49 @@ export async function geocodeAddress(address: string) {
     }
   }
 
+  // Supabaseクライアントを作成
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) {
+    return {
+      success: false,
+      error: '認証が必要です',
+    }
+  }
+
+  // API制限チェック（Geocoding）
+  const { data: limitCheck, error: limitCheckError } = await supabase
+    .rpc('check_global_api_limit', {
+      p_api_name: 'google_maps_geocoding'
+    })
+
+  if (limitCheckError) {
+    console.error('API制限確認エラー:', limitCheckError)
+    return {
+      success: false,
+      error: 'API制限の確認中にエラーが発生しました',
+    }
+  }
+
+  // RPCの戻り値をキャスト
+  interface LimitCheckResult {
+    allowed: boolean
+    daily_used: number
+    daily_limit: number
+    monthly_used: number
+    monthly_limit: number
+  }
+  
+  const limitResult = limitCheck as unknown as LimitCheckResult
+
+  if (!limitResult.allowed) {
+    return {
+      success: false,
+      error: `Geocoding API制限に達しました。本日: ${limitResult.daily_used}/${limitResult.daily_limit}回、今月: ${limitResult.monthly_used}/${limitResult.monthly_limit}回`,
+    }
+  }
 
   // サーバー用のAPIキーを使用
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_SERVER_KEY
@@ -54,6 +97,8 @@ export async function geocodeAddress(address: string) {
     }
   }
 
+  const startTime = Date.now()
+  
   try {
     // Google Maps Services JSを使用してジオコーディング
     const response = await client.geocode({
@@ -64,6 +109,8 @@ export async function geocodeAddress(address: string) {
       },
     })
     console.log(response.data)
+    
+    const apiResponseTime = Date.now() - startTime
     
     if (response.data.status === Status.OK && response.data.results.length > 0) {
       const result = response.data.results[0]
@@ -80,12 +127,46 @@ export async function geocodeAddress(address: string) {
         streetViewAvailable,
       }
       
+      // 成功ログを記録（エラーは無視）
+      supabase
+        .from('geocoding_logs')
+        .insert({
+          user_id: user.id,
+          address: address,
+          success: true,
+          lat: location.lat,
+          lng: location.lng,
+          street_view_available: streetViewAvailable,
+          api_response_time: apiResponseTime
+        })
+        .then(({ error }) => {
+          if (error) {
+            console.error('Geocodingログ記録エラー:', error)
+          }
+        })
+      
       return {
         success: true,
         data: geocodingResult,
         streetViewAvailable,
       }
     } else if (response.data.status === Status.ZERO_RESULTS) {
+      // エラーログを記録
+      supabase
+        .from('geocoding_logs')
+        .insert({
+          user_id: user.id,
+          address: address,
+          success: false,
+          error_message: '指定された住所が見つかりませんでした',
+          api_response_time: apiResponseTime
+        })
+        .then(({ error }) => {
+          if (error) {
+            console.error('Geocodingログ記録エラー:', error)
+          }
+        })
+      
       return {
         success: false,
         error: '指定された住所が見つかりませんでした',
