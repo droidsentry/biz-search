@@ -4,8 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AppConfig } from '@/app.config'
 import { Progress } from '@/components/ui/progress'
 import { 
-  DocumentMagnifyingGlassIcon,
-  ArrowTrendingUpIcon
+  DocumentMagnifyingGlassIcon
 } from '@heroicons/react/24/outline'
 import { useEffect, useState } from 'react'
 import { getApiUsageStats } from '../actions/api-usage'
@@ -162,7 +161,25 @@ export function ApiUsage() {
   }, [])
 
   const apiMetrics: ApiMetric[] = [
-    googleSearchMetric
+    googleSearchMetric,
+    {
+      name: 'Coming Soon 1',
+      icon: DocumentMagnifyingGlassIcon,
+      used: 0,
+      limit: 0,
+      unit: '',
+      status: 'inactive',
+      description: '新機能を準備中です'
+    },
+    {
+      name: 'Coming Soon 2',
+      icon: DocumentMagnifyingGlassIcon,
+      used: 0,
+      limit: 0,
+      unit: '',
+      status: 'inactive',
+      description: '新機能を準備中です'
+    }
   ]
   const getStatusBadge = (status: ApiMetric['status']) => {
     switch (status) {
@@ -210,51 +227,62 @@ export function ApiUsage() {
           const Icon = metric.icon
           
           return (
-            <Card key={metric.name} className="shadow-border relative overflow-hidden">
-              <CardHeader className="border-b pb-3">
+            <Card key={metric.name} className="group relative transition-all duration-200 hover:shadow-lg">
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent to-gray-50/50 dark:to-gray-900/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg pointer-events-none" />
+              <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Icon className="h-5 w-5 text-gray-600 dark:text-gray-400 flex-shrink-0" />
-                    <CardTitle className="text-base font-normal text-gray-900 dark:text-gray-100 truncate">
-                      {metric.name}
+                  <div>
+                    <CardTitle className="text-base font-medium text-gray-900 dark:text-gray-100">
+                      {metric.name.startsWith('Coming Soon') ? 'Coming Soon' : metric.name}
                     </CardTitle>
+                    {metric.description && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        {metric.description}
+                      </p>
+                    )}
                   </div>
                   {metric.name === 'Google Custom Search API' && isRealtimeConnected && (
-                    <div className="flex items-center gap-1.5 rounded-full bg-green-50 dark:bg-green-900/20 px-2 py-0.5 flex-shrink-0">
-                      <div className="h-1.5 w-1.5 bg-green-500 rounded-full animate-pulse" />
-                      <span className="text-xs font-medium text-green-700 dark:text-green-400">
-                        Live
+                    <div className="flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                       </span>
+                      <span>Live</span>
                     </div>
                   )}
                 </div>
               </CardHeader>
-              <CardContent className="pt-4 pb-3">
+              <CardContent className="pt-2 pb-4">
                 {metric.name === 'Google Custom Search API' ? (
                   <GoogleSearchUsageChart 
                     used={metric.used}
                     limit={metric.limit}
                     status={metric.status}
                   />
+                ) : metric.name.startsWith('Coming Soon') ? (
+                  <div className="flex flex-col items-center justify-center h-[280px] text-center">
+                    <div className="p-4 rounded-full bg-gray-50 dark:bg-gray-900/50 mb-4">
+                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                    </div>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">新機能を準備中</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">近日公開予定</p>
+                  </div>
                 ) : (
                   <div className="space-y-4">
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                        {metric.description}
-                      </p>
-                      <div className="flex items-baseline justify-between">
-                        <div>
-                          <span className="text-3xl font-light text-gray-900 dark:text-gray-100">
-                            {metric.used.toLocaleString()}
-                          </span>
-                          <span className="text-sm text-gray-500 dark:text-gray-400 ml-1">
-                            / {metric.limit.toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-2xl font-light text-gray-900 dark:text-gray-100">
-                            {percentage.toFixed(0)}%
-                          </div>
+                    <div className="flex items-baseline justify-between">
+                      <div>
+                        <span className="text-3xl font-light text-gray-900 dark:text-gray-100">
+                          {metric.used.toLocaleString()}
+                        </span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400 ml-1">
+                          / {metric.limit.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-light text-gray-900 dark:text-gray-100">
+                          {percentage.toFixed(0)}%
                         </div>
                       </div>
                     </div>
@@ -282,27 +310,25 @@ export function ApiUsage() {
       </div>
 
       {/* 月間使用履歴 */}
-      <Card className="shadow-border">
-        <CardHeader className="border-b pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <ArrowTrendingUpIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-              <CardTitle className="text-base font-normal text-gray-900 dark:text-gray-100">
-                月間使用履歴
-              </CardTitle>
-            </div>
+      <Card className="group relative transition-all duration-200 hover:shadow-lg">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-gray-50/50 dark:to-gray-900/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg pointer-events-none" />
+        <CardHeader className="pb-3">
+          <div>
+            <CardTitle className="text-base font-medium text-gray-900 dark:text-gray-100">
+              月間使用履歴
+            </CardTitle>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              Google Custom Search API - 過去5ヶ月
+            </p>
           </div>
         </CardHeader>
-        <CardContent className="pt-4 pb-3">
+        <CardContent className="pt-2 pb-4">
           {isLoading ? (
             <div className="flex justify-center py-12">
               <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-200 border-t-gray-900 dark:border-gray-700 dark:border-t-gray-100"></div>
             </div>
           ) : (
             <div className="space-y-3">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Google Custom Search API - 過去5ヶ月
-              </p>
               <ChartContainer
                 config={{
                   requests: {
@@ -358,10 +384,10 @@ export function ApiUsage() {
                   />
                 </AreaChart>
               </ChartContainer>
-              <div className="pt-3 border-t border-gray-100 dark:border-gray-800">
-                <div className="flex items-start justify-between">
+              <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+                <div className="flex items-center justify-between">
                   <div>
-                    <div className="flex items-center gap-2 text-sm font-medium">
+                    <div className="flex items-center gap-2 text-sm">
                       {(() => {
                         const currentMonth = monthlyStats[monthlyStats.length - 1]
                         const previousMonth = monthlyStats[monthlyStats.length - 2]
@@ -370,23 +396,23 @@ export function ApiUsage() {
                           return (
                             <>
                               {change > 0 ? (
-                                <>
-                                  <span className="text-green-600 dark:text-green-400">
-                                    前月比 +{change.toFixed(1)}%
-                                  </span>
+                                <div className="flex items-center gap-1">
                                   <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
                                   </svg>
-                                </>
-                              ) : (
-                                <>
-                                  <span className="text-red-600 dark:text-red-400">
-                                    前月比 {change.toFixed(1)}%
+                                  <span className="text-green-600 dark:text-green-400 font-medium">
+                                    {change.toFixed(1)}%
                                   </span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1">
                                   <svg className="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                                   </svg>
-                                </>
+                                  <span className="text-red-600 dark:text-red-400 font-medium">
+                                    {Math.abs(change).toFixed(1)}%
+                                  </span>
+                                </div>
                               )}
                             </>
                           )
@@ -394,15 +420,15 @@ export function ApiUsage() {
                         return null
                       })()}
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {monthlyStats[0]?.month} - {monthlyStats[monthlyStats.length - 1]?.month}
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      前月比
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       月間上限
                     </p>
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                       {AppConfig.api.googleCustomSearch.monthlyLimit.toLocaleString()}
                     </p>
                   </div>

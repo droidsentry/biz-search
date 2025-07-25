@@ -25,31 +25,26 @@ export async function getDailyApiUsage(): Promise<DailyApiUsage> {
     return { used: 0, limit: AppConfig.api.googleCustomSearch.dailyLimit, status: 'inactive' }
   }
 
-  // 本日の開始と終了時刻を取得（日本時間を考慮）
-  const now = new Date()
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const tomorrow = new Date(today)
-  tomorrow.setDate(tomorrow.getDate() + 1)
+  // グローバル統計を取得
+  const { data: stats, error } = await supabase
+    .rpc('get_global_api_usage_stats', {
+      p_api_name: 'google_custom_search'
+    })
 
-  // 本日の成功したリクエスト数を取得
-  const { count, error } = await supabase
-    .from('search_api_logs')
-    .select('*', { count: 'exact', head: true })
-    .gte('created_at', today.toISOString())
-    .lt('created_at', tomorrow.toISOString())
-    .eq('status_code', 200)
-
-  if (error) {
+  if (error || !stats || stats.length === 0) {
     console.error('API使用状況取得エラー:', error)
     return { used: 0, limit: AppConfig.api.googleCustomSearch.dailyLimit, status: 'inactive' }
   }
 
-  const used = count || 0
-  const limit = AppConfig.api.googleCustomSearch.dailyLimit
+  const globalStats = stats[0]
+  const used = globalStats.daily_used || 0
+  const limit = globalStats.daily_limit || AppConfig.api.googleCustomSearch.dailyLimit
   const percentage = (used / limit) * 100
 
   let status: 'active' | 'warning' | 'danger' | 'inactive' = 'active'
-  if (percentage >= 90) {
+  if (globalStats.is_blocked) {
+    status = 'danger'
+  } else if (percentage >= 90) {
     status = 'danger'
   } else if (percentage >= 70) {
     status = 'warning'

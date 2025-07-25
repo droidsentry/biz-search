@@ -119,6 +119,7 @@ export function GoogleCustomSearchFormProvider({
   const { data, isLoading, isValidating, error } = useGoogleCustomSearch({
     formData: googleCustomSearchPattern,
   });
+  
 
   // 検索結果に基づくモード切り替え
   useEffect(() => {

@@ -23,6 +23,26 @@ export async function getCustomerInfoFromGoogleCustomSearch(
   if (!user) {
     redirect("/login");
   }
+  
+  // グローバルAPI利用制限チェック
+  const { data: limitCheck, error: limitCheckError } = await supabase
+    .rpc('check_global_api_limit', {
+      p_api_name: 'google_custom_search'
+    });
+    
+  if (limitCheckError) {
+    console.error('API制限確認エラー:', limitCheckError);
+    throw new Error('API制限の確認中にエラーが発生しました');
+  }
+  
+  if (!limitCheck.allowed) {
+    const error = new Error(
+      `API制限に達しました。本日: ${limitCheck.daily_used}/${limitCheck.daily_limit}回、今月: ${limitCheck.monthly_used}/${limitCheck.monthly_limit}回`
+    );
+    (error as any).rateLimitInfo = limitCheck;
+    throw error;
+  }
+  
   const startTime = Date.now();
   let statusCode = 200;
   let errorMessage: string | null = null;
@@ -63,9 +83,18 @@ export async function getCustomerInfoFromGoogleCustomSearch(
       console.error("APIログ記録エラー:", logError);
     });
 
-    return response.data;
+    return {
+      ...response.data,
+      _rateLimitInfo: limitCheck // レート制限情報を含める
+    };
   } catch (error) {
     console.error("Search error:", error);
+    
+    // レート制限エラーの場合はそのまま再スロー
+    if ((error as any).rateLimitInfo) {
+      throw error;
+    }
+    
     statusCode = 500;
     errorMessage =
       error instanceof Error ? error.message : "検索中にエラーが発生しました";

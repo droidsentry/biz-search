@@ -3,17 +3,38 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { ChartBarIcon, UsersIcon } from 'lucide-react'
+import { ChartBarIcon, UsersIcon, ShieldIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-
-
-const navigation = [
-  { name: 'API使用状況', href: '/settings', icon: ChartBarIcon },
-  { name: 'メンバー管理', href: '/settings/members', icon: UsersIcon },
-]
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 export function SettingsSidebar() {
   const pathname = usePathname()
+  const [isSystemOwner, setIsSystemOwner] = useState(false)
+  
+  useEffect(() => {
+    const checkSystemOwner = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+        
+      setIsSystemOwner(profile?.role === 'system_owner')
+    }
+    
+    checkSystemOwner()
+  }, [])
+  
+  const navigation = [
+    { name: 'API使用状況', href: '/settings', icon: ChartBarIcon },
+    { name: 'メンバー管理', href: '/settings/members', icon: UsersIcon },
+    ...(isSystemOwner ? [{ name: 'API制限管理', href: '/settings/api-limits', icon: ShieldIcon }] : []),
+  ]
 
   return (
     <div className="sticky top-0 w-64 hidden lg:block mr-0 lg:mr-12">
