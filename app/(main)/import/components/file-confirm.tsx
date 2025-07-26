@@ -1,7 +1,7 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { FileText, X } from 'lucide-react'
+import { FileText, X, AlertCircle } from 'lucide-react'
 
 interface FileConfirmProps {
   files: File[]
@@ -12,6 +12,9 @@ interface FileConfirmProps {
 
 export function FileConfirm({ files, onConfirm, onCancel, onRemoveFile }: FileConfirmProps) {
   const totalSize = files.reduce((sum, file) => sum + file.size, 0)
+  const BATCH_SIZE = 50
+  const batchCount = Math.ceil(files.length / BATCH_SIZE)
+  const showBatchWarning = files.length > BATCH_SIZE
   
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return bytes + ' B'
@@ -27,6 +30,23 @@ export function FileConfirm({ files, onConfirm, onCancel, onRemoveFile }: FileCo
           {files.length}個のPDFファイルが選択されました
         </p>
       </div>
+
+      {showBatchWarning && (
+        <div className="rounded-lg border border-yellow-800 bg-yellow-900/20 p-4">
+          <div className="flex gap-3">
+            <AlertCircle className="h-5 w-5 flex-shrink-0 text-yellow-500" />
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-yellow-500">
+                大量のファイルが選択されています
+              </p>
+              <p className="text-sm text-zinc-400">
+                {files.length}個のファイルは{batchCount}個のバッチに分けて処理されます。
+                各バッチは{BATCH_SIZE}ファイルずつ処理され、全体の処理には時間がかかる場合があります。
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="rounded-lg border border-zinc-800 bg-zinc-900/50">
         <div className="border-b border-zinc-800 px-6 py-4">

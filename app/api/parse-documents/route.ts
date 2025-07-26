@@ -44,8 +44,8 @@ interface APIResponse {
 
 // 設定
 const MAX_FILE_SIZE = 2 * 1024 * 1024    // 2MB
-const MAX_FILES = 50                      // 50ファイル
-const MAX_TOTAL_SIZE = 10 * 1024 * 1024  // 合計10MB
+const MAX_FILES = 100                     // 100ファイル（バッチ処理用に増加）
+const MAX_TOTAL_SIZE = 5 * 1024 * 1024   // 合計5MB（1バッチあたり）
 const RESPONSE_SIZE_LIMIT = 4 * 1024 * 1024  // 4MB
 
 export async function POST(request: NextRequest) {
@@ -140,13 +140,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // レスポンスサイズの概算（1ファイルあたり平均100KB想定）
-    const estimatedResponseSize = files.length * 100 * 1024
+    // レスポンスサイズの概算（1ファイルあたり平均30KB想定 - より正確な見積もり）
+    const estimatedResponseSize = files.length * 30 * 1024
     if (estimatedResponseSize > RESPONSE_SIZE_LIMIT) {
       return NextResponse.json(
         { 
           error: 'レスポンスサイズが制限を超える可能性があります。',
-          suggestion: `ファイル数を${Math.floor(RESPONSE_SIZE_LIMIT / (100 * 1024))}件以下に減らして再実行してください。`
+          suggestion: `ファイル数を${Math.floor(RESPONSE_SIZE_LIMIT / (30 * 1024))}件以下に減らして再実行してください。`
         },
         { status: 400 }
       )
@@ -232,6 +232,7 @@ async function processFile(file: File, includeFullText: boolean): Promise<FileRe
 
     // pdf2jsonで解析
     const pdfData = await parsePDF(buffer)
+    console.log("pdfData", pdfData)
 
     // テキスト抽出
     const extractedText = extractTextFromPDFData(pdfData)
@@ -328,6 +329,7 @@ function extractTextFromPDFData(pdfData: PDFData): string {
       prevY = text.y
     })
   })
+  
 
   return fullText.trim()
 }

@@ -12,54 +12,107 @@ export function PropertyImportForm() {
   const [step, setStep] = useState<ImportStep>('upload')
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [results, setResults] = useState<ParseResult[]>([])
+  const [processingProgress, setProcessingProgress] = useState({
+    currentBatch: 0,
+    totalBatches: 0,
+    processedFiles: 0,
+    totalFiles: 0
+  })
 
   const processFiles = useCallback(async () => {
     setStep('processing')
 
     try {
-      // FormDataを作成
-      const formData = new FormData()
-      selectedFiles.forEach(file => {
-        formData.append('pdfs', file)
-      })
+      const BATCH_SIZE = 50 // バッチサイズ
+      const totalFiles = selectedFiles.length
+      const batchCount = Math.ceil(totalFiles / BATCH_SIZE)
+      
+      let allResults: ParseResult[] = []
+      let totalSuccessful = 0
+      let totalFailed = 0
 
-      // APIエンドポイントに送信
-      const response = await fetch('/api/parse-documents', {
-        method: 'POST',
-        body: formData
-      })
+      // バッチ処理
+      for (let i = 0; i < batchCount; i++) {
+        const start = i * BATCH_SIZE
+        const end = Math.min(start + BATCH_SIZE, totalFiles)
+        const batchFiles = selectedFiles.slice(start, end)
+        
+        // 進捗情報を設定（進捗表示コンポーネントで使用）
+        const currentBatch = i + 1
+        const processedFiles = start
+        
+        // 進捗状態を更新
+        setProcessingProgress({
+          currentBatch,
+          totalBatches: batchCount,
+          processedFiles,
+          totalFiles
+        })
+        
+        // バッチの進捗を表示
+        toast.info(`バッチ ${currentBatch}/${batchCount} を処理中... (${start + 1}-${end}/${totalFiles}ファイル)`)
 
-      const data = await response.json()
+        // FormDataを作成
+        const formData = new FormData()
+        batchFiles.forEach(file => {
+          formData.append('pdfs', file)
+        })
 
-      if (!response.ok) {
-        // サジェスチョンがある場合は追加で表示
-        if (data.suggestion) {
-          toast.error(data.suggestion)
+        // APIエンドポイントに送信
+        const response = await fetch('/api/parse-documents', {
+          method: 'POST',
+          body: formData
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          // エラーが発生してもバッチ処理を継続
+          console.error(`バッチ ${currentBatch} エラー:`, data.error)
+          toast.error(`バッチ ${currentBatch} の処理に失敗: ${data.error}`)
+          
+          // 失敗したファイルもresultsに追加（エラー表示のため）
+          const failedResults = batchFiles.map(file => ({
+            fileName: file.name,
+            fileSize: file.size,
+            status: 'error' as const,
+            error: data.error || 'バッチ処理エラー',
+            processingTime: 0,
+            propertyData: undefined
+          }))
+          allResults = [...allResults, ...failedResults]
+          totalFailed += batchFiles.length
+          continue
         }
-        throw new Error(data.error || 'PDFの解析に失敗しました')
+
+        // 通常のJSONレスポンスを処理
+        const batchResults: ParseResult[] = data.results.map((result: ParseResult) => ({
+          fileName: result.fileName,
+          fileSize: result.fileSize,
+          status: result.status,
+          pageCount: result.pageCount,
+          textLength: result.textLength,
+          processingTime: 0,
+          propertyData: result.propertyData,
+          error: result.error
+        }))
+
+        allResults = [...allResults, ...batchResults]
+        
+        // サマリー情報を累積
+        totalSuccessful += data.summary.successful
+        totalFailed += data.summary.failed
       }
 
-      // 通常のJSONレスポンスを処理
-      const parseResults: ParseResult[] = data.results.map((result: ParseResult) => ({
-        fileName: result.fileName,
-        fileSize: result.fileSize,
-        status: result.status,
-        pageCount: result.pageCount,
-        textLength: result.textLength,
-        processingTime: 0, // APIレスポンスに含まれないため0を設定
-        propertyData: result.propertyData,
-        error: result.error
-      }))
-
-      setResults(parseResults)
+      // 全バッチ処理完了
+      setResults(allResults)
       setStep('complete')
       
-      // サマリー情報を使用
-      const { successful, failed, total } = data.summary
-      if (failed === 0) {
-        toast.success(`${successful}件のPDFを解析しました`)
+      // 最終サマリー
+      if (totalFailed === 0) {
+        toast.success(`${totalSuccessful}件のPDFを解析しました（${batchCount}バッチで処理）`)
       } else {
-        toast.warning(`${successful}/${total}件の解析に成功しました`)
+        toast.warning(`${totalSuccessful}/${totalFiles}件の解析に成功しました（${batchCount}バッチで処理）`)
       }
     } catch (error) {
       console.error('Processing error:', error)
@@ -121,7 +174,7 @@ export function PropertyImportForm() {
 
       {step === 'processing' && (
         <div className="flex min-h-[400px] items-center justify-center">
-          <ImportProgress />
+          <ImportProgress progress={processingProgress} />
         </div>
       )}
 

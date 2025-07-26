@@ -23,7 +23,8 @@ export function FileDropzone({ onDrop, disabled = false }: FileDropzoneProps) {
       'application/pdf': ['.pdf']
     }, // PDFファイルのみ受け付ける
     disabled, // 無効化されている場合はドロップできない
-    multiple: true // 複数ファイル選択可能
+    multiple: true, // 複数ファイル選択可能
+    maxFiles: 300 // 最大300ファイルまで
   })
 
   return (
@@ -52,7 +53,7 @@ export function FileDropzone({ onDrop, disabled = false }: FileDropzoneProps) {
             {isDragActive ? "ドロップして解析開始" : "PDFをドロップ"}
           </p>
           <p className="mt-1 text-sm text-zinc-400">
-            またはクリックして選択
+            またはクリックして選択（最大300ファイル）
           </p>
         </div>
       </div>
