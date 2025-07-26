@@ -63,9 +63,72 @@ export function parsePropertyOwnerData(text: string): PropertyOwner[] {
         const match = line.match(pattern)
         if (match) {
           const ownerAddress = match[1].trim()
-          const ownerName = match[2].trim()
+          let ownerName = match[2].trim()
           
-          console.log('抽出成功:', { ownerAddress, ownerName })
+          // 所有者住所が空の場合は、これは続きの行なのでスキップ
+          if (!ownerAddress && ownerName) {
+            console.log('続きの行と判断してスキップ:', line)
+            continue
+          }
+          
+          console.log('初期氏名抽出:', { ownerAddress, ownerName })
+          
+          // 次の行から氏名の続きを検出
+          const ownerNameLines = [ownerName]
+          let j = i + 1
+          
+          while (j < lines.length) {
+            const nextLine = lines[j].trim()
+            console.log(`確認中の行 (${j}):`, nextLine)
+            
+            // 氏名の続き行の判定：
+            // - ┃で始まり┃で終わる
+            // - │を含む
+            // - 罫線（━や─）ではない
+            // - 左側（住所部分）が空白のみ
+            if (nextLine.startsWith('┃') && 
+                nextLine.endsWith('┃') && 
+                nextLine.includes('│') &&
+                !nextLine.includes('━') &&
+                !nextLine.includes('─')) {
+              
+              // 続きの行のパターンマッチ
+              const continueMatch = nextLine.match(/┃\s*│(.+?)┃/)
+              if (continueMatch) {
+                const additionalName = continueMatch[1].trim()
+                if (additionalName) {
+                  console.log('氏名の続き検出:', additionalName)
+                  ownerNameLines.push(additionalName)
+                  i = j // ループカウンタを更新して、処理済みの行をスキップ
+                } else {
+                  // 空行または無効な行なので終了
+                  break
+                }
+              } else {
+                // マッチしなければ終了
+                break
+              }
+            } else {
+              // 氏名の続きではないので終了
+              break
+            }
+            j++
+          }
+          
+          // 複数行の氏名を処理
+          if (ownerNameLines.length > 1) {
+            // 法人の場合：会社名 + 会社法人等番号を1行に
+            const companyName = ownerNameLines[0]
+            const additionalInfo = ownerNameLines.slice(1).join('')
+              .replace(/\s+/g, '')  // 余分なスペースを削除
+              .replace(/会社法人等番号/, '　会社法人等番号　')  // 前後にスペース追加
+            
+            ownerName = companyName + additionalInfo
+          } else {
+            // 個人の場合：そのまま
+            ownerName = ownerNameLines[0]
+          }
+          console.log('最終的な氏名:', ownerName)
           
           properties.push({
             recordDate: currentRecordDate,

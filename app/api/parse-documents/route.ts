@@ -235,6 +235,7 @@ async function processFile(file: File, includeFullText: boolean): Promise<FileRe
 
     // テキスト抽出
     const extractedText = extractTextFromPDFData(pdfData)
+    console.log("extractedText", extractedText)
     
     // 不動産情報をパース
     const propertyData = parsePropertyOwnerData(extractedText)

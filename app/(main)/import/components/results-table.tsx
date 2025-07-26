@@ -69,7 +69,7 @@ export function ResultsTable({
 
   // 保存ダイアログの状態管理
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
-  
+
   // 遷移確認ダイアログの状態管理
   const [navigationDialogOpen, setNavigationDialogOpen] = useState(false);
   const [savedProjectInfo, setSavedProjectInfo] = useState<{
@@ -149,12 +149,12 @@ export function ResultsTable({
       toast.info(
         <div className="space-y-2 w-fit">
           {/* デバッグ用 削除しないでください*/}
-          {/* <pre className="text-muted-foreground bg-muted p-2 border rounded-md text-xs break-all whitespace-pre-wrap">
+          <pre className="text-muted-foreground bg-muted p-2 border rounded-md text-xs break-all whitespace-pre-wrap">
             {JSON.stringify(row.property, null, 2)}
           </pre>
           <pre className="text-muted-foreground bg-muted p-2 border rounded-md text-xs break-all whitespace-pre-wrap">
             {JSON.stringify(geocoding, null, 2)}
-          </pre> */}
+          </pre>
           <div className="text-muted-foreground bg-muted p-2 border rounded-md">
             <p>物件住所: {row.property.propertyAddress}</p>
             <p>所有者名: {row.property.ownerName}</p>
@@ -306,7 +306,7 @@ export function ResultsTable({
               const propertiesWithoutOwnerAddress = tableRows.filter(
                 (row) => row.property && !row.property.ownerAddress
               );
-              
+
               if (propertiesWithoutOwnerAddress.length > 0) {
                 toast.error(
                   `${propertiesWithoutOwnerAddress.length}件の物件で所有者住所が取得できていません。\nPDFから所有者住所が正しく読み取れていない可能性があります。\n\n所有者住所がない物件は保存できません。`,
@@ -316,20 +316,20 @@ export function ResultsTable({
                 );
                 return;
               }
-              
+
               // 位置情報が取得されていない物件をチェック
               const propertiesWithoutLocation = tableRows.filter(
                 (row) => row.property && !geocodingResults.get(row.rowKey)?.lat
               );
-              
+
               if (propertiesWithoutLocation.length > 0) {
                 const confirmMessage = `${propertiesWithoutLocation.length}件の物件で位置情報が取得されていません。\n位置情報なしで保存しますか？\n\n位置情報がない場合、地図表示やストリートビューが利用できません。`;
-                
+
                 if (!window.confirm(confirmMessage)) {
                   return;
                 }
               }
-              
+
               setSaveDialogOpen(true);
             }}
             disabled={totalProperties === 0}
