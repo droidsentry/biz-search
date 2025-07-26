@@ -41,14 +41,19 @@ export function parsePropertyOwnerData(text: string): PropertyOwner[] {
     }
     
     // 物件住所の抽出（例：東京都墨田区八広４丁目１２９－５－２０１）
-    const addressMatch = line.match(/東京都[^\s]+\s+所有者一覧表/)
+    // 都道府県名から始まる住所を検出
+    const addressMatch = line.match(/((?:東京都|北海道|(?:京都|大阪)府|(?:神奈川|埼玉|千葉|愛知|兵庫|福岡|静岡|茨城|広島|新潟|宮城|長野|岐阜|栃木|群馬|岡山|福島|三重|熊本|鹿児島|沖縄|滋賀|山口|愛媛|長崎|奈良|青森|岩手|大分|石川|山形|宮崎|富山|秋田|香川|和歌山|山梨|佐賀|福井|徳島|高知|島根|鳥取)県)[^\s]+)\s+所有者一覧表/)
     if (addressMatch) {
-      currentPropertyAddress = addressMatch[0].replace(/\s*所有者一覧表.*$/, '').trim()
+      currentPropertyAddress = addressMatch[1].trim()
       console.log('物件住所検出:', currentPropertyAddress)
     }
     
     // データ行の抽出（┃で囲まれた行）
-    if (line.includes('┃') && !line.includes('住') && !line.includes('所') && !line.includes('氏')) {
+    // ヘッダー行（「住所」「氏名」を含む）をスキップ
+    const isHeaderRow = line.includes('住') && line.includes('所') && line.includes('氏') && line.includes('名')
+    
+    // データ行の判定：┃と│を含み、ヘッダー行でない、罫線でない
+    if (line.includes('┃') && line.includes('│') && !isHeaderRow && !line.includes('━') && !line.includes('─')) {
       console.log('データ行候補:', line)
       
       // 複数の区切りパターンに対応
@@ -62,36 +67,59 @@ export function parsePropertyOwnerData(text: string): PropertyOwner[] {
       for (const pattern of patterns) {
         const match = line.match(pattern)
         if (match) {
-          const ownerAddress = match[1].trim()
+          let ownerAddress = match[1].trim()
           let ownerName = match[2].trim()
           
-          // 所有者住所が空の場合は、これは続きの行なのでスキップ
-          if (!ownerAddress && ownerName) {
-            console.log('続きの行と判断してスキップ:', line)
+          // 氏名が空で住所のみの場合は、前の行の住所の続きの可能性
+          if (ownerAddress && !ownerName) {
+            console.log('住所の続きの行と判断してスキップ:', line)
             continue
           }
           
-          console.log('初期氏名抽出:', { ownerAddress, ownerName })
+          console.log('初期データ抽出:', { ownerAddress, ownerName })
           
-          // 次の行から氏名の続きを検出
+          // 住所と氏名の続きを収集
+          const ownerAddressLines = [ownerAddress]
           const ownerNameLines = [ownerName]
           let j = i + 1
           
+          // まず住所の続きを確認
           while (j < lines.length) {
             const nextLine = lines[j].trim()
             console.log(`確認中の行 (${j}):`, nextLine)
             
-            // 氏名の続き行の判定：
-            // - ┃で始まり┃で終わる
-            // - │を含む
-            // - 罫線（━や─）ではない
-            // - 左側（住所部分）が空白のみ
-            if (nextLine.startsWith('┃') && 
-                nextLine.endsWith('┃') && 
-                nextLine.includes('│') &&
-                !nextLine.includes('━') &&
-                !nextLine.includes('─')) {
-              
+            // 住所の続き行の判定：住所部分にのみテキストがある
+            if (nextLine.includes('┃') && nextLine.includes('│') && !nextLine.includes('━') && !nextLine.includes('─')) {
+              const continueMatch = nextLine.match(/┃([^┃│]+)│([^┃│]*)┃/)
+              if (continueMatch) {
+                const additionalAddress = continueMatch[1].trim()
+                const rightSide = continueMatch[2].trim()
+                
+                // 住所の続き（右側が空）
+                if (additionalAddress && !rightSide) {
+                  console.log('住所の続き検出:', additionalAddress)
+                  ownerAddressLines.push(additionalAddress)
+                  i = j // ループカウンタを更新
+                  j++
+                  continue
+                }
+                // それ以外の場合は住所の続きではない
+                break
+              }
+            }
+            break
+          }
+          
+          // 住所を結合
+          ownerAddress = ownerAddressLines.join('')
+          
+          // 次に氏名の続きを確認
+          while (j < lines.length) {
+            const nextLine = lines[j].trim()
+            console.log(`氏名確認中の行 (${j}):`, nextLine)
+            
+            // 氏名の続き行の判定
+            if (nextLine.includes('┃') && nextLine.includes('│') && !nextLine.includes('━') && !nextLine.includes('─')) {
               // 続きの行のパターンマッチ
               const continueMatch = nextLine.match(/┃\s*│(.+?)┃/)
               if (continueMatch) {
@@ -99,20 +127,14 @@ export function parsePropertyOwnerData(text: string): PropertyOwner[] {
                 if (additionalName) {
                   console.log('氏名の続き検出:', additionalName)
                   ownerNameLines.push(additionalName)
-                  i = j // ループカウンタを更新して、処理済みの行をスキップ
-                } else {
-                  // 空行または無効な行なので終了
-                  break
+                  i = j // ループカウンタを更新
+                  j++
+                  continue
                 }
-              } else {
-                // マッチしなければ終了
-                break
               }
-            } else {
-              // 氏名の続きではないので終了
-              break
             }
-            j++
+            // 氏名の続きではないので終了
+            break
           }
           
           // 複数行の氏名を処理
