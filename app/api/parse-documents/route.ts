@@ -233,6 +233,16 @@ async function processFile(file: File, includeFullText: boolean): Promise<FileRe
     // pdf2jsonで解析
     const pdfData = await parsePDF(buffer)
     console.log("pdfData", pdfData)
+    
+    // PDFデータ構造の詳細を確認
+    console.log("PDF Pages数:", pdfData.Pages.length)
+    pdfData.Pages.forEach((page, idx) => {
+      console.log(`ページ${idx + 1}のテキスト数:`, page.Texts?.length || 0)
+      // 最初の数個のテキストアイテムを確認
+      page.Texts?.slice(0, 5).forEach((text, i) => {
+        console.log(`  テキスト${i}:`, text.R[0].T)
+      })
+    })
 
     // テキスト抽出
     const extractedText = extractTextFromPDFData(pdfData)
@@ -313,21 +323,121 @@ function extractTextFromPDFData(pdfData: PDFData): string {
       return a.x - b.x
     })
 
-    // 前の行のY座標を記録
+    // 前の行のY座標とX座標を記録
     let prevY = -1
+    let prevX = -1
     
-    sortedTexts.forEach((text: PDFTextItem) => {
-      // 新しい行かどうかチェック
-      if (prevY !== -1 && Math.abs(text.y - prevY) > 0.1) {
-        fullText += '\n'
-      }
+    // 行ごとにテキストを結合するためのバッファ
+    let currentLine = ''
+    let currentLineY = -1
+    
+    sortedTexts.forEach((text: PDFTextItem, index: number) => {
+      // デバッグ: 元のエンコードされたテキストと位置情報を確認
+      const encodedText = text.R[0].T
+      console.log(`エンコード済みテキスト: ${encodedText} (X:${text.x.toFixed(2)}, Y:${text.y.toFixed(2)})`)
       
       // テキストを抽出（URLデコード）
-      const decodedText = decodeURIComponent(text.R[0].T)
-      fullText += decodedText + ' '
+      let decodedText = '';
+      try {
+        decodedText = decodeURIComponent(encodedText);
+        
+        // デコード成功時のデバッグ情報
+        if (decodedText.trim() === '') {
+          console.warn('空白文字のみ検出:', encodedText, '→', decodedText)
+        }
+      } catch (e) {
+        console.error('デコードエラー:', encodedText, 'エラー:', e);
+        
+        // 代替処理1: escape/unescapeを試す
+        try {
+          decodedText = decodeURIComponent(escape(encodedText));
+          console.log('代替デコード成功:', decodedText);
+        } catch (e2) {
+          // 代替処理2: PDF2JSON特有のエンコーディングを処理
+          // %EE%92%96 のような特殊なエンコーディングに対応
+          try {
+            // 16進数文字列として解析
+            const hexMatch = encodedText.match(/%([0-9A-F]{2})/gi);
+            if (hexMatch) {
+              const bytes = hexMatch.map(hex => parseInt(hex.substring(1), 16));
+              
+              // Private Use Area (U+E000-U+F8FF) の文字を検出
+              if (bytes.length === 3 && bytes[0] === 0xEE) {
+                // PDF2JSONがPrivate Use Areaを使用している場合
+                const charCode = ((bytes[0] & 0x0F) << 12) | ((bytes[1] & 0x3F) << 6) | (bytes[2] & 0x3F);
+                
+                // よく使われる漢字のマッピング（必要に応じて拡張）
+                const privateToUnicodeMap: { [key: number]: string } = {
+                  0xE496: '博', // U+E496 → 博
+                  // 他の文字も必要に応じて追加
+                };
+                
+                if (privateToUnicodeMap[charCode]) {
+                  decodedText = privateToUnicodeMap[charCode];
+                  console.log(`Private Use Area文字を変換: U+${charCode.toString(16).toUpperCase()} → ${decodedText}`);
+                } else {
+                  // マッピングがない場合は元の文字を使用
+                  decodedText = String.fromCharCode(charCode);
+                  console.warn(`未知のPrivate Use Area文字: U+${charCode.toString(16).toUpperCase()}`);
+                }
+              } else {
+                // 通常のUTF-8として処理
+                decodedText = Buffer.from(bytes).toString('utf8');
+              }
+            } else {
+              decodedText = `[デコード失敗: ${encodedText}]`;
+            }
+          } catch (e3) {
+            decodedText = `[文字化け: ${encodedText}]`;
+            console.error('完全にデコード失敗:', encodedText);
+          }
+        }
+      }
       
+      // 文字コード情報を出力（デバッグ用）
+      if (decodedText) {
+        const charCodes = [];
+        for (let i = 0; i < decodedText.length; i++) {
+          charCodes.push(decodedText.charCodeAt(i));
+        }
+        console.log('デコード結果:', decodedText, '文字コード:', charCodes);
+        
+        // PDF2JSONのPrivate Use Area文字を修正
+        // 0xE496 (58518) → 博
+        if (charCodes.includes(58518)) {
+          decodedText = decodedText.replace(/\uE496/g, '博');
+          console.log('Private Use Area文字を置換: E496 → 博');
+        }
+      }
+      
+      // 新しい行かどうかチェック（Y座標の差が0.2より大きい場合）
+      if (currentLineY !== -1 && Math.abs(text.y - currentLineY) > 0.2) {
+        // 現在の行をfullTextに追加
+        fullText += currentLine + '\n'
+        currentLine = ''
+        currentLineY = text.y
+      } else if (currentLineY === -1) {
+        currentLineY = text.y
+      }
+      
+      // 同じ行のテキストを結合
+      // 特殊なケース：「博」のような単一文字が離れた位置にある場合も考慮
+      if (currentLine !== '' && decodedText.trim() !== '') {
+        // X座標の差が大きい場合（20以上）はスペースを追加
+        if (prevX !== -1 && (text.x - prevX) > 20) {
+          currentLine += ' '
+        }
+      }
+      
+      currentLine += decodedText
       prevY = text.y
+      prevX = text.x
     })
+    
+    // 最後の行を追加
+    if (currentLine !== '') {
+      fullText += currentLine
+    }
   })
   
 

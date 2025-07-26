@@ -12,6 +12,7 @@ interface PropertyOwner {
  */
 export function parsePropertyOwnerData(text: string): PropertyOwner[] {
   const properties: PropertyOwner[] = []
+  const extractedText = text // 元のテキストを保持
   
   console.log('=== パース開始 ===')
   console.log('入力テキスト長:', text.length)
@@ -105,6 +106,10 @@ export function parsePropertyOwnerData(text: string): PropertyOwner[] {
             continue
           }
           
+          // 氏名に含まれる余分なスペースを削除
+          // 日本人の名前の場合、スペースは不要なので完全に削除
+          ownerName = ownerName.replace(/\s+/g, '').trim()
+          
           console.log('初期データ抽出:', { ownerAddress, ownerName })
           
           // 住所と氏名の続きを収集
@@ -176,8 +181,22 @@ export function parsePropertyOwnerData(text: string): PropertyOwner[] {
             
             ownerName = companyName + additionalInfo
           } else {
-            // 個人の場合：そのまま
-            ownerName = ownerNameLines[0]
+            // 個人の場合：スペースを削除
+            ownerName = ownerNameLines[0].replace(/\s+/g, '').trim()
+            
+            // デバッグ: 名前が短すぎる場合は警告
+            if (ownerName.length < 3 && ownerName.length > 0) {
+              console.warn(`警告: 氏名が短すぎる可能性があります: "${ownerName}" (${ownerName.length}文字)`)
+              
+              // 「博」のような文字が欠落している可能性をチェック
+              // extractedTextから直接確認
+              const namePattern = new RegExp(ownerName + '[^\\s\\n]{1,2}')
+              const fullTextMatch = extractedText.match(namePattern)
+              if (fullTextMatch) {
+                console.log('extractedTextから完全な名前を検出:', fullTextMatch[0])
+                ownerName = fullTextMatch[0].replace(/\s+/g, '').trim()
+              }
+            }
           }
           console.log('最終的な氏名:', ownerName)
           
