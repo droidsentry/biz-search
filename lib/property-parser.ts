@@ -22,6 +22,8 @@ export function parsePropertyOwnerData(text: string): PropertyOwner[] {
   
   let currentRecordDate = ''
   let currentPropertyAddress = ''
+  let isCoOwnerMode = false  // 共有者モードかどうか
+  const coOwners: { address: string, names: string[] } = { address: '', names: [] }  // 共有者情報
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim()
@@ -48,6 +50,12 @@ export function parsePropertyOwnerData(text: string): PropertyOwner[] {
       console.log('物件住所検出:', currentPropertyAddress)
     }
     
+    // 共有者モードの判定
+    if (line.includes('共') && line.includes('有') && line.includes('者')) {
+      isCoOwnerMode = true
+      console.log('共有者モードに切り替え')
+    }
+    
     // データ行の抽出（┃で囲まれた行）
     // ヘッダー行（「住所」「氏名」を含む）をスキップ
     const isHeaderRow = line.includes('住') && line.includes('所') && line.includes('氏') && line.includes('名')
@@ -56,7 +64,28 @@ export function parsePropertyOwnerData(text: string): PropertyOwner[] {
     if (line.includes('┃') && line.includes('│') && !isHeaderRow && !line.includes('━') && !line.includes('─')) {
       console.log('データ行候補:', line)
       
-      // 複数の区切りパターンに対応
+      // 共有者モードの場合は3列パターン
+      if (isCoOwnerMode) {
+        const coOwnerMatch = line.match(/┃([^┃│]+)│([^┃│]+)│([^┃│]+)┃/)
+        if (coOwnerMatch) {
+          const address = coOwnerMatch[1].trim()
+          const share = coOwnerMatch[2].trim()  // 持分（使用しない）
+          const name = coOwnerMatch[3].trim()
+          
+          console.log('共有者データ抽出:', { address, share, name })
+          
+          // 共有者情報を収集
+          if (!coOwners.address && address) {
+            coOwners.address = address
+          }
+          if (name) {
+            coOwners.names.push(name)
+          }
+          continue
+        }
+      }
+      
+      // 通常の2列パターン
       const patterns = [
         /┃([^┃│]+)│([^┃│]+)┃/,
         /┃\s*([^┃│]+)\s*│\s*([^┃│]+)\s*┃/,
@@ -167,6 +196,17 @@ export function parsePropertyOwnerData(text: string): PropertyOwner[] {
         console.log('パターンマッチ失敗')
       }
     }
+  }
+  
+  // 共有者情報がある場合は最後に追加
+  if (isCoOwnerMode && coOwners.address && coOwners.names.length > 0) {
+    console.log('共有者情報をまとめて追加:', coOwners)
+    properties.push({
+      recordDate: currentRecordDate,
+      propertyAddress: currentPropertyAddress,
+      ownerName: coOwners.names.join('、'),  // 複数の名前を「、」で結合
+      ownerAddress: coOwners.address
+    })
   }
   
   console.log('=== パース完了 ===')
