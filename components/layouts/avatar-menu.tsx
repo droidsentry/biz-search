@@ -18,7 +18,7 @@ import { useTransition } from "react";
 
 export default function AvatarMenu({ user }: { user: User }) {
   const [isPending, startTransition] = useTransition();
-
+  const email = user.email || "";
   const display_name = user.user_metadata.display_name || "";
   const username = user.user_metadata.username || "";
   const avatarText = display_name
@@ -48,7 +48,16 @@ export default function AvatarMenu({ user }: { user: User }) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>マイアカウント</DropdownMenuLabel>
+        <DropdownMenuLabel>
+          <div className="flex flex-col space-y-1 px-2 py-1.5">
+            <p className="text-sm font-medium leading-none">
+              {display_name ? `${display_name} ( ${username} )` : username}
+            </p>
+            <p className="text-xs leading-none text-muted-foreground">
+              {email}
+            </p>
+          </div>
+        </DropdownMenuLabel>
         <DropdownMenuSeparator />
 
         <DropdownMenuItem asChild>

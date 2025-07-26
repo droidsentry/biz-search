@@ -55,7 +55,6 @@ export function Header({ user }: { user: User }) {
           className={cn(
             "flex items-center gap-2",
             "fixed right-[35px] top-[14px] z-[100]"
-            // "fixed right-[35px] top-[4px] z-[100]"
           )}
           style={{
             transform: `scale(${logoScale}) translateY(${logoY + 2}px)`,
