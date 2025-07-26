@@ -51,7 +51,16 @@ export function Header({ user }: { user: User }) {
         </ul>
 
         {/* 右側のアクション */}
-        <div className="flex items-center gap-3">
+        <div
+          className={cn(
+            "flex items-center gap-2",
+            "fixed right-[35px] top-[14px] z-[100]"
+            // "fixed right-[35px] top-[4px] z-[100]"
+          )}
+          style={{
+            transform: `scale(${logoScale}) translateY(${logoY + 2}px)`,
+          }}
+        >
           <AvatarMenu user={user} />
         </div>
       </nav>

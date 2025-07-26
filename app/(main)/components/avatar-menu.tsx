@@ -41,7 +41,7 @@ export default function AvatarMenu({ user }: { user: User }) {
           variant="outline"
           className="rounded-full hover:cursor-pointer relative"
         >
-          <Avatar className="size-8">
+          <Avatar className="size-10">
             <AvatarImage src={avatarUrl} alt={username} />
             <AvatarFallback>{avatarText}</AvatarFallback>
           </Avatar>
