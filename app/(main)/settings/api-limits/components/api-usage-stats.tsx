@@ -19,6 +19,7 @@ import { toast } from "sonner";
 interface ApiUsageStatsProps {
   usage: Tables<"api_global_usage"> | null;
   limits: {
+    api_name: string;
     daily_limit: number;
     monthly_limit: number;
   } | null;
@@ -39,7 +40,7 @@ export function ApiUsageStats({ usage, limits }: ApiUsageStatsProps) {
           event: "*",
           schema: "public",
           table: "api_global_usage",
-          filter: `api_name=eq.google_custom_search`,
+          filter: limits?.api_name ? `api_name=eq.${limits.api_name}` : undefined,
         },
         (payload) => {
           if (payload.new && typeof payload.new === "object") {
@@ -52,7 +53,7 @@ export function ApiUsageStats({ usage, limits }: ApiUsageStatsProps) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [limits?.api_name]);
 
   const handleReset = async (type: "daily" | "monthly" | "unblock") => {
     const confirmMessage =
@@ -79,7 +80,7 @@ export function ApiUsageStats({ usage, limits }: ApiUsageStatsProps) {
       const { error } = await supabase
         .from("api_global_usage")
         .update(updates)
-        .eq("api_name", "google_custom_search");
+        .eq("api_name", limits?.api_name || "google_custom_search");
 
       if (error) {
         toast.error("リセットに失敗しました");

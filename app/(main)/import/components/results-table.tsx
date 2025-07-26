@@ -92,17 +92,6 @@ export function ResultsTable({
     return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   };
 
-  // const formatDate = (dateString: string): string => {
-  //   const date = new Date(dateString)
-  //   return date.toLocaleDateString('ja-JP', {
-  //     year: 'numeric',
-  //     month: '2-digit',
-  //     day: '2-digit',
-  //     hour: '2-digit',
-  //     minute: '2-digit'
-  //   })
-  // }
-
   // フラットな行データを作成
   interface TableRow {
     fileName: string;
@@ -230,6 +219,10 @@ export function ResultsTable({
 
       // 結果を状態に反映
       const newResults = new Map(geocodingResults);
+      let successCount = 0;
+      let errorCount = 0;
+      const errors: string[] = [];
+
       batchResults.forEach((result, index) => {
         const row = validRows[index];
         if (result.success && result.data) {
@@ -239,10 +232,27 @@ export function ResultsTable({
             formattedAddress: result.data.formattedAddress,
             streetViewAvailable: result.streetViewAvailable,
           });
+          successCount++;
         } else {
+          const errorMessage = result.error || "位置情報を取得できませんでした";
           newResults.set(row.rowKey, {
-            error: result.error || "位置情報を取得できませんでした",
+            error: errorMessage,
           });
+          errorCount++;
+
+          // API制限エラーのチェック
+          if (
+            errorMessage.includes("API利用制限に達しました") ||
+            errorMessage.includes("API制限に達しました")
+          ) {
+            if (errors.length === 0) {
+              // 最初のAPI制限エラーのみを詳細に記録
+              errors.push(errorMessage);
+            }
+          } else if (errors.length < 5) {
+            // その他のエラーは最大5件まで記録
+            errors.push(`${row.property!.ownerAddress}: ${errorMessage}`);
+          }
         }
 
         // 進捗更新
@@ -250,11 +260,45 @@ export function ResultsTable({
       });
 
       setGeocodingResults(newResults);
-      toast.success(
-        `${
-          batchResults.filter((r) => r.success).length
-        }件の位置情報を取得しました`
-      );
+
+      // 結果に応じてトースト表示
+      if (successCount > 0 && errorCount === 0) {
+        toast.success(`${successCount}件の位置情報を取得しました`);
+      } else if (successCount > 0 && errorCount > 0) {
+        toast.warning(
+          `${successCount}件の位置情報を取得、${errorCount}件失敗しました`
+        );
+
+        // エラー詳細を表示
+        if (errors.length > 0) {
+          const errorMessage = errors.join("\n");
+          toast.error(
+            <div className="space-y-1">
+              <p className="font-medium">位置情報取得エラー:</p>
+              <pre className="text-xs whitespace-pre-wrap">{errorMessage}</pre>
+            </div>,
+            {
+              duration: 10000,
+            }
+          );
+        }
+      } else if (errorCount > 0) {
+        toast.error(`すべての位置情報取得に失敗しました（${errorCount}件）`);
+
+        // エラー詳細を表示
+        if (errors.length > 0) {
+          const errorMessage = errors.join("\n");
+          toast.error(
+            <div className="space-y-1">
+              <p className="font-medium">位置情報取得エラー:</p>
+              <pre className="text-xs whitespace-pre-wrap">{errorMessage}</pre>
+            </div>,
+            {
+              duration: 10000,
+            }
+          );
+        }
+      }
     } catch (error) {
       console.error("バッチジオコーディングエラー:", error);
       toast.error("位置情報の取得中にエラーが発生しました");
