@@ -23,7 +23,7 @@ export function parsePropertyOwnerData(text: string): PropertyOwner[] {
   let currentRecordDate = ''
   let currentPropertyAddress = ''
   let isCoOwnerMode = false  // 共有者モードかどうか
-  const coOwners: { address: string, names: string[] } = { address: '', names: [] }  // 共有者情報
+  const coOwnersMap = new Map<string, string[]>()  // 住所ごとに共有者をグループ化
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim()
@@ -69,17 +69,41 @@ export function parsePropertyOwnerData(text: string): PropertyOwner[] {
         const coOwnerMatch = line.match(/┃([^┃│]+)│([^┃│]+)│([^┃│]+)┃/)
         if (coOwnerMatch) {
           const address = coOwnerMatch[1].trim()
-          const share = coOwnerMatch[2].trim()  // 持分（使用しない）
+          const share = coOwnerMatch[2].trim()  // 持分
           const name = coOwnerMatch[3].trim()
           
           console.log('共有者データ抽出:', { address, share, name })
           
-          // 共有者情報を収集
-          if (!coOwners.address && address) {
-            coOwners.address = address
-          }
-          if (name) {
-            coOwners.names.push(name)
+          // 住所と名前がある場合は新しいエントリー
+          if (address && name) {
+            // 次の行が住所の続きかチェック
+            let fullAddress = address
+            let j = i + 1
+            while (j < lines.length) {
+              const nextLine = lines[j].trim()
+              const nextMatch = nextLine.match(/┃([^┃│]+)│([^┃│]+)│([^┃│]+)┃/)
+              if (nextMatch) {
+                const nextAddress = nextMatch[1].trim()
+                const nextShare = nextMatch[2].trim()
+                const nextName = nextMatch[3].trim()
+                
+                // 住所の続き行（持分と名前が空）
+                if (nextAddress && !nextShare && !nextName) {
+                  fullAddress += nextAddress
+                  console.log('住所の続きを結合:', fullAddress)
+                  i = j // ループカウンタを更新
+                  j++
+                  continue
+                }
+              }
+              break
+            }
+            
+            // 住所ごとに共有者をグループ化
+            if (!coOwnersMap.has(fullAddress)) {
+              coOwnersMap.set(fullAddress, [])
+            }
+            coOwnersMap.get(fullAddress)!.push(name)
           }
           continue
         }
@@ -198,14 +222,16 @@ export function parsePropertyOwnerData(text: string): PropertyOwner[] {
     }
   }
   
-  // 共有者情報がある場合は最後に追加
-  if (isCoOwnerMode && coOwners.address && coOwners.names.length > 0) {
-    console.log('共有者情報をまとめて追加:', coOwners)
-    properties.push({
-      recordDate: currentRecordDate,
-      propertyAddress: currentPropertyAddress,
-      ownerName: coOwners.names.join('、'),  // 複数の名前を「、」で結合
-      ownerAddress: coOwners.address
+  // 共有者情報がある場合は住所ごとにまとめて追加
+  if (isCoOwnerMode && coOwnersMap.size > 0) {
+    coOwnersMap.forEach((names, address) => {
+      console.log('共有者情報をまとめて追加:', { address, names })
+      properties.push({
+        recordDate: currentRecordDate,
+        propertyAddress: currentPropertyAddress,
+        ownerName: names.join('、'),  // 複数の名前を「、」で結合
+        ownerAddress: address
+      })
     })
   }
   

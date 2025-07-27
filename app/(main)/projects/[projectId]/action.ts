@@ -3,37 +3,72 @@
 import { createClient } from '@/lib/supabase/server'
 import { Tables } from '@/lib/types/database'
 
-export type PropertyWithOwnerAndCompany = {
-  id: string
-  address: string
+// 物件ベース表示用の型（共有者を集約）
+export type PropertyWithPrimaryOwner = {
+  project_property_id: string
+  property_id: string
+  property_address: string
   added_at: string
   import_source_file: string | null
-  current_ownership: {
+  owner_count: number
+  primary_owner: {
     id: string
-    ownership_start: string
-    updated_at: string
-    owner: {
-      id: string
-      name: string
-      address: string
-      lat: number | null
-      lng: number | null
-      street_view_available: boolean | null
-      investigation_completed: boolean | null
-      created_at: string
-      updated_at: string
-      company?: Tables<'owner_companies'> | null
-      companies_count?: number
-    }
+    name: string
+    address: string
+    lat: number | null
+    lng: number | null
+    street_view_available: boolean | null
+    investigation_completed: boolean | null
+    company: {
+      id: string | null
+      name: string | null
+      position: string | null
+    } | null
+    companies_count: number
   } | null
 }
 
+// 所有者ベース表示用の型（共有者を個別に表示）
+export type PropertyWithOwnerAndCompany = {
+  project_property_id: string
+  property_id: string
+  property_address: string
+  added_at: string
+  import_source_file: string | null
+  ownership_id: string
+  ownership_start: string
+  owner: {
+    id: string
+    name: string
+    address: string
+    lat: number | null
+    lng: number | null
+    street_view_available: boolean | null
+    investigation_completed: boolean | null
+    created_at: string
+    updated_at: string
+    company: {
+      id: string | null
+      name: string | null
+      number: string | null
+      position: string | null
+      rank: number | null
+    } | null
+    companies_count: number
+  }
+}
+
 type ProjectPropertiesResponse = {
+  data: PropertyWithPrimaryOwner[] | null
+  error: string | null
+}
+
+type ProjectOwnersResponse = {
   data: PropertyWithOwnerAndCompany[] | null
   error: string | null
 }
 
-// プロジェクトの物件一覧を取得
+// プロジェクトの物件一覧を取得（物件ベース - 共有者を集約）
 export async function getProjectPropertiesAction(
   projectId: string
 ): Promise<ProjectPropertiesResponse> {
@@ -46,90 +81,103 @@ export async function getProjectPropertiesAction(
       return { data: null, error: '認証が必要です' }
     }
 
-    // プロジェクトの物件を取得（現在の所有者情報と会社情報を含む）
+    // RPC関数を使用して物件ベースのデータを取得
     const { data, error } = await supabase
-      .from('project_properties')
-      .select(`
-        id,
-        added_at,
-        import_source_file,
-        property:properties!inner (
-          id,
-          address
-        )
-      `)
-      .eq('project_id', projectId)
-      .order('added_at', { ascending: false })
+      .rpc('get_project_properties_view', { p_project_id: projectId })
 
     if (error) {
       console.error('物件一覧取得エラー:', error)
-      return { data: null, error: error.message }
+      return { data: null, error: error.message || 'データの取得に失敗しました' }
     }
 
-    // 各物件の現在の所有者情報を取得
-    const propertiesWithOwners = await Promise.all(
-      (data || []).map(async (item) => {
-        const { data: ownershipData } = await supabase
-          .from('property_ownerships')
-          .select(`
-            id,
-            ownership_start,
-            updated_at,
-            owner:owners!inner (
-              id,
-              name,
-              address,
-              lat,
-              lng,
-              street_view_available,
-              investigation_completed,
-              created_at,
-              updated_at
-            )
-          `)
-          .eq('property_id', item.property.id)
-          .eq('is_current', true)
-          .single()
+    // データを整形
+    const formattedData: PropertyWithPrimaryOwner[] = (data || []).map(item => ({
+      project_property_id: item.project_property_id,
+      property_id: item.property_id,
+      property_address: item.property_address,
+      added_at: item.added_at,
+      import_source_file: item.import_source_file,
+      owner_count: Number(item.owner_count),
+      primary_owner: item.primary_owner_id ? {
+        id: item.primary_owner_id,
+        name: item.primary_owner_name,
+        address: item.primary_owner_address,
+        lat: item.primary_owner_lat,
+        lng: item.primary_owner_lng,
+        street_view_available: item.primary_owner_street_view_available,
+        investigation_completed: item.primary_owner_investigation_completed,
+        company: item.primary_company_id ? {
+          id: item.primary_company_id,
+          name: item.primary_company_name,
+          position: item.primary_company_position
+        } : null,
+        companies_count: Number(item.primary_owner_companies_count)
+      } : null
+    }))
 
-        // 所有者の会社情報を取得（rank=1のみ）と会社数をカウント
-        let ownerWithCompany = null
-        if (ownershipData?.owner) {
-          const { data: companyData } = await supabase
-            .from('owner_companies')
-            .select('*')
-            .eq('owner_id', ownershipData.owner.id)
-            .eq('rank', 1)
-            .single()
+    return { data: formattedData, error: null }
+  } catch (error) {
+    console.error('予期せぬエラー:', error)
+    return { 
+      data: null, 
+      error: error instanceof Error ? error.message : '予期せぬエラーが発生しました' 
+    }
+  }
+}
 
-          // 会社数をカウント
-          const { count: companiesCount } = await supabase
-            .from('owner_companies')
-            .select('*', { count: 'exact', head: true })
-            .eq('owner_id', ownershipData.owner.id)
+// プロジェクトの物件一覧を取得（所有者ベース - 共有者を個別表示）
+export async function getProjectOwnersAction(
+  projectId: string
+): Promise<ProjectOwnersResponse> {
+  try {
+    const supabase = await createClient()
+    
+    // 認証確認
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return { data: null, error: '認証が必要です' }
+    }
 
-          ownerWithCompany = {
-            ...ownershipData.owner,
-            created_at: ownershipData.owner.created_at || new Date().toISOString(),
-            updated_at: ownershipData.owner.updated_at || new Date().toISOString(),
-            company: companyData,
-            companies_count: companiesCount || 0
-          }
-        }
+    // RPC関数を使用して所有者ベースのデータを取得
+    const { data, error } = await supabase
+      .rpc('get_project_owners_view', { p_project_id: projectId })
 
-        return {
-          id: item.id,
-          address: item.property.address,
-          added_at: item.added_at,
-          import_source_file: item.import_source_file,
-          current_ownership: ownershipData && ownerWithCompany ? {
-            ...ownershipData,
-            owner: ownerWithCompany
-          } : null
-        }
-      })
-    )
+    if (error) {
+      console.error('所有者一覧取得エラー:', error)
+      return { data: null, error: error.message || 'データの取得に失敗しました' }
+    }
 
-    return { data: propertiesWithOwners, error: null }
+    // データを整形
+    const formattedData: PropertyWithOwnerAndCompany[] = (data || []).map(item => ({
+      project_property_id: item.project_property_id,
+      property_id: item.property_id,
+      property_address: item.property_address,
+      added_at: item.added_at,
+      import_source_file: item.import_source_file,
+      ownership_id: item.ownership_id,
+      ownership_start: item.ownership_start,
+      owner: {
+        id: item.owner_id,
+        name: item.owner_name,
+        address: item.owner_address,
+        lat: item.owner_lat,
+        lng: item.owner_lng,
+        street_view_available: item.owner_street_view_available,
+        investigation_completed: item.owner_investigation_completed,
+        created_at: item.owner_created_at,
+        updated_at: item.owner_updated_at,
+        company: item.company_id ? {
+          id: item.company_id,
+          name: item.company_name,
+          number: item.company_number,
+          position: item.company_position,
+          rank: item.company_rank
+        } : null,
+        companies_count: Number(item.owner_companies_count)
+      }
+    }))
+
+    return { data: formattedData, error: null }
   } catch (error) {
     console.error('予期せぬエラー:', error)
     return { 
@@ -188,6 +236,55 @@ export async function getProjectAction(
     }
 
     return { data, error: null }
+  } catch (error) {
+    console.error('予期せぬエラー:', error)
+    return { 
+      data: null, 
+      error: error instanceof Error ? error.message : '予期せぬエラーが発生しました' 
+    }
+  }
+}
+
+// プロジェクトの統計情報を取得
+export async function getProjectStatsAction(
+  projectId: string
+): Promise<{ 
+  data: { 
+    totalProperties: number; 
+    totalOwners: number; 
+    completedOwners: number; 
+    ownerProgress: number; 
+  } | null; 
+  error: string | null 
+}> {
+  try {
+    const supabase = await createClient()
+    
+    // 認証確認
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return { data: null, error: '認証が必要です' }
+    }
+
+    // プロジェクトの統計情報を取得
+    const { data, error } = await supabase
+      .rpc('get_project_stats', { p_project_id: projectId })
+      .single()
+
+    if (error) {
+      console.error('統計情報取得エラー:', error)
+      return { data: null, error: error.message }
+    }
+
+    return { 
+      data: {
+        totalProperties: data.total_properties || 0,
+        totalOwners: data.total_owners || 0,
+        completedOwners: data.completed_owners || 0,
+        ownerProgress: data.owner_progress || 0
+      }, 
+      error: null 
+    }
   } catch (error) {
     console.error('予期せぬエラー:', error)
     return { 

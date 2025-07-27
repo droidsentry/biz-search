@@ -57,3 +57,25 @@ export interface SavePropertiesResponse {
     error: string;
   }>;
 }
+
+// RPC関数のレスポンス型
+export interface CreateProjectAndImportResponse {
+  success: boolean;
+  projectId: string;
+  projectName: string;
+  totalCount: number;
+  importedCount: number;
+  errorCount: number;
+  errors: Array<{
+    error: string;
+    detail?: string;
+  }>;
+}
+
+// 保存進捗の型
+export interface SaveProgress {
+  phase: 'uploading' | 'processing' | 'completed';
+  progress: number;
+  currentBatch?: number;
+  totalBatches?: number;
+}
