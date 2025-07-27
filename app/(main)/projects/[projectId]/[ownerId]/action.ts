@@ -133,7 +133,6 @@ export async function updateOwnerCompanyAction(
   companyData: {
     companyName: string
     companyNumber?: string
-    position?: string
     sourceUrl: string
     rank: 1 | 2 | 3
   }
@@ -149,7 +148,6 @@ export async function updateOwnerCompanyAction(
       owner_id: ownerId,
       company_name: companyData.companyName,
       company_number: companyData.companyNumber || null,
-      position: companyData.position || null,
       source_url: companyData.sourceUrl,
       rank: companyData.rank,
       researched_by: user.id

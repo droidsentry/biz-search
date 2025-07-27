@@ -22,7 +22,6 @@ export type PropertyWithPrimaryOwner = {
     company: {
       id: string | null
       name: string | null
-      position: string | null
     } | null
     companies_count: number
   } | null
@@ -51,7 +50,6 @@ export type PropertyWithOwnerAndCompany = {
       id: string | null
       name: string | null
       number: string | null
-      position: string | null
       rank: number | null
     } | null
     companies_count: number
@@ -108,8 +106,7 @@ export async function getProjectPropertiesAction(
         investigation_completed: item.primary_owner_investigation_completed,
         company: item.primary_company_id ? {
           id: item.primary_company_id,
-          name: item.primary_company_name,
-          position: item.primary_company_position
+          name: item.primary_company_name
         } : null,
         companies_count: Number(item.primary_owner_companies_count)
       } : null
@@ -170,7 +167,6 @@ export async function getProjectOwnersAction(
           id: item.company_id,
           name: item.company_name,
           number: item.company_number,
-          position: item.company_position,
           rank: item.company_rank
         } : null,
         companies_count: Number(item.owner_companies_count)

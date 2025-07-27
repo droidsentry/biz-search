@@ -229,7 +229,6 @@ export type Database = {
           id: string
           is_verified: boolean | null
           owner_id: string
-          position: string | null
           rank: number
           researched_at: string
           researched_by: string | null
@@ -242,7 +241,6 @@ export type Database = {
           id?: string
           is_verified?: boolean | null
           owner_id: string
-          position?: string | null
           rank: number
           researched_at?: string
           researched_by?: string | null
@@ -255,7 +253,6 @@ export type Database = {
           id?: string
           is_verified?: boolean | null
           owner_id?: string
-          position?: string | null
           rank?: number
           researched_at?: string
           researched_by?: string | null
@@ -780,13 +777,13 @@ export type Database = {
           owner_lng: number
           company_1_name: string
           company_1_number: string
-          company_1_position: string
+          company_1_source_url: string
           company_2_name: string
           company_2_number: string
-          company_2_position: string
+          company_2_source_url: string
           company_3_name: string
           company_3_number: string
-          company_3_position: string
+          company_3_source_url: string
           ownership_start: string
           import_date: string
           researched_date: string
@@ -814,7 +811,6 @@ export type Database = {
           company_id: string
           company_name: string
           company_number: string
-          company_position: string
           company_rank: number
           owner_companies_count: number
         }[]
