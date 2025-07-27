@@ -22,12 +22,12 @@ import {
   CreateProjectFormData,
   PropertyData,
   SavePropertiesResponse,
+  SaveProgress,
+  CreateProjectAndImportResponse,
 } from "@/lib/types/property";
-import {
-  createProjectAction,
-  savePropertiesAction,
-} from "@/lib/actions/property";
 import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/client";
+import { Progress } from "@/components/ui/progress";
 
 interface SavePropertiesDialogProps {
   open: boolean;
@@ -43,7 +43,8 @@ export function SavePropertiesDialog({
   onSaveComplete,
 }: SavePropertiesDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [saveProgress, setSaveProgress] = useState<number>(0);
+  const [saveProgress, setSaveProgress] = useState<SaveProgress | null>(null);
+  const supabase = createClient();
 
   const form = useForm<CreateProjectFormData>({
     mode: "onChange",
@@ -58,71 +59,103 @@ export function SavePropertiesDialog({
 
   const onSubmit = async (data: CreateProjectFormData) => {
     setIsLoading(true);
-    setSaveProgress(0);
-
+    
     try {
-      // 新規プロジェクト作成
-      const project = await createProjectAction(data).catch((error) => {
-        toast.error(error.message);
-        setIsLoading(false);
-        return;
-      });
-      if (!project) {
-        toast.error("プロジェクトの作成に失敗しました");
-        return;
-      }
-      const projectId = project.id;
-      toast.success(`プロジェクト「${data.name}」を作成しました`);
-
-      // 物件データの保存
-      setSaveProgress(50);
-
-      const saveResult = await savePropertiesAction({
-        projectId,
-        properties: properties.map((p) => ({
-          propertyAddress: p.propertyAddress,
-          ownerName: p.ownerName,
-          ownerAddress: p.ownerAddress,
-          lat: p.lat,
-          lng: p.lng,
-          streetViewAvailable: p.streetViewAvailable,
-          sourceFileName: p.sourceFileName,
-        })),
-      });
-
-      setSaveProgress(100);
-
-      if (saveResult.success) {
-        toast.success(`${saveResult.savedCount}件の物件情報を保存しました`, {
-          description: saveResult.errors
-            ? `${saveResult.errors.length}件のエラーがありました`
-            : undefined,
-        });
-
-        // プロジェクト名を含めてコールバックを呼び出す
-        const completeResponse = {
-          ...saveResult,
-          projectName: data.name,
-        };
-
-        if (onSaveComplete) {
-          onSaveComplete(completeResponse);
+      // 1. セッションIDを生成
+      const sessionId = crypto.randomUUID();
+      
+      // 2. プログレス表示を開始
+      setSaveProgress({ phase: 'uploading', progress: 0 });
+      
+      // 3. バッチでステージングテーブルにデータ投入
+      const BATCH_SIZE = 100;
+      const totalBatches = Math.ceil(properties.length / BATCH_SIZE);
+      
+      for (let i = 0; i < properties.length; i += BATCH_SIZE) {
+        const batch = properties.slice(i, i + BATCH_SIZE);
+        const currentBatch = Math.floor(i / BATCH_SIZE) + 1;
+        
+        const { error } = await supabase
+          .from('import_staging')
+          .insert(
+            batch.map(p => ({
+              session_id: sessionId,
+              property_address: p.propertyAddress,
+              owner_name: p.ownerName,
+              owner_address: p.ownerAddress,
+              lat: p.lat,
+              lng: p.lng,
+              street_view_available: p.streetViewAvailable || false,
+              source_file_name: p.sourceFileName || ''
+            }))
+          );
+        
+        if (error) {
+          console.error('ステージングデータ投入エラー:', error);
+          throw new Error('データのアップロードに失敗しました');
         }
-
-        // ダイアログを閉じる
-        onOpenChange(false);
-        form.reset();
-      } else {
-        const errorMessage =
-          saveResult.errors?.[0]?.error || "保存に失敗しました";
-        toast.error(errorMessage);
+        
+        // プログレス更新
+        const progress = Math.min((i + batch.length) / properties.length * 100, 100);
+        setSaveProgress({ 
+          phase: 'uploading', 
+          progress,
+          currentBatch,
+          totalBatches 
+        });
       }
+      
+      // 4. RPC関数を呼び出して一括処理
+      setSaveProgress({ phase: 'processing', progress: 0 });
+      
+      const { data: result, error: rpcError } = await supabase
+        .rpc('create_project_and_import_properties', {
+          p_project_name: data.name,
+          p_project_description: data.description || '',
+          p_session_id: sessionId
+        });
+      
+      if (rpcError) {
+        console.error('RPC実行エラー:', rpcError);
+        throw new Error(rpcError.message || 'プロジェクトの作成に失敗しました');
+      }
+      
+      const typedResult = result as CreateProjectAndImportResponse | null;
+      
+      if (!typedResult || !typedResult.success) {
+        throw new Error('プロジェクトの作成に失敗しました');
+      }
+      
+      // 5. 成功
+      setSaveProgress({ phase: 'completed', progress: 100 });
+      
+      toast.success(
+        `プロジェクト「${typedResult.projectName}」を作成し、${typedResult.importedCount}件の物件情報を保存しました`
+      );
+      
+      if (onSaveComplete) {
+        onSaveComplete({
+          success: true,
+          projectId: typedResult.projectId,
+          projectName: typedResult.projectName,
+          savedCount: typedResult.importedCount,
+          errors: typedResult.errors?.map((err, index) => ({
+            index,
+            propertyAddress: '',
+            error: err.error
+          }))
+        });
+      }
+      
+      onOpenChange(false);
+      form.reset();
+      
     } catch (error) {
-      console.error("保存エラー:", error);
-      toast.error("予期せぬエラーが発生しました");
+      console.error('保存エラー:', error);
+      toast.error(error instanceof Error ? error.message : '保存に失敗しました。もう一度お試しください。');
     } finally {
       setIsLoading(false);
-      setSaveProgress(0);
+      setSaveProgress(null);
     }
   };
 
@@ -177,18 +210,26 @@ export function SavePropertiesDialog({
             </div>
 
             {/* 保存進捗 */}
-            {isLoading && saveProgress > 0 && (
+            {saveProgress && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span>保存中...</span>
-                  <span>{Math.round(saveProgress)}%</span>
+                  <span>
+                    {saveProgress.phase === 'uploading' && (
+                      <>
+                        データをアップロード中...
+                        {saveProgress.currentBatch && saveProgress.totalBatches && (
+                          <span className="text-muted-foreground ml-2">
+                            (バッチ {saveProgress.currentBatch}/{saveProgress.totalBatches})
+                          </span>
+                        )}
+                      </>
+                    )}
+                    {saveProgress.phase === 'processing' && 'データを処理中...'}
+                    {saveProgress.phase === 'completed' && '完了しました'}
+                  </span>
+                  <span>{Math.round(saveProgress.progress)}%</span>
                 </div>
-                <div className="w-full bg-zinc-200 rounded-full h-2">
-                  <div
-                    className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${saveProgress}%` }}
-                  />
-                </div>
+                <Progress value={saveProgress.progress} className="h-2" />
               </div>
             )}
           </div>

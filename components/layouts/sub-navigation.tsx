@@ -6,16 +6,11 @@ import { useRef, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useScrollRange } from "@/hooks/use-scroll-range";
 
-const navItems = [
-  { href: "/dashboard", label: "ダッシュボード" },
-  { href: "/import", label: "インポート" },
-  { href: "/projects", label: "プロジェクト" },
-  { href: "/search/patterns", label: "カスタム検索" },
-  { href: "/logs", label: "ログ" },
-  { href: "/settings", label: "設定" },
-];
+interface SubNavigationProps {
+  navItems: { href: string; label: string }[];
+}
 
-export function SubNavigation() {
+export function SubNavigation({ navItems }: SubNavigationProps) {
   const pathname = usePathname();
   const navX = useScrollRange(0, 50, 0, 50);
   const [indicatorStyle, setIndicatorStyle] = useState({

@@ -12,15 +12,14 @@ import {
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useRouter } from "next/navigation";
-import { PropertyWithPrimaryOwner } from "../action";
-import { Users } from "lucide-react";
+import { PropertyWithOwnerAndCompany } from "../action";
 
-interface PropertyTableProps {
-  properties: PropertyWithPrimaryOwner[];
+interface OwnerTableProps {
+  owners: PropertyWithOwnerAndCompany[];
   projectId: string;
 }
 
-export function PropertyTable({ properties, projectId }: PropertyTableProps) {
+export function OwnerTable({ owners, projectId }: OwnerTableProps) {
   const router = useRouter();
 
   return (
@@ -32,17 +31,14 @@ export function PropertyTable({ properties, projectId }: PropertyTableProps) {
         <Table className="min-w-[1200px]">
           <TableHeader className="sticky top-0 z-10">
             <TableRow className="bg-muted-foreground/5 hover:bg-muted-foreground/10 border-b">
-              <TableHead className="min-w-[300px] font-medium text-foreground bg-muted-foreground/5">
-                不動産住所
-              </TableHead>
-              <TableHead className="min-w-[100px] font-medium text-foreground bg-muted-foreground/5">
-                所有者数
-              </TableHead>
               <TableHead className="min-w-[150px] font-medium text-foreground bg-muted-foreground/5">
-                代表所有者
+                所有者氏名
               </TableHead>
               <TableHead className="min-w-[300px] font-medium text-foreground bg-muted-foreground/5">
                 所有者住所
+              </TableHead>
+              <TableHead className="min-w-[300px] font-medium text-foreground bg-muted-foreground/5">
+                不動産住所
               </TableHead>
               <TableHead className="min-w-[200px] font-medium text-foreground bg-muted-foreground/5">
                 会社名
@@ -53,68 +49,44 @@ export function PropertyTable({ properties, projectId }: PropertyTableProps) {
               <TableHead className="min-w-[100px] font-medium text-foreground bg-muted-foreground/5">
                 ステータス
               </TableHead>
-              <TableHead className="min-w-[80px] font-medium text-foreground bg-muted-foreground/5">
-                追加日
+              <TableHead className="min-w-[150px] font-medium text-foreground bg-muted-foreground/5">
+                更新日時
               </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {properties.length === 0 ? (
+            {owners.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={7}
                   className="h-24 text-center text-muted-foreground"
                 >
-                  物件データがありません
+                  所有者データがありません
                 </TableCell>
               </TableRow>
             ) : (
-              properties.map((property) => (
+              owners.map((item) => (
                 <TableRow
-                  key={property.project_property_id}
+                  key={`${item.ownership_id}-${item.owner.id}`}
                   className="hover:bg-muted-foreground/10 transition-colors cursor-pointer"
                   onClick={() => {
-                    if (property.primary_owner?.id) {
-                      router.push(
-                        `/projects/${projectId}/${property.primary_owner.id}`
-                      );
-                    }
+                    router.push(`/projects/${projectId}/${item.owner.id}`);
                   }}
                 >
                   <TableCell className="font-medium">
-                    {property.property_address}
+                    {item.owner.name}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Users className="size-4 text-muted-foreground" />
-                      <span>{property.owner_count}</span>
-                      {property.owner_count > 1 && (
-                        <Badge variant="outline" className="text-xs">
-                          共有
-                        </Badge>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>{property.primary_owner?.name || "-"}</TableCell>
                   <TableCell className="text-sm">
-                    {property.primary_owner?.address || "-"}
+                    {item.owner.address}
                   </TableCell>
-                  <TableCell>
-                    {property.primary_owner?.company?.name || "-"}
+                  <TableCell className="text-sm">
+                    {item.property_address}
                   </TableCell>
+                  <TableCell>{item.owner.company?.name || "-"}</TableCell>
+
                   <TableCell>
                     {(() => {
-                      const owner = property.primary_owner;
-                      if (!owner) {
-                        return (
-                          <Badge
-                            variant="secondary"
-                            className="bg-muted-foreground/10 text-muted-foreground hover:bg-muted-foreground/20"
-                          >
-                            未調査
-                          </Badge>
-                        );
-                      }
+                      const owner = item.owner;
 
                       // 調査完了フラグが立っている場合
                       if (owner.investigation_completed) {
@@ -145,10 +117,12 @@ export function PropertyTable({ properties, projectId }: PropertyTableProps) {
                       );
                     })()}
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {format(new Date(property.added_at), "MM/dd", {
-                      locale: ja,
-                    })}
+                  <TableCell className="text-muted-foreground">
+                    {format(
+                      new Date(item.owner.updated_at),
+                      "yyyy/MM/dd HH:mm",
+                      { locale: ja }
+                    )}
                   </TableCell>
                 </TableRow>
               ))

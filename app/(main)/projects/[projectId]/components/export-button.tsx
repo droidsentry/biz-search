@@ -21,9 +21,9 @@ export function ExportButton({ projectId, projectName }: ExportButtonProps) {
       const exportedData = await exportProjectProperties(projectId).catch(
         (error) => {
           toast.error("エクスポートエラー", {
-            description: error,
+            description: error instanceof Error ? error.message : "エクスポートに失敗しました",
           });
-          return;
+          return null;
         }
       );
 
@@ -34,45 +34,118 @@ export function ExportButton({ projectId, projectName }: ExportButtonProps) {
 
         // ヘッダーを設定
         worksheet.columns = [
-          { header: "物件住所", key: "property_address", width: 40 },
+          { header: "物件名", key: "property_name", width: 40 },
+          { header: "号室", key: "room_number", width: 10 },
+          { header: "㎡数", key: "area", width: 10 },
           { header: "所有者名", key: "owner_name", width: 20 },
+          { header: "状況", key: "status", width: 15 },
+          { header: "自宅番号", key: "home_phone", width: 15 },
+          { header: "勤務先", key: "workplace", width: 50 },
+          { header: "勤務先番号", key: "workplace_phone", width: 15 },
+          { header: "メモ", key: "memo", width: 30 },
+          { header: "本人携帯", key: "mobile_phone", width: 15 },
           { header: "所有者住所", key: "owner_address", width: 40 },
-          { header: "所有者緯度", key: "owner_lat", width: 15 },
-          { header: "所有者経度", key: "owner_lng", width: 15 },
-          { header: "候補1_会社名", key: "company_1_name", width: 30 },
-          { header: "候補1_法人番号", key: "company_1_number", width: 15 },
-          { header: "候補1_役職", key: "company_1_position", width: 15 },
-          { header: "候補2_会社名", key: "company_2_name", width: 30 },
-          { header: "候補2_法人番号", key: "company_2_number", width: 15 },
-          { header: "候補2_役職", key: "company_2_position", width: 15 },
-          { header: "候補3_会社名", key: "company_3_name", width: 30 },
-          { header: "候補3_法人番号", key: "company_3_number", width: 15 },
-          { header: "候補3_役職", key: "company_3_position", width: 15 },
-          { header: "所有開始日", key: "ownership_start", width: 15 },
-          { header: "インポート日時", key: "import_date", width: 20 },
-          { header: "調査日時", key: "researched_date", width: 20 },
+          { header: "地番", key: "land_number", width: 20 },
+          { header: "参照URL", key: "reference_url", width: 40 },
         ];
 
         // データを追加
         exportedData.forEach((row) => {
+          // 物件住所から号室と地番を抽出
+          let roomNumber = "";
+          let landNumber = "";
+          
+          if (row.property_address) {
+            // 全角数字を半角に変換する関数
+            const toHalfWidth = (str: string) => {
+              return str.replace(/[０-９]/g, (s) => {
+                return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+              });
+            };
+            
+            // 最後の「-」または「－」を探す
+            const lastDashIndex = Math.max(
+              row.property_address.lastIndexOf('-'),
+              row.property_address.lastIndexOf('－')
+            );
+            
+            if (lastDashIndex !== -1) {
+              // 最後の「-」または「－」の後の部分を取得
+              const afterDash = row.property_address.substring(lastDashIndex + 1).trim();
+              
+              // 全角数字を半角に変換
+              const afterDashHalf = toHalfWidth(afterDash);
+              
+              // 数字のみで構成されており、3桁以上の場合は号室とみなす
+              if (/^\d{3,}$/.test(afterDashHalf)) {
+                roomNumber = afterDashHalf;
+                landNumber = row.property_address.substring(0, lastDashIndex);
+              } else {
+                // 3桁未満または数字以外が含まれる場合は全体を地番とする
+                landNumber = row.property_address;
+              }
+            } else {
+              // 「-」や「－」がない場合は全体を地番とする
+              landNumber = row.property_address;
+            }
+          }
+
+          // 勤務先の情報を整形（①②③形式）
+          const workplaces: string[] = [];
+          if (row.company_1_name) {
+            workplaces.push(`①${row.company_1_name}`);
+          }
+          if (row.company_2_name) {
+            workplaces.push(`②${row.company_2_name}`);
+          }
+          if (row.company_3_name) {
+            workplaces.push(`③${row.company_3_name}`);
+          }
+          const workplace = workplaces.join(" ");
+
+          // 勤務先番号（①②③形式）
+          const workplacePhones: string[] = [];
+          if (row.company_1_number) {
+            workplacePhones.push(`①${row.company_1_number}`);
+          }
+          if (row.company_2_number) {
+            workplacePhones.push(`②${row.company_2_number}`);
+          }
+          if (row.company_3_number) {
+            workplacePhones.push(`③${row.company_3_number}`);
+          }
+          const workplacePhone = workplacePhones.join(" ");
+
+          // 状況（空欄にする）
+          const status = "";
+
+          // 参照URL（①②③形式）
+          const referenceUrls: string[] = [];
+          if (row.company_1_source_url) {
+            referenceUrls.push(`①${row.company_1_source_url}`);
+          }
+          if (row.company_2_source_url) {
+            referenceUrls.push(`②${row.company_2_source_url}`);
+          }
+          if (row.company_3_source_url) {
+            referenceUrls.push(`③${row.company_3_source_url}`);
+          }
+          const referenceUrl = referenceUrls.join(" ");
+
           worksheet.addRow({
-            property_address: row.property_address || "",
+            property_name: projectName || "",
+            room_number: roomNumber,
+            area: "", // 面積情報は現在のデータ構造にないため空
             owner_name: row.owner_name || "",
+            status: status,
+            home_phone: "", // 自宅番号は現在のデータ構造にないため空
+            workplace: workplace,
+            workplace_phone: workplacePhone,
+            memo: "", // メモは現在のデータ構造にないため空
+            mobile_phone: "", // 携帯番号は現在のデータ構造にないため空
             owner_address: row.owner_address || "",
-            owner_lat: row.owner_lat || "",
-            owner_lng: row.owner_lng || "",
-            company_1_name: row.company_1_name || "",
-            company_1_number: row.company_1_number || "",
-            company_1_position: row.company_1_position || "",
-            company_2_name: row.company_2_name || "",
-            company_2_number: row.company_2_number || "",
-            company_2_position: row.company_2_position || "",
-            company_3_name: row.company_3_name || "",
-            company_3_number: row.company_3_number || "",
-            company_3_position: row.company_3_position || "",
-            ownership_start: row.ownership_start || "",
-            import_date: row.import_date || "",
-            researched_date: row.researched_date || "",
+            land_number: landNumber,
+            reference_url: referenceUrl,
           });
         });
 

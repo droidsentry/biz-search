@@ -32,7 +32,7 @@ export default async function AccountSettingsPage() {
 
       <SettingsCard
         title="ユーザー名"
-        description="一意のユーザー名で、ログイン時に使用します。"
+        description="固有のユーザー名で、ログイン時に使用します。"
       >
         <UsernameForm currentUsername={profile?.username} />
       </SettingsCard>

@@ -73,7 +73,7 @@ export function UsernameForm({ currentUsername }: UsernameFormProps) {
         </CardContent>
         <div className="flex justify-between items-center border-t px-7 pt-3">
           <CardDescription className="text-sm">
-            ユーザー名は英数字、アンダースコア、ハイフンのみ使用できます
+            ユーザー名は20文字以内で入力してください。「.」と「@」は使用できません。
           </CardDescription>
           <Button
             type="submit"

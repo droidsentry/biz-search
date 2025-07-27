@@ -8,19 +8,17 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { signOut } from "@/lib/actions/auth/supabase";
 import { User } from "@supabase/supabase-js";
-import { Loader2Icon, LogOutIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useEffect, useTransition } from "react";
+import { Loader2Icon, LogOutIcon, Settings } from "lucide-react";
+import Link from "next/link";
+import { useTransition } from "react";
 
 export default function AvatarMenu({ user }: { user: User }) {
   const [isPending, startTransition] = useTransition();
-  const router = useRouter();
-
+  const email = user.email || "";
   const display_name = user.user_metadata.display_name || "";
   const username = user.user_metadata.username || "";
   const avatarText = display_name
@@ -35,30 +33,6 @@ export default function AvatarMenu({ user }: { user: User }) {
     });
   };
 
-  // キーボードショートカットの実装
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // ⌘S (Cmd+S) で設定ページに移動
-      if (event.key === "s" && (event.metaKey || event.ctrlKey)) {
-        event.preventDefault();
-        router.push("/settings");
-      }
-
-      // ⇧⌘Q (Shift+Cmd+Q) でログアウト
-      if (
-        event.key === "Q" &&
-        (event.metaKey || event.ctrlKey) &&
-        event.shiftKey
-      ) {
-        event.preventDefault();
-        signOut();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [router]);
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -67,15 +41,34 @@ export default function AvatarMenu({ user }: { user: User }) {
           variant="outline"
           className="rounded-full hover:cursor-pointer relative"
         >
-          <Avatar className="size-8">
+          <Avatar className="size-10">
             <AvatarImage src={avatarUrl} alt={username} />
             <AvatarFallback>{avatarText}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>マイアカウント</DropdownMenuLabel>
+        <DropdownMenuLabel>
+          <div className="flex flex-col space-y-1 px-2 py-1.5">
+            <p className="text-sm font-medium leading-none">
+              {display_name ? `${display_name} ( ${username} )` : username}
+            </p>
+            <p className="text-xs leading-none text-muted-foreground">
+              {email}
+            </p>
+          </div>
+        </DropdownMenuLabel>
         <DropdownMenuSeparator />
+
+        <DropdownMenuItem asChild>
+          <Link href="/account/settings" className="flex items-center w-full">
+            <Settings className="mr-2 size-4" />
+            <span>アカウント設定</span>
+          </Link>
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
         <DropdownMenuItem
           className="text-red-600 dark:text-red-400"
           onSelect={(event) => {
@@ -98,7 +91,6 @@ export default function AvatarMenu({ user }: { user: User }) {
               <span className="">ログアウト</span>
             </>
           )}
-          <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

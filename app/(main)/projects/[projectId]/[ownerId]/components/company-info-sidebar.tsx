@@ -42,7 +42,6 @@ export function CompanyInfoSidebar({
       {
         companyName: string;
         companyNumber: string;
-        position: string;
         sourceUrl: string;
       }
     >
@@ -50,19 +49,16 @@ export function CompanyInfoSidebar({
     1: {
       companyName: companies[1]?.company_name || "",
       companyNumber: companies[1]?.company_number || "",
-      position: companies[1]?.position || "",
       sourceUrl: companies[1]?.source_url || "",
     },
     2: {
       companyName: companies[2]?.company_name || "",
       companyNumber: companies[2]?.company_number || "",
-      position: companies[2]?.position || "",
       sourceUrl: companies[2]?.source_url || "",
     },
     3: {
       companyName: companies[3]?.company_name || "",
       companyNumber: companies[3]?.company_number || "",
-      position: companies[3]?.position || "",
       sourceUrl: companies[3]?.source_url || "",
     },
   });
@@ -78,7 +74,6 @@ export function CompanyInfoSidebar({
       const result = await updateOwnerCompanyAction(ownerId, {
         companyName: data.companyName,
         companyNumber: data.companyNumber || undefined,
-        position: data.position || undefined,
         sourceUrl: data.sourceUrl,
         rank,
       }).catch((error) => {
@@ -112,7 +107,6 @@ export function CompanyInfoSidebar({
           [rank]: {
             companyName: "",
             companyNumber: "",
-            position: "",
             sourceUrl: "",
           },
         });
@@ -168,6 +162,10 @@ export function CompanyInfoSidebar({
                   placeholder="株式会社○○"
                   disabled={isPending}
                 />
+                <p className="text-xs text-muted-foreground">
+                  ※ 役職がある場合は会社名の後に追記してください（例：株式会社○○
+                  / 代表取締役）
+                </p>
               </div>
 
               <div className="space-y-1">
@@ -179,19 +177,6 @@ export function CompanyInfoSidebar({
                     updateField(rank, "companyNumber", e.target.value)
                   }
                   placeholder="03-1234-5678"
-                  disabled={isPending}
-                />
-              </div>
-
-              <div className="space-y-1">
-                <Label htmlFor={`position-${rank}`}>役職</Label>
-                <Input
-                  id={`position-${rank}`}
-                  value={editingData[rank].position}
-                  onChange={(e) =>
-                    updateField(rank, "position", e.target.value)
-                  }
-                  placeholder="代表取締役"
                   disabled={isPending}
                 />
               </div>

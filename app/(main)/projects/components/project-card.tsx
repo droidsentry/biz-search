@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import Link from "next/link";
-import { Calendar, FileText } from "lucide-react";
+import { Calendar, FileText, Users } from "lucide-react";
 import { ProjectWithProgress } from "@/lib/types/project";
 
 export function ProjectCard({ project }: { project: ProjectWithProgress }) {
@@ -36,21 +36,28 @@ export function ProjectCard({ project }: { project: ProjectWithProgress }) {
             </span>
           </div>
 
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <FileText className="size-4" />
-            <span>{project.totalProperties} 件の物件</span>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <FileText className="size-4" />
+              <span>{project.totalProperties} 件の物件</span>
+            </div>
+            
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Users className="size-4" />
+              <span>{project.totalOwners} 名の所有者</span>
+            </div>
           </div>
 
           <div className="space-y-2">
             <div className="flex justify-between items-center text-sm">
-              <span className="text-muted-foreground">調査進捗</span>
+              <span className="text-muted-foreground">所有者調査進捗</span>
               <span className="font-medium text-foreground">
                 {project.progress}%
               </span>
             </div>
             <Progress value={project.progress} className="h-2" />
             <p className="text-xs text-muted-foreground">
-              {project.completedProperties}/{project.totalProperties} 件完了
+              {project.completedProperties}/{project.totalOwners} 名完了
             </p>
           </div>
         </CardContent>

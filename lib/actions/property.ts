@@ -38,6 +38,7 @@ export async function checkProjectName(name: string): Promise<boolean> {
 
 /**
  * 新規プロジェクトの作成
+ * @deprecated RPC関数 create_project_and_import_properties を使用してください
  */
 export async function createProjectAction(formData: CreateProjectFormData) {
   const supabase = await createClient();
@@ -325,6 +326,7 @@ async function importPropertiesFromPDF(
 
 /**
  * 物件データの一括保存（新DB設計対応）
+ * @deprecated RPC関数 create_project_and_import_properties を使用してください
  */
 export async function savePropertiesAction(
   data: SavePropertiesData

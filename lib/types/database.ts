@@ -118,6 +118,110 @@ export type Database = {
           },
         ]
       }
+      import_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          error_count: number | null
+          errors: Json | null
+          id: string
+          processed_count: number | null
+          project_description: string | null
+          project_id: string
+          project_name: string
+          session_id: string
+          started_at: string | null
+          status: string
+          success_count: number | null
+          total_count: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          error_count?: number | null
+          errors?: Json | null
+          id?: string
+          processed_count?: number | null
+          project_description?: string | null
+          project_id: string
+          project_name: string
+          session_id: string
+          started_at?: string | null
+          status?: string
+          success_count?: number | null
+          total_count?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          error_count?: number | null
+          errors?: Json | null
+          id?: string
+          processed_count?: number | null
+          project_description?: string | null
+          project_id?: string
+          project_name?: string
+          session_id?: string
+          started_at?: string | null
+          status?: string
+          success_count?: number | null
+          total_count?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_jobs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_staging: {
+        Row: {
+          created_at: string | null
+          id: string
+          lat: number | null
+          lng: number | null
+          owner_address: string
+          owner_name: string
+          property_address: string
+          session_id: string
+          source_file_name: string | null
+          street_view_available: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          owner_address: string
+          owner_name: string
+          property_address: string
+          session_id: string
+          source_file_name?: string | null
+          street_view_available?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          owner_address?: string
+          owner_name?: string
+          property_address?: string
+          session_id?: string
+          source_file_name?: string | null
+          street_view_available?: boolean | null
+        }
+        Relationships: []
+      }
       owner_companies: {
         Row: {
           company_name: string
@@ -125,7 +229,6 @@ export type Database = {
           id: string
           is_verified: boolean | null
           owner_id: string
-          position: string | null
           rank: number
           researched_at: string
           researched_by: string | null
@@ -138,7 +241,6 @@ export type Database = {
           id?: string
           is_verified?: boolean | null
           owner_id: string
-          position?: string | null
           rank: number
           researched_at?: string
           researched_by?: string | null
@@ -151,7 +253,6 @@ export type Database = {
           id?: string
           is_verified?: boolean | null
           owner_id?: string
-          position?: string | null
           rank?: number
           researched_at?: string
           researched_by?: string | null
@@ -620,6 +721,19 @@ export type Database = {
         Args: { p_api_name: string; p_increment?: number }
         Returns: Json
       }
+      cleanup_old_staging_data: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      create_project_and_import_properties: {
+        Args: {
+          p_project_name: string
+          p_project_description: string
+          p_session_id: string
+          p_user_id?: string
+        }
+        Returns: Json
+      }
       deactivate_user_account: {
         Args: { user_id: string; reason?: string }
         Returns: undefined
@@ -663,16 +777,102 @@ export type Database = {
           owner_lng: number
           company_1_name: string
           company_1_number: string
-          company_1_position: string
+          company_1_source_url: string
           company_2_name: string
           company_2_number: string
-          company_2_position: string
+          company_2_source_url: string
           company_3_name: string
           company_3_number: string
-          company_3_position: string
+          company_3_source_url: string
           ownership_start: string
           import_date: string
           researched_date: string
+        }[]
+      }
+      get_project_owners_view: {
+        Args: { p_project_id: string }
+        Returns: {
+          project_property_id: string
+          property_id: string
+          property_address: string
+          added_at: string
+          import_source_file: string
+          ownership_id: string
+          ownership_start: string
+          owner_id: string
+          owner_name: string
+          owner_address: string
+          owner_lat: number
+          owner_lng: number
+          owner_street_view_available: boolean
+          owner_investigation_completed: boolean
+          owner_created_at: string
+          owner_updated_at: string
+          company_id: string
+          company_name: string
+          company_number: string
+          company_rank: number
+          owner_companies_count: number
+        }[]
+      }
+      get_project_properties_view: {
+        Args: { p_project_id: string }
+        Returns: {
+          project_property_id: string
+          property_id: string
+          property_address: string
+          added_at: string
+          import_source_file: string
+          owner_count: number
+          primary_owner_id: string
+          primary_owner_name: string
+          primary_owner_address: string
+          primary_owner_lat: number
+          primary_owner_lng: number
+          primary_owner_street_view_available: boolean
+          primary_owner_investigation_completed: boolean
+          primary_company_id: string
+          primary_company_name: string
+          primary_company_position: string
+          primary_owner_companies_count: number
+        }[]
+      }
+      get_project_stats: {
+        Args: { p_project_id: string }
+        Returns: {
+          total_properties: number
+          total_owners: number
+          completed_owners: number
+          owner_progress: number
+        }[]
+      }
+      get_projects_with_full_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          name: string
+          description: string
+          created_by: string
+          created_at: string
+          updated_at: string
+          total_properties: number
+          total_owners: number
+          completed_owners: number
+          owner_progress: number
+        }[]
+      }
+      get_projects_with_owner_progress: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          name: string
+          description: string
+          created_by: string
+          created_at: string
+          updated_at: string
+          total_owners: number
+          completed_owners: number
+          progress: number
         }[]
       }
       get_user_patterns_with_stats: {

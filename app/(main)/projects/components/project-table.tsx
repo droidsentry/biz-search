@@ -24,18 +24,19 @@ export function ProjectTable({
       <Table>
         <TableHeader>
           <TableRow className="bg-muted-foreground/5 hover:bg-muted-foreground/10">
-            <TableHead className="w-[30%] ">プロジェクト名</TableHead>
-            <TableHead className="w-[30%]">メモ</TableHead>
-            <TableHead className="w-[15%]">作成日時</TableHead>
+            <TableHead className="w-[25%] ">プロジェクト名</TableHead>
+            <TableHead className="w-[25%]">メモ</TableHead>
+            <TableHead className="w-[12%]">作成日時</TableHead>
             <TableHead className="w-[10%] text-center">物件数</TableHead>
-            <TableHead className="w-[15%]">調査進捗</TableHead>
+            <TableHead className="w-[10%] text-center">所有者数</TableHead>
+            <TableHead className="w-[18%]">所有者調査進捗</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {projects.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={5}
+                colSpan={6}
                 className="text-center text-muted-foreground py-8"
               >
                 プロジェクトがありません
@@ -67,6 +68,11 @@ export function ProjectTable({
                 <TableCell className="text-center">
                   <span className="text-muted-foreground">
                     {project.totalProperties}
+                  </span>
+                </TableCell>
+                <TableCell className="text-center">
+                  <span className="text-muted-foreground">
+                    {project.totalOwners}
                   </span>
                 </TableCell>
                 <TableCell>

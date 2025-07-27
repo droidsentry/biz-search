@@ -54,11 +54,25 @@ export async function geocodeAddress(address: string) {
     }
   }
 
+  // JSON形式のレスポンスの型定義
+  interface LimitCheckResult {
+    allowed: boolean
+    error?: string
+    daily_used: number
+    daily_limit: number
+    monthly_used: number
+    monthly_limit: number
+    daily_remaining?: number
+    monthly_remaining?: number
+    blocked_until?: string
+  }
+
   // API制限チェック（Geocoding）
   const { data: limitCheck, error: limitCheckError } = await supabase
     .rpc('check_global_api_limit', {
       p_api_name: 'google_maps_geocoding'
     })
+    .single<LimitCheckResult>()
 
   if (limitCheckError) {
     console.error('API制限確認エラー:', limitCheckError)
@@ -68,21 +82,27 @@ export async function geocodeAddress(address: string) {
     }
   }
 
-  // RPCの戻り値をキャスト
-  interface LimitCheckResult {
-    allowed: boolean
-    daily_used: number
-    daily_limit: number
-    monthly_used: number
-    monthly_limit: number
-  }
-  
-  const limitResult = limitCheck as unknown as LimitCheckResult
-
-  if (!limitResult.allowed) {
+  // RPCの戻り値をチェック
+  if (!limitCheck) {
+    console.error('API制限チェックの戻り値が不正です')
     return {
       success: false,
-      error: `Geocoding API制限に達しました。本日: ${limitResult.daily_used}/${limitResult.daily_limit}回、今月: ${limitResult.monthly_used}/${limitResult.monthly_limit}回`,
+      error: 'API制限の確認中にエラーが発生しました',
+    }
+  }
+  
+  const limitResult = limitCheck
+
+  if (!limitResult.allowed) {
+    const errorMessage = limitResult.error || 'API利用制限に達しました'
+    let blockInfo = ''
+    if (limitResult.blocked_until) {
+      const blockedUntil = new Date(limitResult.blocked_until)
+      blockInfo = `。制限解除予定: ${blockedUntil.toLocaleString('ja-JP')}`
+    }
+    return {
+      success: false,
+      error: `${errorMessage}。本日: ${limitResult.daily_used}/${limitResult.daily_limit}回、今月: ${limitResult.monthly_used}/${limitResult.monthly_limit}回${blockInfo}`,
     }
   }
 

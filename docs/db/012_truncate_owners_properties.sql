@@ -1,0 +1,34 @@
+-- ============================================
+-- owners と properties テーブルの高速データ削除
+-- ============================================
+-- 
+-- TRUNCATE を使用した高速削除
+-- CASCADE オプションにより、これらのテーブルを参照している
+-- すべての関連テーブルのデータも自動的に削除されます。
+--
+-- 影響を受けるテーブル:
+-- - public.owners
+-- - public.properties
+-- - public.property_ownerships (自動削除)
+-- - public.project_properties (自動削除)
+-- - public.owner_companies (自動削除)
+--
+
+-- TRUNCATE による高速削除（CASCADE で関連データも削除）
+TRUNCATE TABLE public.owners, public.properties CASCADE;
+
+-- 削除後の確認クエリ
+-- SELECT 
+--   'owners' as table_name, COUNT(*) as count FROM public.owners
+-- UNION ALL
+-- SELECT 
+--   'properties', COUNT(*) FROM public.properties
+-- UNION ALL
+-- SELECT 
+--   'property_ownerships', COUNT(*) FROM public.property_ownerships
+-- UNION ALL
+-- SELECT 
+--   'project_properties', COUNT(*) FROM public.project_properties
+-- UNION ALL
+-- SELECT 
+--   'owner_companies', COUNT(*) FROM public.owner_companies;

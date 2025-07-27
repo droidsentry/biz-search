@@ -1,9 +1,9 @@
-import { SettingsSidebar } from './components/settings-sidebar'
+import { SettingsSidebar } from "./components/settings-sidebar";
 
 export default function SettingsLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <div className="mx-auto max-w-7xl px-2 md:px-4 pb-8">
@@ -14,11 +14,8 @@ export default function SettingsLayout({
         {/* 右側の透明サイドバー */}
         <SettingsSidebar />
         {/* メインコンテンツ */}
-        <div className="w-full">
-        {children}
-      </div>
-        
+        <div className="w-full">{children}</div>
       </div>
     </div>
-  )
+  );
 }
