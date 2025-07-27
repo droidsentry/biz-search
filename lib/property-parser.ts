@@ -316,7 +316,8 @@ export function parsePropertyOwnerData(text: string, options?: { maxOwnersPerPro
         if (processedCount >= neededCount) break
         
         console.log('共有者情報を追加:', { address, names })
-        const combinedName = names.join('、')
+        // 常に最初の所有者名のみを使用
+        const combinedName = names[0]
         
         // 各共有者の名前もチェック
         let nameWarning: string | undefined
@@ -363,7 +364,8 @@ export function parsePropertyOwnerData(text: string, options?: { maxOwnersPerPro
       }
       
       console.log('共有者情報をまとめて追加:', { address, names })
-      const combinedName = names.join('、')  // 複数の名前を「、」で結合
+      // 常に最初の所有者名のみを使用
+      const combinedName = names[0]
       
       // 各共有者の名前もチェック
       let nameWarning: string | undefined
