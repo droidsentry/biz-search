@@ -30,8 +30,9 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ParseResult, PropertyData, GeocodingResult } from "../types";
+import { Input } from "@/components/ui/input";
 import { batchGeocodeAddresses } from "@/lib/actions/location/batch-geocoding";
 import Link from "next/link";
 import { CopyCell } from "@/components/ui/copy-cell";
@@ -70,6 +71,9 @@ export function ResultsTable({
   // 保存ダイアログの状態管理
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
 
+  // 編集されたデータの状態管理
+  const [editedData, setEditedData] = useState<Map<string, PropertyData>>(new Map());
+
   // 遷移確認ダイアログの状態管理
   const [navigationDialogOpen, setNavigationDialogOpen] = useState(false);
   const [savedProjectInfo, setSavedProjectInfo] = useState<{
@@ -103,6 +107,40 @@ export function ResultsTable({
     rowKey: string; // ジオコーディング結果のキー
   }
 
+  // 編集された名前を取得する関数
+  const getEditedProperty = (row: TableRow): PropertyData | null => {
+    if (!row.property) return null;
+    const edited = editedData.get(row.rowKey);
+    return edited || row.property;
+  };
+
+  // 名前を編集する関数
+  const handleNameEdit = (rowKey: string, newName: string) => {
+    const row = tableRows.find(r => r.rowKey === rowKey);
+    if (!row || !row.property) return;
+
+    const newEditedData = new Map(editedData);
+    newEditedData.set(rowKey, {
+      ...row.property,
+      ownerName: newName
+    });
+    setEditedData(newEditedData);
+  };
+
+  // 住所を編集する関数
+  const handleAddressEdit = (rowKey: string, newAddress: string) => {
+    const row = tableRows.find(r => r.rowKey === rowKey);
+    if (!row || !row.property) return;
+
+    const newEditedData = new Map(editedData);
+    const currentData = editedData.get(rowKey) || row.property;
+    newEditedData.set(rowKey, {
+      ...currentData,
+      ownerAddress: newAddress
+    });
+    setEditedData(newEditedData);
+  };
+
   const tableRows: TableRow[] = results.flatMap((result, index): TableRow[] => {
     if (result.propertyData && result.propertyData.length > 0) {
       return result.propertyData.map(
@@ -135,19 +173,20 @@ export function ResultsTable({
     const geocoding = geocodingResults.get(row.rowKey);
 
     if (row.property) {
+      const property = getEditedProperty(row)!;
       toast.info(
         <div className="space-y-2 w-fit">
           {/* デバッグ用 削除しないでください*/}
           <pre className="text-muted-foreground bg-muted p-2 border rounded-md text-xs break-all whitespace-pre-wrap">
-            {JSON.stringify(row.property, null, 2)}
+            {JSON.stringify(property, null, 2)}
           </pre>
           <pre className="text-muted-foreground bg-muted p-2 border rounded-md text-xs break-all whitespace-pre-wrap">
             {JSON.stringify(geocoding, null, 2)}
           </pre>
           <div className="text-muted-foreground bg-muted p-2 border rounded-md">
-            <p>物件住所: {row.property.propertyAddress}</p>
-            <p>所有者名: {row.property.ownerName}</p>
-            <p>所有者住所: {row.property.ownerAddress}</p>
+            <p>物件住所: {property.propertyAddress}</p>
+            <p>所有者名: {property.ownerName}</p>
+            <p>所有者住所: {property.ownerAddress}</p>
 
             {geocoding && (
               <>
@@ -461,21 +500,24 @@ export function ResultsTable({
 
                     <div className="space-y-1">
                       <span className="text-zinc-500">所有者名</span>
-                      <div className="-mx-4">
-                        <CopyCell
-                          value={row.property.ownerName}
-                          className="text-zinc-300"
+                      <div className="-mx-4 px-4">
+                        <Input
+                          value={getEditedProperty(row)?.ownerName || ''}
+                          onChange={(e) => handleNameEdit(row.rowKey, e.target.value)}
+                          className="text-zinc-300 bg-zinc-800 border-zinc-700"
+                          placeholder="所有者名を入力"
                         />
                       </div>
                     </div>
 
                     <div className="space-y-1">
                       <span className="text-zinc-500">所有者住所</span>
-                      <div className="-mx-4">
-                        <CopyCell
-                          value={row.property.ownerAddress}
-                          className="text-zinc-300"
-                          truncate={false}
+                      <div className="-mx-4 px-4">
+                        <Input
+                          value={getEditedProperty(row)?.ownerAddress || ''}
+                          onChange={(e) => handleAddressEdit(row.rowKey, e.target.value)}
+                          className="text-zinc-300 bg-zinc-800 border-zinc-700"
+                          placeholder="所有者住所を入力"
                         />
                       </div>
                     </div>
@@ -630,14 +672,28 @@ export function ResultsTable({
                   </TableCell>
                   <TableCell className="text-foreground/80 p-0">
                     {row.property ? (
-                      <CopyCell value={row.property.ownerName} />
+                      <div className="px-2 py-1">
+                        <Input
+                          value={getEditedProperty(row)?.ownerName || ''}
+                          onChange={(e) => handleNameEdit(row.rowKey, e.target.value)}
+                          className="h-8 text-sm bg-muted/30 border-muted-foreground/20"
+                          placeholder="所有者名を入力"
+                        />
+                      </div>
                     ) : (
                       <span className="block truncate px-2 py-1">-</span>
                     )}
                   </TableCell>
                   <TableCell className="text-foreground/80 p-0">
                     {row.property ? (
-                      <CopyCell value={row.property.ownerAddress} />
+                      <div className="px-2 py-1">
+                        <Input
+                          value={getEditedProperty(row)?.ownerAddress || ''}
+                          onChange={(e) => handleAddressEdit(row.rowKey, e.target.value)}
+                          className="h-8 text-sm bg-muted/30 border-muted-foreground/20"
+                          placeholder="所有者住所を入力"
+                        />
+                      </div>
                     ) : (
                       <span className="block truncate px-2 py-1">-</span>
                     )}
@@ -730,10 +786,11 @@ export function ResultsTable({
           .filter((row) => row.property !== null)
           .map((row) => {
             const geocoding = geocodingResults.get(row.rowKey);
+            const property = getEditedProperty(row)!;
             return {
-              propertyAddress: row.property!.propertyAddress,
-              ownerName: row.property!.ownerName,
-              ownerAddress: row.property!.ownerAddress,
+              propertyAddress: property.propertyAddress,
+              ownerName: property.ownerName,
+              ownerAddress: property.ownerAddress,
               lat: geocoding?.lat || null,
               lng: geocoding?.lng || null,
               streetViewAvailable: geocoding?.streetViewAvailable || false,
