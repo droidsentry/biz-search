@@ -128,7 +128,7 @@ export async function geocodeAddress(address: string) {
         language: Language.ja, // 日本語で結果を取得
       },
     })
-    console.log(response.data)
+    // console.log(response.data)
     
     const apiResponseTime = Date.now() - startTime
     
@@ -161,7 +161,7 @@ export async function geocodeAddress(address: string) {
         })
         .then(({ error }) => {
           if (error) {
-            console.error('Geocodingログ記録エラー:', error)
+            // console.error('Geocodingログ記録エラー:', error)
           }
         })
       
@@ -183,7 +183,7 @@ export async function geocodeAddress(address: string) {
         })
         .then(({ error }) => {
           if (error) {
-            console.error('Geocodingログ記録エラー:', error)
+            // console.error('Geocodingログ記録エラー:', error)
           }
         })
       
@@ -219,8 +219,8 @@ export async function geocodeAddress(address: string) {
     
     // エラーの詳細をログに記録
     if (error instanceof Error) {
-      console.error('Error message:', error.message)
-      console.error('Error stack:', error.stack)
+      // console.error('Error message:', error.message)
+      // console.error('Error stack:', error.stack)
     }
     
     return {
@@ -256,10 +256,10 @@ export async function checkStreetViewAvailability(lat: number, lng: number): Pro
     
     // statusが"OK"の場合のみStreet Viewが利用可能
     if (data.status === 'OK') {
-      console.log('Street View available at:', data.location)
+      // console.log('Street View available at:', data.location)
       return true
     } else if (data.status === 'ZERO_RESULTS') {
-      console.log('No Street View imagery at this location')
+      // console.log('No Street View imagery at this location')
       return false
     } else {
       console.error('Street View metadata error:', data.status)

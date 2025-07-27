@@ -235,34 +235,34 @@ async function processFile(file: File, includeFullText: boolean): Promise<FileRe
 
     // pdf2jsonで解析
     const pdfData = await parsePDF(buffer)
-    console.log("pdfData", pdfData)
+    // console.log("pdfData", pdfData)
     
     // デバッグ: テキスト要素の詳細を出力
-    if (pdfData.Pages[0] && pdfData.Pages[0].Texts) {
-      console.log("テキスト要素の詳細:")
-      pdfData.Pages[0].Texts.forEach((text, index) => {
-        const decodedText = decodeURIComponent(text.R[0].T)
-        // 「佐」または「慎」を含むテキストを探す
-        if (decodedText.includes('佐') || decodedText.includes('慎') || decodedText.includes('一')) {
-          const charCodes: number[] = []
-          for (let i = 0; i < decodedText.length; i++) {
-            charCodes.push(decodedText.charCodeAt(i))
-          }
-          console.log(`[${index}] 名前関連:`, {
-            x: text.x,
-            y: text.y,
-            text: decodedText,
-            textLength: decodedText.length,
-            rawEncoded: text.R[0].T,
-            charCodes: charCodes.map(c => `0x${c.toString(16).toUpperCase()}`).join(' ')
-          })
-        }
-      })
-    }
+    // if (pdfData.Pages[0] && pdfData.Pages[0].Texts) {
+    //   console.log("テキスト要素の詳細:")
+    //   pdfData.Pages[0].Texts.forEach((text, index) => {
+    //     const decodedText = decodeURIComponent(text.R[0].T)
+    //     // 「佐」または「慎」を含むテキストを探す
+    //     if (decodedText.includes('佐') || decodedText.includes('慎') || decodedText.includes('一')) {
+    //       const charCodes: number[] = []
+    //       for (let i = 0; i < decodedText.length; i++) {
+    //         charCodes.push(decodedText.charCodeAt(i))
+    //       }
+    //       console.log(`[${index}] 名前関連:`, {
+    //         x: text.x,
+    //         y: text.y,
+    //         text: decodedText,
+    //         textLength: decodedText.length,
+    //         rawEncoded: text.R[0].T,
+    //         charCodes: charCodes.map(c => `0x${c.toString(16).toUpperCase()}`).join(' ')
+    //       })
+    //     }
+    //   })
+    // }
 
     // テキスト抽出
     const extractedText = extractTextFromPDFData(pdfData)
-    console.log("extractedText", extractedText)
+    // console.log("extractedText", extractedText)
     
     // 不動産情報をパース（5世帯以上検出時に早期終了）
     const propertyData = parsePropertyOwnerData(extractedText, { earlyStopOnSuspicious: true })
@@ -290,14 +290,14 @@ async function processFile(file: File, includeFullText: boolean): Promise<FileRe
       : undefined
 
     // デバッグログ
-    if (suspiciousProperties.length > 0) {
-      console.log('🚨 不正なファイル検出:', {
-        fileName: file.name,
-        suspiciousProperties,
-        isSuspiciousFile,
-        suspiciousReason
-      })
-    }
+    // if (suspiciousProperties.length > 0) {
+    //   console.log('🚨 不正なファイル検出:', {
+    //     fileName: file.name,
+    //     suspiciousProperties,
+    //     isSuspiciousFile,
+    //     suspiciousReason
+    //   })
+    // }
 
     return {
       fileName: file.name,
@@ -398,7 +398,7 @@ function extractTextFromPDFData(pdfData: PDFData): string {
         decodedText = decodeURIComponent(rawText)
       } catch (e) {
         // デコードエラーの場合
-        console.log('デコードエラー:', { rawText, error: e })
+        // console.log('デコードエラー:', { rawText, error: e })
         decodedText = rawText
       }
       
@@ -423,30 +423,30 @@ function extractTextFromPDFData(pdfData: PDFData): string {
       })
       
       if (invisibleChars.length > 0) {
-        console.log('⚠️ 不可視文字検出（文字欠損の可能性）:', {
-          テキスト: decodedText,
-          文字コード: charCodes,
-          不可視文字コード: invisibleChars,
-          位置: { x: text.x, y: text.y }
-        })
+        // console.log('⚠️ 不可視文字検出（文字欠損の可能性）:', {
+        //   テキスト: decodedText,
+        //   文字コード: charCodes,
+        //   不可視文字コード: invisibleChars,
+        //   位置: { x: text.x, y: text.y }
+        // })
       }
       
       // デコード前後で特殊文字や異常パターンをチェック
       if (rawText.includes('%20%20') || rawText.includes('%E3%80%80%E3%80%80')) {
         // 連続した空白（半角または全角）のエンコード
-        console.log('連続空白検出（エンコード）:', { 
-          rawText, 
-          decodedText,
-          position: { x: text.x, y: text.y }
-        })
+        // console.log('連続空白検出（エンコード）:', { 
+        //   rawText, 
+        //   decodedText,
+        //   position: { x: text.x, y: text.y }
+        // })
       }
       
       // デコード後の異常パターンチェック
       if (decodedText.includes('  ') || decodedText.includes('　　')) {
-        console.log('連続空白検出（デコード後）:', { 
-          decodedText,
-          position: { x: text.x, y: text.y }
-        })
+        // console.log('連続空白検出（デコード後）:', { 
+        //   decodedText,
+        //   position: { x: text.x, y: text.y }
+        // })
       }
       
       // 同じ行で前のテキストがある場合、X座標の差をチェック
@@ -455,24 +455,24 @@ function extractTextFromPDFData(pdfData: PDFData): string {
         
         // テーブルセルの境界（│）の直後で、かつ短い文字の場合の特別処理
         if (lineText.endsWith('│') && decodedText.length <= 2) {
-          console.log('⚠️ 文字欠損の可能性検出:', {
-            理由: 'テーブルセル境界直後の短い文字',
-            前のテキスト: lineText.slice(-10),
-            現在のテキスト: decodedText,
-            座標差: xGap.toFixed(2),
-            位置: { x: text.x, y: text.y },
-            推測: '名前の一部が欠損している可能性があります'
-          })
+          // console.log('⚠️ 文字欠損の可能性検出:', {
+          //   理由: 'テーブルセル境界直後の短い文字',
+          //   前のテキスト: lineText.slice(-10),
+          //   現在のテキスト: decodedText,
+          //   座標差: xGap.toFixed(2),
+          //   位置: { x: text.x, y: text.y },
+          //   推測: '名前の一部が欠損している可能性があります'
+          // })
         }
         
         if (xGap > 2.0) {
           // X座標の差が大きい場合（文字欠損の可能性）
-          console.log('文字間隔異常検出:', {
-            prevText: lineText.slice(-10), // 直前の10文字
-            currentText: decodedText,
-            xGap: xGap.toFixed(2),
-            position: { x: text.x, y: text.y }
-          })
+          // console.log('文字間隔異常検出:', {
+          //   prevText: lineText.slice(-10), // 直前の10文字
+          //   currentText: decodedText,
+          //   xGap: xGap.toFixed(2),
+          //   position: { x: text.x, y: text.y }
+          // })
           
           // 異常な空白の場合は、空白を2つ挿入（後で検知しやすいように）
           lineText += '  ' + decodedText

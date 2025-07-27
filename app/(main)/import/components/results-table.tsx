@@ -144,10 +144,10 @@ export function ResultsTable({
   };
 
   // デバッグ：不正ファイルの検出状況を確認
-  const suspiciousFiles = results.filter((r) => r.isSuspiciousFile);
-  if (suspiciousFiles.length > 0) {
-    console.log("🚨 結果テーブルで不正ファイル検出:", suspiciousFiles);
-  }
+  // const suspiciousFiles = results.filter((r) => r.isSuspiciousFile);
+  // if (suspiciousFiles.length > 0) {
+  //   console.log("🚨 結果テーブルで不正ファイル検出:", suspiciousFiles);
+  // }
 
   const tableRows: TableRow[] = results.flatMap((result, index): TableRow[] => {
     if (result.propertyData && result.propertyData.length > 0) {
@@ -266,7 +266,7 @@ export function ResultsTable({
     try {
       const ownerAddresses = validRows.map((row) => row.property!.ownerAddress);
       const batchResults = await batchGeocodeAddresses(ownerAddresses);
-      console.log(`batchResults`, batchResults);
+      // console.log(`batchResults`, batchResults);
 
       // 結果を状態に反映
       const newResults = new Map(geocodingResults);
@@ -903,7 +903,7 @@ export function ResultsTable({
         onSaveComplete={(response) => {
           if (response.success) {
             // 保存成功後の処理
-            console.log("保存完了:", response);
+            // console.log("保存完了:", response);
             setSavedProjectInfo({
               savedCount: response.savedCount,
               projectName: response.projectName,
