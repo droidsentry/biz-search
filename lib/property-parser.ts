@@ -3,6 +3,10 @@ interface PropertyOwner {
   propertyAddress: string // 物件住所（部屋番号含む）
   ownerName: string      // 所有者名
   ownerAddress: string   // 所有者住所
+  ownerNameWarning?: string // 所有者名の警告（文字欠損など）
+  isOwnerNameCorrupted?: boolean // 所有者名が文字化けしているか
+  ownerAddressWarning?: string // 所有者住所の警告（文字欠損など）
+  isOwnerAddressCorrupted?: boolean // 所有者住所が文字化けしているか
 }
 
 /**
@@ -205,11 +209,50 @@ export function parsePropertyOwnerData(text: string): PropertyOwner[] {
           }
           console.log('最終的な氏名:', ownerName)
           
+          // 名前の警告チェック
+          const nameWarning = detectIncompleteOwnerNamePattern(ownerName)
+          const isOwnerNameCorrupted = nameWarning !== undefined
+          
+          if (nameWarning) {
+            console.log('名前警告:', nameWarning)
+          }
+          
+          // 住所の警告チェック（住所専用のパターン検知を適用）
+          const addressWarning = detectIncompleteAddressPattern(ownerAddress)
+          const isOwnerAddressCorrupted = addressWarning !== undefined
+          
+          if (addressWarning) {
+            console.log('住所警告:', addressWarning)
+          }
+          
+          // デバッグ用：名前の詳細を出力
+          const charCodes = []
+          for (let i = 0; i < ownerName.length; i++) {
+            charCodes.push(ownerName.charCodeAt(i))
+          }
+          console.log('名前の詳細:', {
+            name: ownerName,
+            length: ownerName.length,
+            hasDoubleSpace: /\s{2,}/.test(ownerName),
+            hasDoubleSpaceZenkaku: /　{2,}/.test(ownerName),
+            hasDoubleSpaceMixed: /[\s　]{2,}/.test(ownerName),
+            spaceCount: (ownerName.match(/\s/g) || []).length,
+            zenkakuSpaceCount: (ownerName.match(/　/g) || []).length,
+            nameWithoutSpaces: ownerName.replace(/[\s　]/g, ''),
+            charCodes: charCodes.map(c => `0x${c.toString(16).toUpperCase()}`).join(' '),
+            warning: nameWarning,
+            isCorrupted: isOwnerNameCorrupted
+          })
+          
           properties.push({
             recordDate: currentRecordDate,
             propertyAddress: currentPropertyAddress,
             ownerName: ownerName,
-            ownerAddress: ownerAddress
+            ownerAddress: ownerAddress,
+            ownerNameWarning: nameWarning,
+            isOwnerNameCorrupted: isOwnerNameCorrupted,
+            ownerAddressWarning: addressWarning,
+            isOwnerAddressCorrupted: isOwnerAddressCorrupted
           })
           matched = true
           break
@@ -226,11 +269,33 @@ export function parsePropertyOwnerData(text: string): PropertyOwner[] {
   if (isCoOwnerMode && coOwnersMap.size > 0) {
     coOwnersMap.forEach((names, address) => {
       console.log('共有者情報をまとめて追加:', { address, names })
+      const combinedName = names.join('、')  // 複数の名前を「、」で結合
+      
+      // 各共有者の名前もチェック
+      let nameWarning: string | undefined
+      let isOwnerNameCorrupted = false
+      for (const name of names) {
+        const warning = detectIncompleteOwnerNamePattern(name)
+        if (warning) {
+          nameWarning = warning + ` (共有者: ${name})`
+          isOwnerNameCorrupted = true
+          break
+        }
+      }
+      
+      // 住所の警告チェック
+      const addressWarning = detectIncompleteAddressPattern(address)
+      const isOwnerAddressCorrupted = addressWarning !== undefined
+      
       properties.push({
         recordDate: currentRecordDate,
         propertyAddress: currentPropertyAddress,
-        ownerName: names.join('、'),  // 複数の名前を「、」で結合
-        ownerAddress: address
+        ownerName: combinedName,
+        ownerAddress: address,
+        ownerNameWarning: nameWarning,
+        isOwnerNameCorrupted: isOwnerNameCorrupted,
+        ownerAddressWarning: addressWarning,
+        isOwnerAddressCorrupted: isOwnerAddressCorrupted
       })
     })
   }
@@ -249,4 +314,131 @@ function convertToHalfWidth(str: string): string {
   return str.replace(/[０-９]/g, (match) => {
     return String.fromCharCode(match.charCodeAt(0) - 0xFEE0)
   })
+}
+
+/**
+ * 不完全な所有者名パターンを検知
+ * @param name 検証する名前
+ * @returns 警告メッセージ（問題がない場合はundefined）
+ */
+function detectIncompleteOwnerNamePattern(name: string): string | undefined {
+  // 法人の会社法人等番号パターンをチェック（正常なパターン）
+  if (name.includes('会社法人等番号')) {
+    return undefined // 警告なし
+  }
+  
+  // 文字コードレベルでチェック
+  const charCodes: number[] = []
+  for (let i = 0; i < name.length; i++) {
+    charCodes.push(name.charCodeAt(i))
+  }
+  
+  // 不可視文字や特殊文字の検出
+  const hasInvisibleChar = charCodes.some(code => {
+    return (
+      code === 0xEE45 || // PDFで見つかった特殊文字
+      code === 0x200B || // ゼロ幅スペース
+      code === 0xFFFD || // 置換文字
+      (code >= 0xE000 && code <= 0xF8FF) // 私用領域
+    )
+  })
+  
+  if (hasInvisibleChar) {
+    return '名前に不可視文字が含まれています（文字欠損の可能性）'
+  }
+  
+  // 空白が2つ以上連続している場合（半角・全角問わず）
+  if (/[\s　]{2,}/.test(name)) {
+    return '名前に連続した空白が含まれています（文字欠損の可能性）'
+  }
+  
+  // 複数の空白を含む短い名前（例: "佐 慎一"）
+  const spaceCount = (name.match(/[\s　]/g) || []).length
+  const nameWithoutSpaces = name.replace(/[\s　]/g, '')
+  
+  // 2つ以上の空白があり、かつ名前が短い場合
+  if (spaceCount >= 2 && nameWithoutSpaces.length <= 4) {
+    return '名前に複数の空白が含まれており、文字が欠損している可能性があります'
+  }
+  
+  // 日本人の名前で一般的な長さより短い（2文字以下）かつ空白を含む
+  if (nameWithoutSpaces.length <= 2 && (name.includes(' ') || name.includes('　'))) {
+    return '名前が短すぎます（文字欠損の可能性）'
+  }
+  
+  // 一般的な日本人の姓名パターンをチェック
+  if (name.match(/[\u4E00-\u9FFF]/) && (name.includes(' ') || name.includes('　'))) {
+    // 漢字を含み、空白も含む場合
+    const parts = name.split(/[\s　]+/)
+    if (parts.length === 2) {
+      const [firstName, lastName] = parts
+      
+      // 「佐 慎一」のようなパターン（姓が1文字で名が2文字）
+      if (firstName.length === 1 && lastName.length === 2) {
+        // 一般的な1文字姓をチェック
+        const commonSingleCharSurnames = ['関', '林', '森', '原', '堀', '辻', '菅', '岡', '南', '東', '西', '北']
+        if (!commonSingleCharSurnames.includes(firstName)) {
+          return `姓「${firstName}」が不完全な可能性があります（文字欠損の疑い）`
+        }
+      }
+      // 両方1文字は疑わしい
+      else if (firstName.length === 1 && lastName.length === 1) {
+        return '姓名が短すぎます（文字欠損の可能性）'
+      }
+    }
+    // 3つ以上のパーツに分かれている場合（例: "佐  慎一" → ["佐", "", "慎一"]）
+    else if (parts.length >= 3) {
+      // 空のパーツがある場合は文字欠損の可能性
+      if (parts.some(part => part === '')) {
+        return '名前に異常な空白パターンが含まれています（文字欠損の可能性）'
+      }
+      return '名前が複数の部分に分かれています（文字欠損の可能性）'
+    }
+  }
+  
+  return undefined
+}
+
+/**
+ * 不完全な住所パターンを検知
+ * @param address 検証する住所
+ * @returns 警告メッセージ（問題がない場合はundefined）
+ */
+function detectIncompleteAddressPattern(address: string): string | undefined {
+  // 文字コードレベルでチェック
+  const charCodes: number[] = []
+  for (let i = 0; i < address.length; i++) {
+    charCodes.push(address.charCodeAt(i))
+  }
+  
+  // 不可視文字や特殊文字の検出
+  const hasInvisibleChar = charCodes.some(code => {
+    return (
+      code === 0xEE45 || // PDFで見つかった特殊文字
+      code === 0x200B || // ゼロ幅スペース
+      code === 0xFFFD || // 置換文字
+      (code >= 0xE000 && code <= 0xF8FF) // 私用領域
+    )
+  })
+  
+  if (hasInvisibleChar) {
+    return '住所に不可視文字が含まれています（文字欠損の可能性）'
+  }
+  
+  // 住所特有のパターンチェック
+  // 建物名や号室などで空白が含まれるのは正常
+  // 例: "Ｇｒａｃｅ　Ｃｏｕｒｔ　Ｍｅｇｕｒｏ", "パークハウス　２０１号室"
+  
+  // 異常なパターンのみチェック
+  // 10個以上の連続した空白は異常
+  if (/[\s　]{10,}/.test(address)) {
+    return '住所に異常な連続空白が含まれています'
+  }
+  
+  // 住所が極端に短い（5文字未満）場合は警告
+  if (address.length < 5) {
+    return '住所が短すぎます（文字欠損の可能性）'
+  }
+  
+  return undefined
 }

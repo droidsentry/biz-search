@@ -72,7 +72,9 @@ export function ResultsTable({
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
 
   // 編集されたデータの状態管理
-  const [editedData, setEditedData] = useState<Map<string, PropertyData>>(new Map());
+  const [editedData, setEditedData] = useState<Map<string, PropertyData>>(
+    new Map()
+  );
 
   // 遷移確認ダイアログの状態管理
   const [navigationDialogOpen, setNavigationDialogOpen] = useState(false);
@@ -116,27 +118,27 @@ export function ResultsTable({
 
   // 名前を編集する関数
   const handleNameEdit = (rowKey: string, newName: string) => {
-    const row = tableRows.find(r => r.rowKey === rowKey);
+    const row = tableRows.find((r) => r.rowKey === rowKey);
     if (!row || !row.property) return;
 
     const newEditedData = new Map(editedData);
     newEditedData.set(rowKey, {
       ...row.property,
-      ownerName: newName
+      ownerName: newName,
     });
     setEditedData(newEditedData);
   };
 
   // 住所を編集する関数
   const handleAddressEdit = (rowKey: string, newAddress: string) => {
-    const row = tableRows.find(r => r.rowKey === rowKey);
+    const row = tableRows.find((r) => r.rowKey === rowKey);
     if (!row || !row.property) return;
 
     const newEditedData = new Map(editedData);
     const currentData = editedData.get(rowKey) || row.property;
     newEditedData.set(rowKey, {
       ...currentData,
-      ownerAddress: newAddress
+      ownerAddress: newAddress,
     });
     setEditedData(newEditedData);
   };
@@ -502,9 +504,15 @@ export function ResultsTable({
                       <span className="text-zinc-500">所有者名</span>
                       <div className="-mx-4 px-4">
                         <Input
-                          value={getEditedProperty(row)?.ownerName || ''}
-                          onChange={(e) => handleNameEdit(row.rowKey, e.target.value)}
-                          className="text-zinc-300 bg-zinc-800 border-zinc-700"
+                          value={getEditedProperty(row)?.ownerName || ""}
+                          onChange={(e) =>
+                            handleNameEdit(row.rowKey, e.target.value)
+                          }
+                          className={`bg-zinc-800 border-zinc-700 ${
+                            row.property.isOwnerNameCorrupted
+                              ? "text-red-400"
+                              : "text-zinc-300"
+                          }`}
                           placeholder="所有者名を入力"
                         />
                       </div>
@@ -514,9 +522,15 @@ export function ResultsTable({
                       <span className="text-zinc-500">所有者住所</span>
                       <div className="-mx-4 px-4">
                         <Input
-                          value={getEditedProperty(row)?.ownerAddress || ''}
-                          onChange={(e) => handleAddressEdit(row.rowKey, e.target.value)}
-                          className="text-zinc-300 bg-zinc-800 border-zinc-700"
+                          value={getEditedProperty(row)?.ownerAddress || ""}
+                          onChange={(e) =>
+                            handleAddressEdit(row.rowKey, e.target.value)
+                          }
+                          className={`bg-zinc-800 border-zinc-700 ${
+                            row.property.isOwnerAddressCorrupted
+                              ? "text-red-400"
+                              : "text-zinc-300"
+                          }`}
                           placeholder="所有者住所を入力"
                         />
                       </div>
@@ -603,7 +617,7 @@ export function ResultsTable({
         <Table className="table-fixed">
           <TableHeader>
             <TableRow className="bg-muted-foreground/5 hover:bg-muted-foreground/10">
-              <TableHead className="text-foreground/80 font-semibold min-w-[200px]">
+              <TableHead className="text-foreground/80 font-semibold w-20">
                 ファイル名
               </TableHead>
               <TableHead className="text-foreground/80 font-semibold text-center w-12">
@@ -612,13 +626,13 @@ export function ResultsTable({
               <TableHead className="text-foreground/80 font-semibold text-right w-18">
                 サイズ
               </TableHead>
-              <TableHead className="text-foreground/80 font-semibold w-60">
+              <TableHead className="text-foreground/80 font-semibold w-20">
                 物件住所
               </TableHead>
-              <TableHead className="text-foreground/80 font-semibold w-25">
+              <TableHead className="text-foreground/80 font-semibold w-80">
                 所有者名
               </TableHead>
-              <TableHead className="text-foreground/80 font-semibold w-60">
+              <TableHead className="text-foreground/80 font-semibold">
                 所有者住所
               </TableHead>
               <TableHead className="text-foreground/80 font-semibold text-center w-12">
@@ -643,10 +657,8 @@ export function ResultsTable({
                   key={index}
                   className="border-muted-foreground/20 hover:bg-muted-foreground/10"
                 >
-                  <TableCell className="font-medium text-foreground min-w-[200px] truncate">
-                    <span className="block truncate" title={row.fileName}>
-                      {row.fileName}
-                    </span>
+                  <TableCell className="font-medium text-foreground w-32 p-0">
+                    <CopyCell value={row.fileName} truncate={true} />
                   </TableCell>
                   <TableCell className="text-center">
                     {row.status === "success" ? (
@@ -658,9 +670,12 @@ export function ResultsTable({
                   <TableCell className="text-right text-muted-foreground">
                     {formatFileSize(row.fileSize)}
                   </TableCell>
-                  <TableCell className="text-foreground/80 p-0">
+                  <TableCell className="text-foreground/80 w-40 p-0">
                     {row.property ? (
-                      <CopyCell value={row.property.propertyAddress} />
+                      <CopyCell
+                        value={row.property.propertyAddress}
+                        truncate={true}
+                      />
                     ) : (
                       <span
                         className="block truncate px-2 py-1"
@@ -674,9 +689,15 @@ export function ResultsTable({
                     {row.property ? (
                       <div className="px-2 py-1">
                         <Input
-                          value={getEditedProperty(row)?.ownerName || ''}
-                          onChange={(e) => handleNameEdit(row.rowKey, e.target.value)}
-                          className="h-8 text-sm bg-muted/30 border-muted-foreground/20"
+                          value={getEditedProperty(row)?.ownerName || ""}
+                          onChange={(e) =>
+                            handleNameEdit(row.rowKey, e.target.value)
+                          }
+                          className={`h-8 text-sm bg-muted/30 border-muted-foreground/20 ${
+                            row.property.isOwnerNameCorrupted
+                              ? "text-red-400"
+                              : ""
+                          }`}
                           placeholder="所有者名を入力"
                         />
                       </div>
@@ -688,9 +709,15 @@ export function ResultsTable({
                     {row.property ? (
                       <div className="px-2 py-1">
                         <Input
-                          value={getEditedProperty(row)?.ownerAddress || ''}
-                          onChange={(e) => handleAddressEdit(row.rowKey, e.target.value)}
-                          className="h-8 text-sm bg-muted/30 border-muted-foreground/20"
+                          value={getEditedProperty(row)?.ownerAddress || ""}
+                          onChange={(e) =>
+                            handleAddressEdit(row.rowKey, e.target.value)
+                          }
+                          className={`h-8 text-sm bg-muted/30 border-muted-foreground/20 ${
+                            row.property.isOwnerAddressCorrupted
+                              ? "text-red-400"
+                              : ""
+                          }`}
                           placeholder="所有者住所を入力"
                         />
                       </div>

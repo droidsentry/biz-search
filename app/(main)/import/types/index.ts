@@ -6,6 +6,10 @@ export interface PropertyData {
   propertyAddress: string // 物件住所
   ownerName: string      // 所有者名
   ownerAddress: string   // 所有者住所
+  ownerNameWarning?: string // 所有者名の警告（文字欠損など）
+  isOwnerNameCorrupted?: boolean // 所有者名が文字化けしているか
+  ownerAddressWarning?: string // 所有者住所の警告（文字欠損など）
+  isOwnerAddressCorrupted?: boolean // 所有者住所が文字化けしているか
 }
 
 // 解析結果

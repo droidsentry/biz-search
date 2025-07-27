@@ -28,6 +28,7 @@ interface FileResult {
     propertyAddress: string
     ownerName: string
     ownerAddress: string
+    ownerNameWarning?: string
   }>
   error?: string
 }
@@ -233,6 +234,29 @@ async function processFile(file: File, includeFullText: boolean): Promise<FileRe
     // pdf2jsonで解析
     const pdfData = await parsePDF(buffer)
     console.log("pdfData", pdfData)
+    
+    // デバッグ: テキスト要素の詳細を出力
+    if (pdfData.Pages[0] && pdfData.Pages[0].Texts) {
+      console.log("テキスト要素の詳細:")
+      pdfData.Pages[0].Texts.forEach((text, index) => {
+        const decodedText = decodeURIComponent(text.R[0].T)
+        // 「佐」または「慎」を含むテキストを探す
+        if (decodedText.includes('佐') || decodedText.includes('慎') || decodedText.includes('一')) {
+          const charCodes: number[] = []
+          for (let i = 0; i < decodedText.length; i++) {
+            charCodes.push(decodedText.charCodeAt(i))
+          }
+          console.log(`[${index}] 名前関連:`, {
+            x: text.x,
+            y: text.y,
+            text: decodedText,
+            textLength: decodedText.length,
+            rawEncoded: text.R[0].T,
+            charCodes: charCodes.map(c => `0x${c.toString(16).toUpperCase()}`).join(' ')
+          })
+        }
+      })
+    }
 
     // テキスト抽出
     const extractedText = extractTextFromPDFData(pdfData)
@@ -315,19 +339,120 @@ function extractTextFromPDFData(pdfData: PDFData): string {
 
     // 前の行のY座標を記録
     let prevY = -1
+    let prevX = -1
+    let lineText = ''
     
-    sortedTexts.forEach((text: PDFTextItem) => {
+    sortedTexts.forEach((text: PDFTextItem, index: number) => {
       // 新しい行かどうかチェック
       if (prevY !== -1 && Math.abs(text.y - prevY) > 0.1) {
-        fullText += '\n'
+        fullText += lineText + '\n'
+        lineText = ''
+        prevX = -1
       }
       
       // テキストを抽出（URLデコード）
-      const decodedText = decodeURIComponent(text.R[0].T)
-      fullText += decodedText + ' '
+      const rawText = text.R[0].T
+      let decodedText = ''
+      
+      try {
+        decodedText = decodeURIComponent(rawText)
+      } catch (e) {
+        // デコードエラーの場合
+        console.log('デコードエラー:', { rawText, error: e })
+        decodedText = rawText
+      }
+      
+      // 文字コードレベルでの異常検出
+      const charCodes: number[] = []
+      for (let i = 0; i < decodedText.length; i++) {
+        charCodes.push(decodedText.charCodeAt(i))
+      }
+      
+      // 不可視文字や特殊文字の検出
+      const invisibleChars = charCodes.filter(code => {
+        // ゼロ幅スペース、制御文字、その他の不可視文字
+        return (
+          code === 0x200B || // ゼロ幅スペース
+          code === 0x200C || // ゼロ幅非接合子
+          code === 0x200D || // ゼロ幅接合子
+          code === 0xFEFF || // ゼロ幅非改行スペース
+          code === 0x00A0 || // ノーブレークスペース
+          (code >= 0x0000 && code <= 0x001F && code !== 0x0009 && code !== 0x000A && code !== 0x000D) || // 制御文字（タブ、改行、復帰を除く）
+          code === 0xFFFD    // 置換文字（文字化けの際に使用される）
+        )
+      })
+      
+      if (invisibleChars.length > 0) {
+        console.log('⚠️ 不可視文字検出（文字欠損の可能性）:', {
+          テキスト: decodedText,
+          文字コード: charCodes,
+          不可視文字コード: invisibleChars,
+          位置: { x: text.x, y: text.y }
+        })
+      }
+      
+      // デコード前後で特殊文字や異常パターンをチェック
+      if (rawText.includes('%20%20') || rawText.includes('%E3%80%80%E3%80%80')) {
+        // 連続した空白（半角または全角）のエンコード
+        console.log('連続空白検出（エンコード）:', { 
+          rawText, 
+          decodedText,
+          position: { x: text.x, y: text.y }
+        })
+      }
+      
+      // デコード後の異常パターンチェック
+      if (decodedText.includes('  ') || decodedText.includes('　　')) {
+        console.log('連続空白検出（デコード後）:', { 
+          decodedText,
+          position: { x: text.x, y: text.y }
+        })
+      }
+      
+      // 同じ行で前のテキストがある場合、X座標の差をチェック
+      if (prevX !== -1 && Math.abs(text.y - prevY) <= 0.1) {
+        const xGap = text.x - prevX
+        
+        // テーブルセルの境界（│）の直後で、かつ短い文字の場合の特別処理
+        if (lineText.endsWith('│') && decodedText.length <= 2) {
+          console.log('⚠️ 文字欠損の可能性検出:', {
+            理由: 'テーブルセル境界直後の短い文字',
+            前のテキスト: lineText.slice(-10),
+            現在のテキスト: decodedText,
+            座標差: xGap.toFixed(2),
+            位置: { x: text.x, y: text.y },
+            推測: '名前の一部が欠損している可能性があります'
+          })
+        }
+        
+        if (xGap > 2.0) {
+          // X座標の差が大きい場合（文字欠損の可能性）
+          console.log('文字間隔異常検出:', {
+            prevText: lineText.slice(-10), // 直前の10文字
+            currentText: decodedText,
+            xGap: xGap.toFixed(2),
+            position: { x: text.x, y: text.y }
+          })
+          
+          // 異常な空白の場合は、空白を2つ挿入（後で検知しやすいように）
+          lineText += '  ' + decodedText
+        } else {
+          // 通常の空白
+          lineText += ' ' + decodedText
+        }
+      } else {
+        // 行の最初のテキスト
+        lineText += decodedText
+      }
       
       prevY = text.y
+      prevX = text.x + (decodedText.length * 0.5) // テキストの終端位置を推定
     })
+    
+    // 最後の行を追加
+    if (lineText) {
+      fullText += lineText
+    }
   })
   
 
