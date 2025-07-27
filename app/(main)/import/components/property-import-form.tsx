@@ -86,7 +86,38 @@ export function PropertyImportForm() {
         }
 
         // 通常のJSONレスポンスを処理
-        const batchResults: ParseResult[] = data.results.map((result: any) => ({
+        interface PDFMetadata {
+          Title?: string
+          Author?: string
+          Subject?: string
+          Creator?: string
+          Producer?: string
+          CreationDate?: string
+          ModDate?: string
+          [key: string]: string | undefined
+        }
+        
+        interface APIResult {
+          fileName: string
+          fileSize: number
+          status: 'success' | 'error'
+          pageCount?: number
+          textLength?: number
+          text?: string
+          metadata?: PDFMetadata
+          propertyData?: Array<{
+            recordDate: string
+            propertyAddress: string
+            ownerName: string
+            ownerAddress: string
+            ownerNameWarning?: string
+          }>
+          error?: string
+          isSuspiciousFile?: boolean
+          suspiciousReason?: string
+        }
+        
+        const batchResults: ParseResult[] = data.results.map((result: APIResult) => ({
           fileName: result.fileName,
           fileSize: result.fileSize,
           status: result.status,

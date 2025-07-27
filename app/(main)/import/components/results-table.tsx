@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
 import { Button } from "@/components/ui/button";
+import { CopyCell } from "@/components/ui/copy-cell";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -11,8 +12,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { batchGeocodeAddresses } from "@/lib/actions/location/batch-geocoding";
+import { PropertyData as PropertyDataType } from "@/lib/types/property";
+import { cn } from "@/lib/utils";
+import {
   Check,
-  Eye,
+  Database,
+  ExternalLink,
   Loader2,
   MapPin,
   MapPinned,
@@ -20,26 +31,13 @@ import {
   RefreshCw,
   Trash2,
   X,
-  ExternalLink,
 } from "lucide-react";
-import { toast } from "sonner";
-import { useState, useEffect } from "react";
-import type { ParseResult, PropertyData, GeocodingResult } from "../types";
-import { Input } from "@/components/ui/input";
-import { batchGeocodeAddresses } from "@/lib/actions/location/batch-geocoding";
 import Link from "next/link";
-import { CopyCell } from "@/components/ui/copy-cell";
-import { SavePropertiesDialog } from "./save-properties-dialog";
+import React, { useState } from "react";
+import { toast } from "sonner";
+import type { GeocodingResult, ParseResult, PropertyData } from "../types";
 import { NavigationConfirmDialog } from "./navigation-confirm-dialog";
-import { PropertyData as PropertyDataType } from "@/lib/types/property";
-import { Database } from "lucide-react";
-import { cn } from "@/lib/utils";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { SavePropertiesDialog } from "./save-properties-dialog";
 
 interface ResultsTableProps {
   results: ParseResult[];
@@ -146,9 +144,9 @@ export function ResultsTable({
   };
 
   // デバッグ：不正ファイルの検出状況を確認
-  const suspiciousFiles = results.filter(r => r.isSuspiciousFile);
+  const suspiciousFiles = results.filter((r) => r.isSuspiciousFile);
   if (suspiciousFiles.length > 0) {
-    console.log('🚨 結果テーブルで不正ファイル検出:', suspiciousFiles);
+    console.log("🚨 結果テーブルで不正ファイル検出:", suspiciousFiles);
   }
 
   const tableRows: TableRow[] = results.flatMap((result, index): TableRow[] => {
@@ -183,65 +181,65 @@ export function ResultsTable({
     }
   });
 
-  const handleShowDetails = (row: TableRow) => {
-    const geocoding = geocodingResults.get(row.rowKey);
+  // const handleShowDetails = (row: TableRow) => {
+  //   const geocoding = geocodingResults.get(row.rowKey);
 
-    if (row.property) {
-      const property = getEditedProperty(row)!;
-      toast.info(
-        <div className="space-y-2 w-fit">
-          {/* デバッグ用 削除しないでください*/}
-          <pre className="text-muted-foreground bg-muted p-2 border rounded-md text-xs break-all whitespace-pre-wrap">
-            {JSON.stringify(property, null, 2)}
-          </pre>
-          <pre className="text-muted-foreground bg-muted p-2 border rounded-md text-xs break-all whitespace-pre-wrap">
-            {JSON.stringify(geocoding, null, 2)}
-          </pre>
-          <div className="text-muted-foreground bg-muted p-2 border rounded-md">
-            <p>物件住所: {property.propertyAddress}</p>
-            <p>所有者名: {property.ownerName}</p>
-            <p>所有者住所: {property.ownerAddress}</p>
+  //   if (row.property) {
+  //     const property = getEditedProperty(row)!;
+  //     toast.info(
+  //       <div className="space-y-2 w-fit">
+  //         {/* デバッグ用 削除しないでください*/}
+  //         <pre className="text-muted-foreground bg-muted p-2 border rounded-md text-xs break-all whitespace-pre-wrap">
+  //           {JSON.stringify(property, null, 2)}
+  //         </pre>
+  //         <pre className="text-muted-foreground bg-muted p-2 border rounded-md text-xs break-all whitespace-pre-wrap">
+  //           {JSON.stringify(geocoding, null, 2)}
+  //         </pre>
+  //         <div className="text-muted-foreground bg-muted p-2 border rounded-md">
+  //           <p>物件住所: {property.propertyAddress}</p>
+  //           <p>所有者名: {property.ownerName}</p>
+  //           <p>所有者住所: {property.ownerAddress}</p>
 
-            {geocoding && (
-              <>
-                <div className="mt-2 pt-2 border-t border-muted-foreground/20">
-                  <p className="font-semibold mb-1">位置情報:</p>
-                  {geocoding.lat && geocoding.lng ? (
-                    <>
-                      <p>緯度: {geocoding.lat}</p>
-                      <p>経度: {geocoding.lng}</p>
-                      <p>
-                        ストリートビュー:{" "}
-                        {geocoding.streetViewAvailable
-                          ? "利用可能"
-                          : "利用不可"}
-                      </p>
-                    </>
-                  ) : geocoding.error ? (
-                    <p className="text-red-500">エラー: {geocoding.error}</p>
-                  ) : (
-                    <p className="text-zinc-500">未取得</p>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        </div>,
-        {
-          duration: 5000,
-          position: "top-center",
-          style: {
-            maxWidth: "1500px",
-            width: "auto",
-          },
-        }
-      );
-    } else {
-      toast.error(`エラー: ${row.error || "情報がありません"}`, {
-        position: "top-center",
-      });
-    }
-  };
+  //           {geocoding && (
+  //             <>
+  //               <div className="mt-2 pt-2 border-t border-muted-foreground/20">
+  //                 <p className="font-semibold mb-1">位置情報:</p>
+  //                 {geocoding.lat && geocoding.lng ? (
+  //                   <>
+  //                     <p>緯度: {geocoding.lat}</p>
+  //                     <p>経度: {geocoding.lng}</p>
+  //                     <p>
+  //                       ストリートビュー:{" "}
+  //                       {geocoding.streetViewAvailable
+  //                         ? "利用可能"
+  //                         : "利用不可"}
+  //                     </p>
+  //                   </>
+  //                 ) : geocoding.error ? (
+  //                   <p className="text-red-500">エラー: {geocoding.error}</p>
+  //                 ) : (
+  //                   <p className="text-zinc-500">未取得</p>
+  //                 )}
+  //               </div>
+  //             </>
+  //           )}
+  //         </div>
+  //       </div>,
+  //       {
+  //         duration: 5000,
+  //         position: "top-center",
+  //         style: {
+  //           maxWidth: "1500px",
+  //           width: "auto",
+  //         },
+  //       }
+  //     );
+  //   } else {
+  //     toast.error(`エラー: ${row.error || "情報がありません"}`, {
+  //       position: "top-center",
+  //     });
+  //   }
+  // };
 
   const handleDelete = (originalIndex: number) => {
     if (onDelete) {
@@ -404,11 +402,21 @@ export function ResultsTable({
                     size="sm"
                     onClick={() => {
                       // 不正なファイルがあるかチェック
-                      const hasSuspiciousFiles = tableRows.some((row) => row.isSuspiciousFile);
+                      const hasSuspiciousFiles = tableRows.some(
+                        (row) => row.isSuspiciousFile
+                      );
                       if (hasSuspiciousFiles) {
-                        const suspiciousFileNames = [...new Set(tableRows.filter(row => row.isSuspiciousFile).map(row => row.fileName))];
+                        const suspiciousFileNames = [
+                          ...new Set(
+                            tableRows
+                              .filter((row) => row.isSuspiciousFile)
+                              .map((row) => row.fileName)
+                          ),
+                        ];
                         toast.error(
-                          `不正なファイルが含まれています。\n${suspiciousFileNames.join('、')}\n\n該当ファイルを削除してから保存してください。`,
+                          `不正なファイルが含まれています。\n${suspiciousFileNames.join(
+                            "、"
+                          )}\n\n該当ファイルを削除してから保存してください。`,
                           {
                             duration: 5000,
                           }
@@ -433,7 +441,8 @@ export function ResultsTable({
 
                       // 位置情報が取得されていない物件をチェック
                       const propertiesWithoutLocation = tableRows.filter(
-                        (row) => row.property && !geocodingResults.get(row.rowKey)?.lat
+                        (row) =>
+                          row.property && !geocodingResults.get(row.rowKey)?.lat
                       );
 
                       if (propertiesWithoutLocation.length > 0) {
@@ -446,7 +455,10 @@ export function ResultsTable({
 
                       setSaveDialogOpen(true);
                     }}
-                    disabled={totalProperties === 0 || tableRows.some(row => row.isSuspiciousFile)}
+                    disabled={
+                      totalProperties === 0 ||
+                      tableRows.some((row) => row.isSuspiciousFile)
+                    }
                     className="text-zinc-400 hover:text-white border-zinc-700"
                   >
                     <Database className="mr-2 size-4" />
@@ -454,7 +466,7 @@ export function ResultsTable({
                   </Button>
                 </span>
               </TooltipTrigger>
-              {tableRows.some(row => row.isSuspiciousFile) && (
+              {tableRows.some((row) => row.isSuspiciousFile) && (
                 <TooltipContent>
                   <p>不正なファイルを削除してから保存してください</p>
                 </TooltipContent>
@@ -495,10 +507,12 @@ export function ResultsTable({
                 </div>
               )}
               <div className="flex items-center justify-between">
-                <h3 className={cn(
-                  "font-medium text-white text-sm truncate flex-1 mr-4",
-                  row.isSuspiciousFile && "text-red-400"
-                )}>
+                <h3
+                  className={cn(
+                    "font-medium text-white text-sm truncate flex-1 mr-4",
+                    row.isSuspiciousFile && "text-red-400"
+                  )}
+                >
                   {row.fileName}
                 </h3>
                 <div className="flex items-center gap-2">
@@ -521,10 +535,12 @@ export function ResultsTable({
               <div className="grid grid-cols-1 gap-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-zinc-500">サイズ</span>
-                  <span className={cn(
-                    "text-zinc-300",
-                    row.isSuspiciousFile && "text-red-400"
-                  )}>
+                  <span
+                    className={cn(
+                      "text-zinc-300",
+                      row.isSuspiciousFile && "text-red-400"
+                    )}
+                  >
                     {formatFileSize(row.fileSize)}
                   </span>
                 </div>
@@ -705,150 +721,162 @@ export function ResultsTable({
                       row.isSuspiciousFile && "bg-red-900/20"
                     )}
                   >
-                    <TableCell className={cn(
-                      "font-medium text-foreground w-32 p-0",
-                      row.isSuspiciousFile && "text-red-500"
-                    )}>
+                    <TableCell
+                      className={cn(
+                        "font-medium text-foreground w-32 p-0",
+                        row.isSuspiciousFile && "text-red-500"
+                      )}
+                    >
                       <CopyCell value={row.fileName} truncate={true} />
                     </TableCell>
-                  <TableCell className="text-center">
-                    {row.status === "success" ? (
-                      <Check className="size-4 text-green-500 mx-auto" />
-                    ) : (
-                      <X className="size-4 text-destructive mx-auto" />
-                    )}
-                  </TableCell>
-                  <TableCell className={cn(
-                    "text-right text-muted-foreground",
-                    row.isSuspiciousFile && "text-red-400"
-                  )}>
-                    {formatFileSize(row.fileSize)}
-                  </TableCell>
-                  <TableCell className={cn(
-                    "text-foreground/80 w-40 p-0",
-                    row.isSuspiciousFile && "text-red-400"
-                  )}>
-                    {row.property ? (
-                      <CopyCell
-                        value={row.property.propertyAddress}
-                        truncate={true}
-                      />
-                    ) : (
-                      <span
-                        className="block truncate px-2 py-1"
-                        title={row.error || "エラー"}
-                      >
-                        {row.error || "エラー"}
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-foreground/80 p-0">
-                    {row.property ? (
-                      <div className="px-2 py-1">
-                        <Input
-                          value={getEditedProperty(row)?.ownerName || ""}
-                          onChange={(e) =>
-                            handleNameEdit(row.rowKey, e.target.value)
-                          }
-                          className={`h-8 text-sm bg-muted/30 border-muted-foreground/20 ${
-                            row.property.isOwnerNameCorrupted
-                              ? "text-red-400"
-                              : ""
-                          }`}
-                          placeholder="所有者名を入力"
-                        />
-                      </div>
-                    ) : (
-                      <span className="block truncate px-2 py-1">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-foreground/80 p-0">
-                    {row.property ? (
-                      <div className="px-2 py-1">
-                        <Input
-                          value={getEditedProperty(row)?.ownerAddress || ""}
-                          onChange={(e) =>
-                            handleAddressEdit(row.rowKey, e.target.value)
-                          }
-                          className={`h-8 text-sm bg-muted/30 border-muted-foreground/20 ${
-                            row.property.isOwnerAddressCorrupted
-                              ? "text-red-400"
-                              : ""
-                          }`}
-                          placeholder="所有者住所を入力"
-                        />
-                      </div>
-                    ) : (
-                      <span className="block truncate px-2 py-1">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {row.property &&
-                      (geocoding?.loading ? (
-                        <Loader2 className="size-4 animate-spin mx-auto text-zinc-400" />
-                      ) : geocoding && geocoding.lat && geocoding.lng ? (
-                        <Button variant="ghost" size="icon" asChild>
-                          <Link
-                            href={generateMapsUrl(
-                              geocoding.lat!,
-                              geocoding.lng!
-                            )}
-                            target="_blank"
-                          >
-                            <ExternalLink />
-                          </Link>
-                        </Button>
-                      ) : geocoding?.error ? (
-                        <X className="size-4 text-red-500 mx-auto" />
+                    <TableCell className="text-center">
+                      {row.status === "success" ? (
+                        <Check className="size-4 text-green-500 mx-auto" />
                       ) : (
-                        <span className="text-muted-foreground">-</span>
-                      ))}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {row.property &&
-                      geocoding &&
-                      (geocoding.streetViewAvailable === true &&
-                      geocoding.lat &&
-                      geocoding.lng ? (
-                        <Button variant="ghost" size="icon" asChild>
-                          <Link
-                            href={generateStreetViewUrl(
-                              geocoding.lat!,
-                              geocoding.lng!
-                            )}
-                            target="_blank"
-                          >
-                            <ExternalLink />
-                          </Link>
-                        </Button>
-                      ) : geocoding.streetViewAvailable === false ? (
-                        <X className="size-4 text-zinc-500 mx-auto" />
-                      ) : (
-                        <span className="text-zinc-500">-</span>
-                      ))}
-                  </TableCell>
-                  <TableCell className="w-12">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(row.originalIndex)}
-                      className="h-8 w-8 p-0 hover:bg-red-900/30 hover:text-red-400"
-                      title="削除"
+                        <X className="size-4 text-destructive mx-auto" />
+                      )}
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        "text-right text-muted-foreground",
+                        row.isSuspiciousFile && "text-red-400"
+                      )}
                     >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-                {row.isSuspiciousFile && row.suspiciousReason && (
-                  <TableRow key={`${index}-warning`} className="bg-red-900/20 hover:bg-red-900/30">
-                    <TableCell colSpan={9} className="text-red-400 text-sm py-2">
-                      ⚠️ 不正なファイルの可能性: {row.suspiciousReason}
+                      {formatFileSize(row.fileSize)}
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        "text-foreground/80 w-40 p-0",
+                        row.isSuspiciousFile && "text-red-400"
+                      )}
+                    >
+                      {row.property ? (
+                        <CopyCell
+                          value={row.property.propertyAddress}
+                          truncate={true}
+                        />
+                      ) : (
+                        <span
+                          className="block truncate px-2 py-1"
+                          title={row.error || "エラー"}
+                        >
+                          {row.error || "エラー"}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-foreground/80 p-0">
+                      {row.property ? (
+                        <div className="px-2 py-1">
+                          <Input
+                            value={getEditedProperty(row)?.ownerName || ""}
+                            onChange={(e) =>
+                              handleNameEdit(row.rowKey, e.target.value)
+                            }
+                            className={`h-8 text-sm bg-muted/30 border-muted-foreground/20 ${
+                              row.property.isOwnerNameCorrupted
+                                ? "text-red-400"
+                                : ""
+                            }`}
+                            placeholder="所有者名を入力"
+                          />
+                        </div>
+                      ) : (
+                        <span className="block truncate px-2 py-1">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-foreground/80 p-0">
+                      {row.property ? (
+                        <div className="px-2 py-1">
+                          <Input
+                            value={getEditedProperty(row)?.ownerAddress || ""}
+                            onChange={(e) =>
+                              handleAddressEdit(row.rowKey, e.target.value)
+                            }
+                            className={`h-8 text-sm bg-muted/30 border-muted-foreground/20 ${
+                              row.property.isOwnerAddressCorrupted
+                                ? "text-red-400"
+                                : ""
+                            }`}
+                            placeholder="所有者住所を入力"
+                          />
+                        </div>
+                      ) : (
+                        <span className="block truncate px-2 py-1">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {row.property &&
+                        (geocoding?.loading ? (
+                          <Loader2 className="size-4 animate-spin mx-auto text-zinc-400" />
+                        ) : geocoding && geocoding.lat && geocoding.lng ? (
+                          <Button variant="ghost" size="icon" asChild>
+                            <Link
+                              href={generateMapsUrl(
+                                geocoding.lat!,
+                                geocoding.lng!
+                              )}
+                              target="_blank"
+                            >
+                              <ExternalLink />
+                            </Link>
+                          </Button>
+                        ) : geocoding?.error ? (
+                          <X className="size-4 text-red-500 mx-auto" />
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        ))}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {row.property &&
+                        geocoding &&
+                        (geocoding.streetViewAvailable === true &&
+                        geocoding.lat &&
+                        geocoding.lng ? (
+                          <Button variant="ghost" size="icon" asChild>
+                            <Link
+                              href={generateStreetViewUrl(
+                                geocoding.lat!,
+                                geocoding.lng!
+                              )}
+                              target="_blank"
+                            >
+                              <ExternalLink />
+                            </Link>
+                          </Button>
+                        ) : geocoding.streetViewAvailable === false ? (
+                          <X className="size-4 text-zinc-500 mx-auto" />
+                        ) : (
+                          <span className="text-zinc-500">-</span>
+                        ))}
+                    </TableCell>
+                    <TableCell className="w-12">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(row.originalIndex)}
+                        className="h-8 w-8 p-0 hover:bg-red-900/30 hover:text-red-400"
+                        title="削除"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
-                )}
-              </React.Fragment>
-            );
-          })}
+                  {row.isSuspiciousFile && row.suspiciousReason && (
+                    <TableRow
+                      key={`${index}-warning`}
+                      className="bg-red-900/20 hover:bg-red-900/30"
+                    >
+                      <TableCell
+                        colSpan={9}
+                        className="text-red-400 text-sm py-2"
+                      >
+                        ⚠️ 不正なファイルの可能性: {row.suspiciousReason}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </React.Fragment>
+              );
+            })}
           </TableBody>
         </Table>
       </div>

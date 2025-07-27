@@ -59,11 +59,10 @@ export function SavePropertiesDialog({
 
   const onSubmit = async (data: CreateProjectFormData) => {
     setIsLoading(true);
-    let sessionId: string | null = null;
     
     try {
       // 1. セッションIDを生成
-      sessionId = crypto.randomUUID();
+      const sessionId = crypto.randomUUID();
       
       // 2. プログレス表示を開始
       setSaveProgress({ phase: 'uploading', progress: 0 });
@@ -112,16 +111,18 @@ export function SavePropertiesDialog({
       const { data: result, error: rpcError } = await supabase
         .rpc('create_project_and_import_properties', {
           p_project_name: data.name,
-          p_project_description: data.description || null,
+          p_project_description: data.description || '',
           p_session_id: sessionId
-        }) as { data: CreateProjectAndImportResponse | null; error: any };
+        });
       
       if (rpcError) {
         console.error('RPC実行エラー:', rpcError);
         throw new Error(rpcError.message || 'プロジェクトの作成に失敗しました');
       }
       
-      if (!result || !result.success) {
+      const typedResult = result as CreateProjectAndImportResponse | null;
+      
+      if (!typedResult || !typedResult.success) {
         throw new Error('プロジェクトの作成に失敗しました');
       }
       
@@ -129,16 +130,16 @@ export function SavePropertiesDialog({
       setSaveProgress({ phase: 'completed', progress: 100 });
       
       toast.success(
-        `プロジェクト「${result.projectName}」を作成し、${result.importedCount}件の物件情報を保存しました`
+        `プロジェクト「${typedResult.projectName}」を作成し、${typedResult.importedCount}件の物件情報を保存しました`
       );
       
       if (onSaveComplete) {
         onSaveComplete({
           success: true,
-          projectId: result.projectId,
-          projectName: result.projectName,
-          savedCount: result.importedCount,
-          errors: result.errors?.map((err, index) => ({
+          projectId: typedResult.projectId,
+          projectName: typedResult.projectName,
+          savedCount: typedResult.importedCount,
+          errors: typedResult.errors?.map((err, index) => ({
             index,
             propertyAddress: '',
             error: err.error
@@ -152,19 +153,6 @@ export function SavePropertiesDialog({
     } catch (error) {
       console.error('保存エラー:', error);
       toast.error(error instanceof Error ? error.message : '保存に失敗しました。もう一度お試しください。');
-      
-      // ステージングデータのクリーンアップ（オプション）
-      if (sessionId) {
-        await supabase
-          .from('import_staging')
-          .delete()
-          .eq('session_id', sessionId)
-          .then(({ error }) => {
-            if (error) {
-              console.error('ステージングデータのクリーンアップエラー:', error);
-            }
-          });
-      }
     } finally {
       setIsLoading(false);
       setSaveProgress(null);

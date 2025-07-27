@@ -279,7 +279,7 @@ async function processFile(file: File, includeFullText: boolean): Promise<FileRe
 
     // 5世帯以上の物件があるかチェック
     const suspiciousProperties = Array.from(propertyOwnerCount.entries())
-      .filter(([_, count]) => count >= 5)
+      .filter(([, count]) => count >= 5)
 
     // 早期終了した場合も不正とみなす
     const isSuspiciousFile = suspiciousProperties.length > 0 || wasEarlyStop

@@ -103,9 +103,6 @@ export function PropertyTable({ properties, projectId }: PropertyTableProps) {
                     {property.primary_owner?.company?.name || "-"}
                   </TableCell>
                   <TableCell>
-                    {property.primary_owner?.company?.position || "-"}
-                  </TableCell>
-                  <TableCell>
                     {(() => {
                       const owner = property.primary_owner;
                       if (!owner) {
