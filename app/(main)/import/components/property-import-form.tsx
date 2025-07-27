@@ -86,7 +86,7 @@ export function PropertyImportForm() {
         }
 
         // 通常のJSONレスポンスを処理
-        const batchResults: ParseResult[] = data.results.map((result: ParseResult) => ({
+        const batchResults: ParseResult[] = data.results.map((result: any) => ({
           fileName: result.fileName,
           fileSize: result.fileSize,
           status: result.status,
@@ -94,7 +94,9 @@ export function PropertyImportForm() {
           textLength: result.textLength,
           processingTime: 0,
           propertyData: result.propertyData,
-          error: result.error
+          error: result.error,
+          isSuspiciousFile: result.isSuspiciousFile,
+          suspiciousReason: result.suspiciousReason
         }))
 
         allResults = [...allResults, ...batchResults]

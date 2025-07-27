@@ -22,6 +22,8 @@ export interface ParseResult {
   processingTime: number
   propertyData?: PropertyData[]
   error?: string
+  isSuspiciousFile?: boolean
+  suspiciousReason?: string
 }
 
 // フォームの状態

@@ -31,6 +31,8 @@ interface FileResult {
     ownerNameWarning?: string
   }>
   error?: string
+  isSuspiciousFile?: boolean
+  suspiciousReason?: string
 }
 
 interface APIResponse {
@@ -262,8 +264,40 @@ async function processFile(file: File, includeFullText: boolean): Promise<FileRe
     const extractedText = extractTextFromPDFData(pdfData)
     console.log("extractedText", extractedText)
     
-    // 不動産情報をパース
-    const propertyData = parsePropertyOwnerData(extractedText)
+    // 不動産情報をパース（5世帯以上検出時に早期終了）
+    const propertyData = parsePropertyOwnerData(extractedText, { earlyStopOnSuspicious: true })
+    
+    // 早期終了が発生したかを判定（最後のデータにwasEarlyStopフラグがある場合）
+    const wasEarlyStop = propertyData.length > 0 && propertyData[propertyData.length - 1].wasEarlyStop === true
+
+    // 物件住所ごとに所有者数をカウント
+    const propertyOwnerCount = new Map<string, number>()
+    propertyData.forEach(data => {
+      const count = propertyOwnerCount.get(data.propertyAddress) || 0
+      propertyOwnerCount.set(data.propertyAddress, count + 1)
+    })
+
+    // 5世帯以上の物件があるかチェック
+    const suspiciousProperties = Array.from(propertyOwnerCount.entries())
+      .filter(([_, count]) => count >= 5)
+
+    // 早期終了した場合も不正とみなす
+    const isSuspiciousFile = suspiciousProperties.length > 0 || wasEarlyStop
+    const suspiciousReason = isSuspiciousFile 
+      ? wasEarlyStop 
+        ? `${propertyData[0]?.propertyAddress || 'ファイル'}で複数世帯の所有者が検出されました（処理を早期終了）`
+        : `${suspiciousProperties[0][0]}（${suspiciousProperties[0][1]}世帯）で5世帯以上の所有者が検出されました`
+      : undefined
+
+    // デバッグログ
+    if (suspiciousProperties.length > 0) {
+      console.log('🚨 不正なファイル検出:', {
+        fileName: file.name,
+        suspiciousProperties,
+        isSuspiciousFile,
+        suspiciousReason
+      })
+    }
 
     return {
       fileName: file.name,
@@ -273,7 +307,13 @@ async function processFile(file: File, includeFullText: boolean): Promise<FileRe
       textLength: extractedText.length,
       text: includeFullText ? extractedText : undefined,
       metadata: pdfData.Meta || {},
-      propertyData
+      propertyData: propertyData.map(data => {
+        // wasEarlyStopフラグは返却データから削除
+        const { wasEarlyStop, ...cleanData } = data
+        return cleanData
+      }),
+      isSuspiciousFile,
+      suspiciousReason
     }
   } catch (error) {
     return {

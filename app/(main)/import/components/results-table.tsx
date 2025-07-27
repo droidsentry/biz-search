@@ -1,12 +1,7 @@
 "use client";
 
+import React from "react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -22,8 +17,6 @@ import {
   MapPin,
   MapPinned,
   MapPlus,
-  MoreHorizontal,
-  MoreVertical,
   RefreshCw,
   Trash2,
   X,
@@ -40,6 +33,13 @@ import { SavePropertiesDialog } from "./save-properties-dialog";
 import { NavigationConfirmDialog } from "./navigation-confirm-dialog";
 import { PropertyData as PropertyDataType } from "@/lib/types/property";
 import { Database } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ResultsTableProps {
   results: ParseResult[];
@@ -107,6 +107,8 @@ export function ResultsTable({
     error?: string;
     originalIndex: number; // 元のresults配列のインデックス
     rowKey: string; // ジオコーディング結果のキー
+    isSuspiciousFile?: boolean; // 不正なファイルか
+    suspiciousReason?: string; // 不正な理由
   }
 
   // 編集された名前を取得する関数
@@ -143,6 +145,12 @@ export function ResultsTable({
     setEditedData(newEditedData);
   };
 
+  // デバッグ：不正ファイルの検出状況を確認
+  const suspiciousFiles = results.filter(r => r.isSuspiciousFile);
+  if (suspiciousFiles.length > 0) {
+    console.log('🚨 結果テーブルで不正ファイル検出:', suspiciousFiles);
+  }
+
   const tableRows: TableRow[] = results.flatMap((result, index): TableRow[] => {
     if (result.propertyData && result.propertyData.length > 0) {
       return result.propertyData.map(
@@ -154,6 +162,8 @@ export function ResultsTable({
           error: undefined,
           originalIndex: index,
           rowKey: `${index}-${propIndex}`,
+          isSuspiciousFile: result.isSuspiciousFile,
+          suspiciousReason: result.suspiciousReason,
         })
       );
     } else {
@@ -166,6 +176,8 @@ export function ResultsTable({
           error: result.error,
           originalIndex: index,
           rowKey: `${index}-0`,
+          isSuspiciousFile: result.isSuspiciousFile,
+          suspiciousReason: result.suspiciousReason,
         },
       ];
     }
@@ -383,46 +395,72 @@ export function ResultsTable({
             )}
           </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              // 所有者住所が取得できない物件をチェック
-              const propertiesWithoutOwnerAddress = tableRows.filter(
-                (row) => row.property && !row.property.ownerAddress
-              );
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span tabIndex={0}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      // 不正なファイルがあるかチェック
+                      const hasSuspiciousFiles = tableRows.some((row) => row.isSuspiciousFile);
+                      if (hasSuspiciousFiles) {
+                        const suspiciousFileNames = [...new Set(tableRows.filter(row => row.isSuspiciousFile).map(row => row.fileName))];
+                        toast.error(
+                          `不正なファイルが含まれています。\n${suspiciousFileNames.join('、')}\n\n該当ファイルを削除してから保存してください。`,
+                          {
+                            duration: 5000,
+                          }
+                        );
+                        return;
+                      }
 
-              if (propertiesWithoutOwnerAddress.length > 0) {
-                toast.error(
-                  `${propertiesWithoutOwnerAddress.length}件の物件で所有者住所が取得できていません。\nPDFから所有者住所が正しく読み取れていない可能性があります。\n\n所有者住所がない物件は保存できません。`,
-                  {
-                    duration: 5000,
-                  }
-                );
-                return;
-              }
+                      // 所有者住所が取得できない物件をチェック
+                      const propertiesWithoutOwnerAddress = tableRows.filter(
+                        (row) => row.property && !row.property.ownerAddress
+                      );
 
-              // 位置情報が取得されていない物件をチェック
-              const propertiesWithoutLocation = tableRows.filter(
-                (row) => row.property && !geocodingResults.get(row.rowKey)?.lat
-              );
+                      if (propertiesWithoutOwnerAddress.length > 0) {
+                        toast.error(
+                          `${propertiesWithoutOwnerAddress.length}件の物件で所有者住所が取得できていません。\nPDFから所有者住所が正しく読み取れていない可能性があります。\n\n所有者住所がない物件は保存できません。`,
+                          {
+                            duration: 5000,
+                          }
+                        );
+                        return;
+                      }
 
-              if (propertiesWithoutLocation.length > 0) {
-                const confirmMessage = `${propertiesWithoutLocation.length}件の物件で位置情報が取得されていません。\n位置情報なしで保存しますか？\n\n位置情報がない場合、地図表示やストリートビューが利用できません。`;
+                      // 位置情報が取得されていない物件をチェック
+                      const propertiesWithoutLocation = tableRows.filter(
+                        (row) => row.property && !geocodingResults.get(row.rowKey)?.lat
+                      );
 
-                if (!window.confirm(confirmMessage)) {
-                  return;
-                }
-              }
+                      if (propertiesWithoutLocation.length > 0) {
+                        const confirmMessage = `${propertiesWithoutLocation.length}件の物件で位置情報が取得されていません。\n位置情報なしで保存しますか？\n\n位置情報がない場合、地図表示やストリートビューが利用できません。`;
 
-              setSaveDialogOpen(true);
-            }}
-            disabled={totalProperties === 0}
-            className="text-zinc-400 hover:text-white border-zinc-700"
-          >
-            <Database className="mr-2 size-4" />
-            データベースに保存
-          </Button>
+                        if (!window.confirm(confirmMessage)) {
+                          return;
+                        }
+                      }
+
+                      setSaveDialogOpen(true);
+                    }}
+                    disabled={totalProperties === 0 || tableRows.some(row => row.isSuspiciousFile)}
+                    className="text-zinc-400 hover:text-white border-zinc-700"
+                  >
+                    <Database className="mr-2 size-4" />
+                    データベースに保存
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {tableRows.some(row => row.isSuspiciousFile) && (
+                <TooltipContent>
+                  <p>不正なファイルを削除してから保存してください</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
 
           <Button
             variant="ghost"
@@ -444,10 +482,23 @@ export function ResultsTable({
           return (
             <div
               key={index}
-              className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 space-y-3"
+              className={cn(
+                "rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 space-y-3",
+                row.isSuspiciousFile && "border-red-800 bg-red-900/20"
+              )}
             >
+              {row.isSuspiciousFile && row.suspiciousReason && (
+                <div className="rounded-md bg-red-800/30 p-3 mb-3">
+                  <p className="text-red-400 text-sm">
+                    ⚠️ 不正なファイルの可能性: {row.suspiciousReason}
+                  </p>
+                </div>
+              )}
               <div className="flex items-center justify-between">
-                <h3 className="font-medium text-white text-sm truncate flex-1 mr-4">
+                <h3 className={cn(
+                  "font-medium text-white text-sm truncate flex-1 mr-4",
+                  row.isSuspiciousFile && "text-red-400"
+                )}>
                   {row.fileName}
                 </h3>
                 <div className="flex items-center gap-2">
@@ -456,33 +507,24 @@ export function ResultsTable({
                   ) : (
                     <X className="size-5 text-red-500 flex-shrink-0" />
                   )}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <MoreVertical className="size-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleShowDetails(row)}>
-                        <Eye className="mr-2 size-4" />
-                        詳細を表示
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleDelete(row.originalIndex)}
-                        className="text-red-600 focus:text-red-600"
-                      >
-                        <Trash2 className="mr-2 size-4" />
-                        削除
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDelete(row.originalIndex)}
+                    className="h-8 w-8 p-0 hover:bg-red-900/30 hover:text-red-400"
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-zinc-500">サイズ</span>
-                  <span className="text-zinc-300">
+                  <span className={cn(
+                    "text-zinc-300",
+                    row.isSuspiciousFile && "text-red-400"
+                  )}>
                     {formatFileSize(row.fileSize)}
                   </span>
                 </div>
@@ -494,7 +536,10 @@ export function ResultsTable({
                       <div className="-mx-4">
                         <CopyCell
                           value={row.property.propertyAddress}
-                          className="text-white font-medium"
+                          className={cn(
+                            "text-white font-medium",
+                            row.isSuspiciousFile && "text-red-400"
+                          )}
                           truncate={false}
                         />
                       </div>
@@ -653,13 +698,19 @@ export function ResultsTable({
               const geocoding = geocodingResults.get(row.rowKey);
 
               return (
-                <TableRow
-                  key={index}
-                  className="border-muted-foreground/20 hover:bg-muted-foreground/10"
-                >
-                  <TableCell className="font-medium text-foreground w-32 p-0">
-                    <CopyCell value={row.fileName} truncate={true} />
-                  </TableCell>
+                <React.Fragment key={index}>
+                  <TableRow
+                    className={cn(
+                      "border-muted-foreground/20 hover:bg-muted-foreground/10",
+                      row.isSuspiciousFile && "bg-red-900/20"
+                    )}
+                  >
+                    <TableCell className={cn(
+                      "font-medium text-foreground w-32 p-0",
+                      row.isSuspiciousFile && "text-red-500"
+                    )}>
+                      <CopyCell value={row.fileName} truncate={true} />
+                    </TableCell>
                   <TableCell className="text-center">
                     {row.status === "success" ? (
                       <Check className="size-4 text-green-500 mx-auto" />
@@ -667,10 +718,16 @@ export function ResultsTable({
                       <X className="size-4 text-destructive mx-auto" />
                     )}
                   </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
+                  <TableCell className={cn(
+                    "text-right text-muted-foreground",
+                    row.isSuspiciousFile && "text-red-400"
+                  )}>
                     {formatFileSize(row.fileSize)}
                   </TableCell>
-                  <TableCell className="text-foreground/80 w-40 p-0">
+                  <TableCell className={cn(
+                    "text-foreground/80 w-40 p-0",
+                    row.isSuspiciousFile && "text-red-400"
+                  )}>
                     {row.property ? (
                       <CopyCell
                         value={row.property.propertyAddress}
@@ -771,36 +828,27 @@ export function ResultsTable({
                       ))}
                   </TableCell>
                   <TableCell className="w-12">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                        >
-                          <MoreHorizontal className="size-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => handleShowDetails(row)}
-                        >
-                          <Eye className="mr-2 size-4" />
-                          詳細を表示
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleDelete(row.originalIndex)}
-                          className="text-red-600 focus:text-red-600"
-                        >
-                          <Trash2 className="mr-2 size-4" />
-                          削除
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(row.originalIndex)}
+                      className="h-8 w-8 p-0 hover:bg-red-900/30 hover:text-red-400"
+                      title="削除"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
-              );
-            })}
+                {row.isSuspiciousFile && row.suspiciousReason && (
+                  <TableRow key={`${index}-warning`} className="bg-red-900/20 hover:bg-red-900/30">
+                    <TableCell colSpan={9} className="text-red-400 text-sm py-2">
+                      ⚠️ 不正なファイルの可能性: {row.suspiciousReason}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </React.Fragment>
+            );
+          })}
           </TableBody>
         </Table>
       </div>

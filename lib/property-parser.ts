@@ -7,18 +7,24 @@ interface PropertyOwner {
   isOwnerNameCorrupted?: boolean // 所有者名が文字化けしているか
   ownerAddressWarning?: string // 所有者住所の警告（文字欠損など）
   isOwnerAddressCorrupted?: boolean // 所有者住所が文字化けしているか
+  wasEarlyStop?: boolean // 早期終了フラグ（最後の1件にのみ設定）
 }
 
 /**
  * PDFから抽出された不動産所有者情報をパースする
  * @param text PDFから抽出されたテキスト
+ * @param options パースオプション
  * @returns パース済みの所有者情報配列
  */
-export function parsePropertyOwnerData(text: string): PropertyOwner[] {
+export function parsePropertyOwnerData(text: string, options?: { maxOwnersPerProperty?: number; earlyStopOnSuspicious?: boolean }): PropertyOwner[] {
   const properties: PropertyOwner[] = []
+  const maxOwners = options?.maxOwnersPerProperty || Infinity
+  const earlyStop = options?.earlyStopOnSuspicious ?? false
   
   console.log('=== パース開始 ===')
   console.log('入力テキスト長:', text.length)
+  console.log('最大所有者数制限:', maxOwners === Infinity ? '無制限' : maxOwners)
+  console.log('不正検出時の早期終了:', earlyStop)
   
   // テキストを行に分割
   const lines = text.split('\n')
@@ -28,6 +34,7 @@ export function parsePropertyOwnerData(text: string): PropertyOwner[] {
   let currentPropertyAddress = ''
   let isCoOwnerMode = false  // 共有者モードかどうか
   const coOwnersMap = new Map<string, string[]>()  // 住所ごとに共有者をグループ化
+  const propertyOwnerCount = new Map<string, number>()  // 物件ごとの所有者数
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim()
@@ -244,6 +251,23 @@ export function parsePropertyOwnerData(text: string): PropertyOwner[] {
             isCorrupted: isOwnerNameCorrupted
           })
           
+          // 物件ごとの所有者数をチェック
+          const currentCount = propertyOwnerCount.get(currentPropertyAddress) || 0
+          if (currentCount >= maxOwners) {
+            console.log(`⚠️ 物件「${currentPropertyAddress}」で${maxOwners}世帯以上の所有者を検出。処理を中断します。`)
+            return properties  // 早期終了
+          }
+          
+          // 早期停止オプションが有効で、既に4世帯分ある場合（5世帯目で検出）
+          if (earlyStop && currentCount >= 4) {
+            console.log(`🚨 物件「${currentPropertyAddress}」で5世帯以上を検出。早期終了します（4世帯分のみ返却）。`)
+            // 最後の要素に早期終了フラグを設定
+            if (properties.length > 0) {
+              properties[properties.length - 1].wasEarlyStop = true
+            }
+            return properties  // 5世帯目以降は追加せずに終了
+          }
+          
           properties.push({
             recordDate: currentRecordDate,
             propertyAddress: currentPropertyAddress,
@@ -254,6 +278,10 @@ export function parsePropertyOwnerData(text: string): PropertyOwner[] {
             ownerAddressWarning: addressWarning,
             isOwnerAddressCorrupted: isOwnerAddressCorrupted
           })
+          
+          // カウントを更新
+          propertyOwnerCount.set(currentPropertyAddress, currentCount + 1)
+          
           matched = true
           break
         }
@@ -267,7 +295,73 @@ export function parsePropertyOwnerData(text: string): PropertyOwner[] {
   
   // 共有者情報がある場合は住所ごとにまとめて追加
   if (isCoOwnerMode && coOwnersMap.size > 0) {
+    // 早期停止チェック - 既に4世帯分ある場合
+    if (earlyStop && properties.length >= 4) {
+      console.log(`🚨 共有者モードで5世帯以上を検出（既に${properties.length}世帯、共有者${coOwnersMap.size}件）。早期終了フラグを設定します。`)
+      // 最後の要素に早期終了フラグを設定
+      if (properties.length > 0) {
+        properties[properties.length - 1].wasEarlyStop = true
+      }
+      return properties  // 共有者データは追加せずに終了
+    }
+    
+    // 早期停止モードで、まだデータが少なく、共有者を含めて5世帯以上になる場合
+    if (earlyStop && properties.length < 4 && properties.length + coOwnersMap.size >= 5) {
+      console.log(`🚨 共有者モードで5世帯以上を検出（既存${properties.length}世帯 + 共有者${coOwnersMap.size}件）。${4 - properties.length}世帯分の共有者のみ処理します。`)
+      // 必要な世帯数だけ処理
+      let processedCount = 0
+      const neededCount = 4 - properties.length
+      
+      for (const [address, names] of coOwnersMap) {
+        if (processedCount >= neededCount) break
+        
+        console.log('共有者情報を追加:', { address, names })
+        const combinedName = names.join('、')
+        
+        // 各共有者の名前もチェック
+        let nameWarning: string | undefined
+        let isOwnerNameCorrupted = false
+        for (const name of names) {
+          const warning = detectIncompleteOwnerNamePattern(name)
+          if (warning) {
+            nameWarning = warning + ` (共有者: ${name})`
+            isOwnerNameCorrupted = true
+            break
+          }
+        }
+        
+        // 住所の警告チェック
+        const addressWarning = detectIncompleteAddressPattern(address)
+        const isOwnerAddressCorrupted = addressWarning !== undefined
+        
+        properties.push({
+          recordDate: currentRecordDate,
+          propertyAddress: currentPropertyAddress,
+          ownerName: combinedName,
+          ownerAddress: address,
+          ownerNameWarning: nameWarning,
+          isOwnerNameCorrupted: isOwnerNameCorrupted,
+          ownerAddressWarning: addressWarning,
+          isOwnerAddressCorrupted: isOwnerAddressCorrupted,
+          wasEarlyStop: processedCount === neededCount - 1  // 最後の1件にのみ早期終了フラグを設定
+        })
+        
+        processedCount++
+      }
+      
+      return properties
+    }
+    
     coOwnersMap.forEach((names, address) => {
+      // 早期停止チェック
+      if (earlyStop) {
+        const currentCount = propertyOwnerCount.get(currentPropertyAddress) || 0
+        if (currentCount >= 4) {
+          console.log(`🚨 共有者処理中に既に4世帯分を検出。スキップします。`)
+          return  // forEachの現在の反復をスキップ
+        }
+      }
+      
       console.log('共有者情報をまとめて追加:', { address, names })
       const combinedName = names.join('、')  // 複数の名前を「、」で結合
       
@@ -297,6 +391,10 @@ export function parsePropertyOwnerData(text: string): PropertyOwner[] {
         ownerAddressWarning: addressWarning,
         isOwnerAddressCorrupted: isOwnerAddressCorrupted
       })
+      
+      // カウントを更新
+      const count = propertyOwnerCount.get(currentPropertyAddress) || 0
+      propertyOwnerCount.set(currentPropertyAddress, count + 1)
     })
   }
   
