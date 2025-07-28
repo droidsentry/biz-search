@@ -1,202 +1,216 @@
-'use client'
+"use client";
 
-import { useState, useCallback } from 'react'
-import { toast } from 'sonner'
-import { FileDropzone } from './file-dropzone'
-import { FileConfirm } from './file-confirm'
-import { ImportProgress } from './import-progress'
-import { ResultsTable } from './results-table'
-import type { ImportStep, ParseResult } from '../types'
+import { useState, useCallback } from "react";
+import { toast } from "sonner";
+import { FileDropzone } from "./file-dropzone";
+import { FileConfirm } from "./file-confirm";
+import { ImportProgress } from "./import-progress";
+import { ResultsTable } from "./results-table";
+import type { ImportStep, ParseResult } from "../types";
 
 export function PropertyImportForm() {
-  const [step, setStep] = useState<ImportStep>('upload')
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
-  const [results, setResults] = useState<ParseResult[]>([])
+  const [step, setStep] = useState<ImportStep>("upload");
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [results, setResults] = useState<ParseResult[]>([]);
   const [processingProgress, setProcessingProgress] = useState({
     currentBatch: 0,
     totalBatches: 0,
     processedFiles: 0,
-    totalFiles: 0
-  })
+    totalFiles: 0,
+  });
 
   const processFiles = useCallback(async () => {
-    setStep('processing')
+    setStep("processing");
 
     try {
-      const BATCH_SIZE = 50 // バッチサイズ
-      const totalFiles = selectedFiles.length
-      const batchCount = Math.ceil(totalFiles / BATCH_SIZE)
-      
-      let allResults: ParseResult[] = []
-      let totalSuccessful = 0
-      let totalFailed = 0
+      const BATCH_SIZE = 50; // バッチサイズ
+      const totalFiles = selectedFiles.length;
+      const batchCount = Math.ceil(totalFiles / BATCH_SIZE);
+
+      let allResults: ParseResult[] = [];
+      let totalSuccessful = 0;
+      let totalFailed = 0;
 
       // バッチ処理
       for (let i = 0; i < batchCount; i++) {
-        const start = i * BATCH_SIZE
-        const end = Math.min(start + BATCH_SIZE, totalFiles)
-        const batchFiles = selectedFiles.slice(start, end)
-        
+        const start = i * BATCH_SIZE;
+        const end = Math.min(start + BATCH_SIZE, totalFiles);
+        const batchFiles = selectedFiles.slice(start, end);
+
         // 進捗情報を設定（進捗表示コンポーネントで使用）
-        const currentBatch = i + 1
-        const processedFiles = start
-        
+        const currentBatch = i + 1;
+        const processedFiles = start;
+
         // 進捗状態を更新
         setProcessingProgress({
           currentBatch,
           totalBatches: batchCount,
           processedFiles,
-          totalFiles
-        })
-        
-        // バッチの進捗を表示
-        toast.info(`バッチ ${currentBatch}/${batchCount} を処理中... (${start + 1}-${end}/${totalFiles}ファイル)`)
+          totalFiles,
+        });
+
+        // 処理の進捗を表示
+        toast.info(
+          `処理 ${currentBatch}/${batchCount} を実行中... (${
+            start + 1
+          }-${end}/${totalFiles}ファイル)`
+        );
 
         // FormDataを作成
-        const formData = new FormData()
-        batchFiles.forEach(file => {
-          formData.append('pdfs', file)
-        })
+        const formData = new FormData();
+        batchFiles.forEach((file) => {
+          formData.append("pdfs", file);
+        });
 
         // APIエンドポイントに送信
-        const response = await fetch('/api/parse-documents', {
-          method: 'POST',
-          body: formData
-        })
+        const response = await fetch("/api/parse-documents", {
+          method: "POST",
+          body: formData,
+        });
 
-        const data = await response.json()
+        const data = await response.json();
 
         if (!response.ok) {
           // エラーが発生してもバッチ処理を継続
-          console.error(`バッチ ${currentBatch} エラー:`, data.error)
-          toast.error(`バッチ ${currentBatch} の処理に失敗: ${data.error}`)
-          
+          // console.error(`バッチ ${currentBatch} エラー:`, data.error)
+          // toast.error(`バッチ ${currentBatch} の処理に失敗: ${data.error}`)
+
           // 失敗したファイルもresultsに追加（エラー表示のため）
-          const failedResults = batchFiles.map(file => ({
+          const failedResults = batchFiles.map((file) => ({
             fileName: file.name,
             fileSize: file.size,
-            status: 'error' as const,
-            error: data.error || 'バッチ処理エラー',
+            status: "error" as const,
+            error: data.error || "処理エラー",
             processingTime: 0,
-            propertyData: undefined
-          }))
-          allResults = [...allResults, ...failedResults]
-          totalFailed += batchFiles.length
-          continue
+            propertyData: undefined,
+          }));
+          allResults = [...allResults, ...failedResults];
+          totalFailed += batchFiles.length;
+          continue;
         }
 
         // 通常のJSONレスポンスを処理
         interface PDFMetadata {
-          Title?: string
-          Author?: string
-          Subject?: string
-          Creator?: string
-          Producer?: string
-          CreationDate?: string
-          ModDate?: string
-          [key: string]: string | undefined
+          Title?: string;
+          Author?: string;
+          Subject?: string;
+          Creator?: string;
+          Producer?: string;
+          CreationDate?: string;
+          ModDate?: string;
+          [key: string]: string | undefined;
         }
-        
-        interface APIResult {
-          fileName: string
-          fileSize: number
-          status: 'success' | 'error'
-          pageCount?: number
-          textLength?: number
-          text?: string
-          metadata?: PDFMetadata
-          propertyData?: Array<{
-            recordDate: string
-            propertyAddress: string
-            ownerName: string
-            ownerAddress: string
-            ownerNameWarning?: string
-          }>
-          error?: string
-          isSuspiciousFile?: boolean
-          suspiciousReason?: string
-        }
-        
-        const batchResults: ParseResult[] = data.results.map((result: APIResult) => ({
-          fileName: result.fileName,
-          fileSize: result.fileSize,
-          status: result.status,
-          pageCount: result.pageCount,
-          textLength: result.textLength,
-          processingTime: 0,
-          propertyData: result.propertyData,
-          error: result.error,
-          isSuspiciousFile: result.isSuspiciousFile,
-          suspiciousReason: result.suspiciousReason
-        }))
 
-        allResults = [...allResults, ...batchResults]
-        
+        interface APIResult {
+          fileName: string;
+          fileSize: number;
+          status: "success" | "error";
+          pageCount?: number;
+          textLength?: number;
+          text?: string;
+          metadata?: PDFMetadata;
+          propertyData?: Array<{
+            recordDate: string;
+            propertyAddress: string;
+            ownerName: string;
+            ownerAddress: string;
+            ownerNameWarning?: string;
+          }>;
+          error?: string;
+          isSuspiciousFile?: boolean;
+          suspiciousReason?: string;
+        }
+
+        const batchResults: ParseResult[] = data.results.map(
+          (result: APIResult) => ({
+            fileName: result.fileName,
+            fileSize: result.fileSize,
+            status: result.status,
+            pageCount: result.pageCount,
+            textLength: result.textLength,
+            processingTime: 0,
+            propertyData: result.propertyData,
+            error: result.error,
+            isSuspiciousFile: result.isSuspiciousFile,
+            suspiciousReason: result.suspiciousReason,
+          })
+        );
+
+        allResults = [...allResults, ...batchResults];
+
         // サマリー情報を累積
-        totalSuccessful += data.summary.successful
-        totalFailed += data.summary.failed
+        totalSuccessful += data.summary.successful;
+        totalFailed += data.summary.failed;
       }
 
       // 全バッチ処理完了
-      setResults(allResults)
-      setStep('complete')
-      
+      setResults(allResults);
+      setStep("complete");
+
       // 最終サマリー
       if (totalFailed === 0) {
-        toast.success(`${totalSuccessful}件のPDFを解析しました（${batchCount}バッチで処理）`)
+        toast.success(
+          `${totalSuccessful}件のPDFを解析しました（${batchCount}回で処理）`
+        );
       } else {
-        toast.warning(`${totalSuccessful}/${totalFiles}件の解析に成功しました（${batchCount}バッチで処理）`)
+        toast.warning(
+          `${totalSuccessful}/${totalFiles}件の解析に成功しました（${batchCount}回で処理）`
+        );
       }
     } catch (error) {
-      console.error('Processing error:', error)
-      toast.error(error instanceof Error ? error.message : 'PDFの処理中にエラーが発生しました')
-      setStep('confirm')
+      console.error("Processing error:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "PDFの処理中にエラーが発生しました"
+      );
+      setStep("confirm");
     }
-  }, [selectedFiles])
+  }, [selectedFiles]);
 
   const handleDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) {
-      toast.error('PDFファイルを選択してください')
-      return
+      toast.error("PDFファイルを選択してください");
+      return;
     }
 
-    setSelectedFiles(acceptedFiles)
-    setStep('confirm')
-  }, [])
+    setSelectedFiles(acceptedFiles);
+    setStep("confirm");
+  }, []);
 
   const handleRemoveFile = useCallback((index: number) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index))
-  }, [])
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  }, []);
 
   const handleCancel = useCallback(() => {
-    setSelectedFiles([])
-    setStep('upload')
-  }, [])
+    setSelectedFiles([]);
+    setStep("upload");
+  }, []);
 
   const handleReset = useCallback(() => {
-    setSelectedFiles([])
-    setResults([])
-    setStep('upload')
-  }, [])
+    setSelectedFiles([]);
+    setResults([]);
+    setStep("upload");
+  }, []);
 
   return (
     <div className="mx-auto max-w-[1400px] px-2 md:px-4 py-8">
-      {step === 'upload' && (
+      {step === "upload" && (
         <div className="space-y-8 max-w-3xl mx-auto">
           <div className="text-center">
             <h1 className="text-3xl font-semibold text-white">PDFインポート</h1>
             <p className="mt-2 text-zinc-400">
-              不動産名簿PDFをドロップして解析を開始
+              所有者事項のPDFをドロップして解析を開始します。
             </p>
           </div>
-          
+
           <FileDropzone onDrop={handleDrop} />
         </div>
       )}
 
-      {step === 'confirm' && (
+      {step === "confirm" && (
         <div className="max-w-3xl mx-auto">
-          <FileConfirm 
+          <FileConfirm
             files={selectedFiles}
             onConfirm={processFiles}
             onCancel={handleCancel}
@@ -205,21 +219,21 @@ export function PropertyImportForm() {
         </div>
       )}
 
-      {step === 'processing' && (
+      {step === "processing" && (
         <div className="flex min-h-[400px] items-center justify-center">
           <ImportProgress progress={processingProgress} />
         </div>
       )}
 
-      {step === 'complete' && (
-        <ResultsTable 
-          results={results} 
+      {step === "complete" && (
+        <ResultsTable
+          results={results}
           onReset={handleReset}
           onDelete={(index) => {
-            setResults(prev => prev.filter((_, i) => i !== index))
+            setResults((prev) => prev.filter((_, i) => i !== index));
           }}
         />
       )}
     </div>
-  )
+  );
 }

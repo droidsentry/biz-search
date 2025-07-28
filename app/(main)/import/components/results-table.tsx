@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { CopyButton } from "@/components/ui/copy-button";
 import { CopyCell } from "@/components/ui/copy-cell";
 import { Input } from "@/components/ui/input";
 import {
@@ -24,6 +25,7 @@ import {
   Check,
   Database,
   ExternalLink,
+  FileText,
   Loader2,
   MapPin,
   MapPinned,
@@ -38,6 +40,7 @@ import { toast } from "sonner";
 import type { GeocodingResult, ParseResult, PropertyData } from "../types";
 import { NavigationConfirmDialog } from "./navigation-confirm-dialog";
 import { SavePropertiesDialog } from "./save-properties-dialog";
+import { GeocodingLoadingDialog } from "./geocoding-loading-dialog";
 
 interface ResultsTableProps {
   results: ParseResult[];
@@ -61,10 +64,7 @@ export function ResultsTable({
     Map<string, GeocodingResult>
   >(new Map());
   const [isGeocoding, setIsGeocoding] = useState(false);
-  const [geocodingProgress, setGeocodingProgress] = useState<{
-    current: number;
-    total: number;
-  } | null>(null);
+  const [isGeocodingInBackground, setIsGeocodingInBackground] = useState(false);
 
   // 保存ダイアログの状態管理
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -144,10 +144,10 @@ export function ResultsTable({
   };
 
   // デバッグ：不正ファイルの検出状況を確認
-  const suspiciousFiles = results.filter((r) => r.isSuspiciousFile);
-  if (suspiciousFiles.length > 0) {
-    console.log("🚨 結果テーブルで不正ファイル検出:", suspiciousFiles);
-  }
+  // const suspiciousFiles = results.filter((r) => r.isSuspiciousFile);
+  // if (suspiciousFiles.length > 0) {
+  //   console.log("🚨 結果テーブルで不正ファイル検出:", suspiciousFiles);
+  // }
 
   const tableRows: TableRow[] = results.flatMap((result, index): TableRow[] => {
     if (result.propertyData && result.propertyData.length > 0) {
@@ -261,12 +261,12 @@ export function ResultsTable({
     }
 
     setIsGeocoding(true);
-    setGeocodingProgress({ current: 0, total: validRows.length });
+    setIsGeocodingInBackground(true);
 
     try {
       const ownerAddresses = validRows.map((row) => row.property!.ownerAddress);
       const batchResults = await batchGeocodeAddresses(ownerAddresses);
-      console.log(`batchResults`, batchResults);
+      // console.log(`batchResults`, batchResults);
 
       // 結果を状態に反映
       const newResults = new Map(geocodingResults);
@@ -305,57 +305,71 @@ export function ResultsTable({
             errors.push(`${row.property!.ownerAddress}: ${errorMessage}`);
           }
         }
-
-        // 進捗更新
-        setGeocodingProgress({ current: index + 1, total: validRows.length });
       });
 
       setGeocodingResults(newResults);
 
-      // 結果に応じてトースト表示
-      if (successCount > 0 && errorCount === 0) {
-        toast.success(`${successCount}件の位置情報を取得しました`);
-      } else if (successCount > 0 && errorCount > 0) {
-        toast.warning(
-          `${successCount}件の位置情報を取得、${errorCount}件失敗しました`
-        );
-
-        // エラー詳細を表示
-        if (errors.length > 0) {
-          const errorMessage = errors.join("\n");
-          toast.error(
-            <div className="space-y-1">
-              <p className="font-medium">位置情報取得エラー:</p>
-              <pre className="text-xs whitespace-pre-wrap">{errorMessage}</pre>
-            </div>,
-            {
-              duration: 10000,
-            }
+      // バックグラウンド処理の場合のみトースト表示
+      if (!isGeocoding) {
+        if (successCount > 0 && errorCount === 0) {
+          toast.success(`${successCount}件の位置情報を取得しました`);
+        } else if (successCount > 0 && errorCount > 0) {
+          toast.warning(
+            `${successCount}件の位置情報を取得、${errorCount}件失敗しました`
           );
+
+          // エラー詳細を表示
+          if (errors.length > 0) {
+            const errorMessage = errors.join("\n");
+            toast.error(
+              <div className="space-y-1">
+                <p className="font-medium">位置情報取得エラー:</p>
+                <pre className="text-xs whitespace-pre-wrap">
+                  {errorMessage}
+                </pre>
+              </div>,
+              {
+                duration: 10000,
+              }
+            );
+          }
+        } else if (errorCount > 0) {
+          toast.error(`すべての位置情報取得に失敗しました（${errorCount}件）`);
+
+          // エラー詳細を表示
+          if (errors.length > 0) {
+            const errorMessage = errors.join("\n");
+            toast.error(
+              <div className="space-y-1">
+                <p className="font-medium">位置情報取得エラー:</p>
+                <pre className="text-xs whitespace-pre-wrap">
+                  {errorMessage}
+                </pre>
+              </div>,
+              {
+                duration: 10000,
+              }
+            );
+          }
         }
-      } else if (errorCount > 0) {
-        toast.error(`すべての位置情報取得に失敗しました（${errorCount}件）`);
-
-        // エラー詳細を表示
-        if (errors.length > 0) {
-          const errorMessage = errors.join("\n");
-          toast.error(
-            <div className="space-y-1">
-              <p className="font-medium">位置情報取得エラー:</p>
-              <pre className="text-xs whitespace-pre-wrap">{errorMessage}</pre>
-            </div>,
-            {
-              duration: 10000,
-            }
+      } else {
+        // ダイアログ表示中の場合
+        if (successCount > 0 && errorCount === 0) {
+          toast.success(`${successCount}件の位置情報を取得しました`);
+        } else if (successCount > 0 && errorCount > 0) {
+          toast.warning(
+            `${successCount}件の位置情報を取得、${errorCount}件失敗しました`
           );
+        } else if (errorCount > 0) {
+          toast.error(`すべての位置情報取得に失敗しました（${errorCount}件）`);
         }
       }
     } catch (error) {
-      console.error("バッチジオコーディングエラー:", error);
+      console.error("ジオコーディング処理エラー:", error);
       toast.error("位置情報の取得中にエラーが発生しました");
     } finally {
       setIsGeocoding(false);
-      setGeocodingProgress(null);
+      setIsGeocodingInBackground(false);
     }
   };
 
@@ -375,15 +389,13 @@ export function ResultsTable({
             variant="outline"
             size="sm"
             onClick={handleBatchGeocode}
-            disabled={isGeocoding || totalProperties === 0}
+            disabled={isGeocodingInBackground || totalProperties === 0}
             className="text-zinc-400 hover:text-white border-zinc-700"
           >
-            {isGeocoding ? (
+            {isGeocodingInBackground ? (
               <>
                 <Loader2 className="mr-2 size-4 animate-spin" />
-                {geocodingProgress
-                  ? `${geocodingProgress.current}/${geocodingProgress.total}件処理中`
-                  : "処理中..."}
+                処理中...
               </>
             ) : (
               <>
@@ -678,8 +690,8 @@ export function ResultsTable({
         <Table className="table-fixed">
           <TableHeader>
             <TableRow className="bg-muted-foreground/5 hover:bg-muted-foreground/10">
-              <TableHead className="text-foreground/80 font-semibold w-20">
-                ファイル名
+              <TableHead className="text-foreground/80 font-semibold w-12 text-center">
+                <FileText className="size-4 mx-auto" />
               </TableHead>
               <TableHead className="text-foreground/80 font-semibold text-center w-12">
                 状態
@@ -687,7 +699,7 @@ export function ResultsTable({
               <TableHead className="text-foreground/80 font-semibold text-right w-18">
                 サイズ
               </TableHead>
-              <TableHead className="text-foreground/80 font-semibold w-20">
+              <TableHead className="text-foreground/80 font-semibold w-32">
                 物件住所
               </TableHead>
               <TableHead className="text-foreground/80 font-semibold w-80">
@@ -721,13 +733,34 @@ export function ResultsTable({
                       row.isSuspiciousFile && "bg-red-900/20"
                     )}
                   >
-                    <TableCell
-                      className={cn(
-                        "font-medium text-foreground w-32 p-0",
-                        row.isSuspiciousFile && "text-red-500"
-                      )}
-                    >
-                      <CopyCell value={row.fileName} truncate={true} />
+                    <TableCell className="text-center w-12">
+                      {/* <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild> */}
+                      <div>
+                        <CopyButton
+                          value={row.fileName}
+                          className="h-8 w-8 hover:bg-muted/80"
+                          showIcon={false}
+                          onCopy={() =>
+                            toast.success("ファイル名をコピーしました")
+                          }
+                        >
+                          <FileText
+                            className={cn(
+                              "size-4",
+                              row.isSuspiciousFile && "text-red-500"
+                            )}
+                          />
+                        </CopyButton>
+                      </div>
+                      {/* </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{row.fileName}</p>
+                            <p className="text-xs text-muted-foreground">クリックでコピー</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider> */}
                     </TableCell>
                     <TableCell className="text-center">
                       {row.status === "success" ? (
@@ -746,7 +779,7 @@ export function ResultsTable({
                     </TableCell>
                     <TableCell
                       className={cn(
-                        "text-foreground/80 w-40 p-0",
+                        "text-foreground/80 w-32 p-0",
                         row.isSuspiciousFile && "text-red-400"
                       )}
                     >
@@ -903,7 +936,7 @@ export function ResultsTable({
         onSaveComplete={(response) => {
           if (response.success) {
             // 保存成功後の処理
-            console.log("保存完了:", response);
+            // console.log("保存完了:", response);
             setSavedProjectInfo({
               savedCount: response.savedCount,
               projectName: response.projectName,
@@ -919,6 +952,16 @@ export function ResultsTable({
         onOpenChange={setNavigationDialogOpen}
         savedCount={savedProjectInfo.savedCount}
         projectName={savedProjectInfo.projectName}
+      />
+
+      {/* ジオコーディングローディングダイアログ */}
+      <GeocodingLoadingDialog
+        open={isGeocoding}
+        totalCount={
+          tableRows.filter((row) => row.property && row.property.ownerAddress)
+            .length
+        }
+        onCancel={() => setIsGeocoding(false)}
       />
     </div>
   );

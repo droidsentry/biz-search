@@ -30,7 +30,7 @@ export function ImportProgress({ className, progress }: ImportProgressProps) {
         <div className="w-full space-y-4">
           <div className="text-center space-y-2">
             <p className="text-lg text-zinc-400">
-              バッチ {progress.currentBatch}/{progress.totalBatches} を処理中...
+              処理 {progress.currentBatch}/{progress.totalBatches} を実行中...
             </p>
             <p className="text-sm text-zinc-500">
               {progress.processedFiles}/{progress.totalFiles} ファイル処理済み
