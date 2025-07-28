@@ -78,7 +78,9 @@ export async function getCustomerInfoFromGoogleCustomSearch(
     );
 
     const client = await createGoogleSearchClient();
+    // console.log("googleCustomSearchParams", googleCustomSearchParams);
     const response = await client.cse.list(googleCustomSearchParams);
+    // console.log("response", response);
 
     // 結果の件数を取得
     resultCount = response.data.items?.length || 0;
@@ -241,7 +243,7 @@ async function recordSearchApiLog({
 
   if (process.env.NODE_ENV === "development") {
     // console.log("APIログ記録成功:", data);
-    console.log("APIログ記録成功:", data);
+    // console.log("APIログ記録成功:", data);
     // console.log("APIログ記録成功:");
   }
 
