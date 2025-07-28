@@ -21,20 +21,18 @@ function SearchContent({ initialQuery, initialAddress }: OwnerSearchProps) {
     useGoogleCustomSearchOwnerForm();
   const form = useFormContext<GoogleCustomSearchPattern>();
 
-  // 初期値を設定（初回レンダリング時または initialQuery 変更時）
+  // ownerIdの変更を追跡して初期値を設定
+  const { currentOwnerId } = useGoogleCustomSearchOwnerForm();
+  
   useEffect(() => {
-    // 現在の値を取得
-    const currentName = form.getValues("googleCustomSearchParams.customerName");
-    const currentAddress = form.getValues("googleCustomSearchParams.address");
-
-    // initialQueryが変更された場合、または現在値が空の場合に設定
-    if (initialQuery && currentName !== initialQuery) {
+    // ownerIdが変更された時に初期値を設定
+    if (currentOwnerId && initialQuery) {
       form.setValue("googleCustomSearchParams.customerName", initialQuery);
     }
-    if (initialAddress) {
+    if (currentOwnerId && initialAddress) {
       form.setValue("googleCustomSearchParams.address", initialAddress);
     }
-  }, [form, initialAddress, initialQuery]);
+  }, [currentOwnerId]); // ownerIdが変更された時のみ実行
 
   return (
     <div className="space-y-6 w-full">
