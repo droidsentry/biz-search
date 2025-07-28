@@ -137,7 +137,7 @@ export function CompactSearchForm({ onSave }: CompactSearchFormProps) {
                 <FormControl>
                   <RadioGroup
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value}
                     className="flex gap-4 text-xs"
                   >
                     <FormItem className="flex items-center gap-2">
@@ -189,7 +189,7 @@ export function CompactSearchForm({ onSave }: CompactSearchFormProps) {
                 <FormControl>
                   <RadioGroup
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value}
                     className="flex gap-4 text-xs"
                   >
                     <FormItem className="flex items-center gap-2">

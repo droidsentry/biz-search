@@ -139,11 +139,19 @@ export function GoogleCustomSearchFormProvider({
   useEffect(() => {
     const page = searchParams.get("start");
     if (page && googleCustomSearchPattern) {
-      const currentFormValues = form.getValues();
-      currentFormValues.googleCustomSearchParams.startPage = parseInt(page);
-      setGoogleCustomSearchPattern(currentFormValues);
+      // 既存のgoogleCustomSearchPatternを直接変更するのではなく、新しいオブジェクトを作成
+      setGoogleCustomSearchPattern(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          googleCustomSearchParams: {
+            ...prev.googleCustomSearchParams,
+            startPage: parseInt(page)
+          }
+        };
+      });
     }
-  }, [searchParams, form, googleCustomSearchPattern]);
+  }, [searchParams]); // searchParamsのみを依存配列に含める
 
   // 動的にselectedPatternを更新
   useEffect(() => {
