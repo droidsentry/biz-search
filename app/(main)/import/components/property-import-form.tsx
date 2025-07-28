@@ -49,9 +49,9 @@ export function PropertyImportForm() {
           totalFiles,
         });
 
-        // バッチの進捗を表示
+        // 処理の進捗を表示
         toast.info(
-          `バッチ ${currentBatch}/${batchCount} を処理中... (${
+          `処理 ${currentBatch}/${batchCount} を実行中... (${
             start + 1
           }-${end}/${totalFiles}ファイル)`
         );
@@ -80,7 +80,7 @@ export function PropertyImportForm() {
             fileName: file.name,
             fileSize: file.size,
             status: "error" as const,
-            error: data.error || "バッチ処理エラー",
+            error: data.error || "処理エラー",
             processingTime: 0,
             propertyData: undefined,
           }));
@@ -150,11 +150,11 @@ export function PropertyImportForm() {
       // 最終サマリー
       if (totalFailed === 0) {
         toast.success(
-          `${totalSuccessful}件のPDFを解析しました（${batchCount}バッチで処理）`
+          `${totalSuccessful}件のPDFを解析しました（${batchCount}回で処理）`
         );
       } else {
         toast.warning(
-          `${totalSuccessful}/${totalFiles}件の解析に成功しました（${batchCount}バッチで処理）`
+          `${totalSuccessful}/${totalFiles}件の解析に成功しました（${batchCount}回で処理）`
         );
       }
     } catch (error) {

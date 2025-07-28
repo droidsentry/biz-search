@@ -219,7 +219,7 @@ export function SavePropertiesDialog({
                         データをアップロード中...
                         {saveProgress.currentBatch && saveProgress.totalBatches && (
                           <span className="text-muted-foreground ml-2">
-                            (バッチ {saveProgress.currentBatch}/{saveProgress.totalBatches})
+                            (処理 {saveProgress.currentBatch}/{saveProgress.totalBatches})
                           </span>
                         )}
                       </>
