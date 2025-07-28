@@ -1,4 +1,4 @@
-import { GoogleCustomSearchFormProvider } from "../../../components/providers/google-custom-search-form";
+import { GoogleCustomSearchOwnerFormProvider } from "@/components/providers/google-custom-search-owner-form";
 import { getSearchPatterns } from "../search/execute/components/action";
 
 export default async function Layout({
@@ -10,11 +10,10 @@ export default async function Layout({
   const patterns = await getSearchPatterns();
 
   return (
-    <GoogleCustomSearchFormProvider
+    <GoogleCustomSearchOwnerFormProvider
       patterns={patterns}
-      selectedSearchPattern={undefined}
     >
       {children}
-    </GoogleCustomSearchFormProvider>
+    </GoogleCustomSearchOwnerFormProvider>
   );
 }

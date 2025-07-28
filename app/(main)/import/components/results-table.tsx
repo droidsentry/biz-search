@@ -19,7 +19,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { batchGeocodeAddresses } from "@/lib/actions/location/batch-geocoding";
-import { PropertyData as PropertyDataType } from "@/lib/types/property";
 import { cn } from "@/lib/utils";
 import {
   Check,
@@ -38,9 +37,9 @@ import Link from "next/link";
 import React, { useState } from "react";
 import { toast } from "sonner";
 import type { GeocodingResult, ParseResult, PropertyData } from "../types";
+import { GeocodingLoadingDialog } from "./geocoding-loading-dialog";
 import { NavigationConfirmDialog } from "./navigation-confirm-dialog";
 import { SavePropertiesDialog } from "./save-properties-dialog";
-import { GeocodingLoadingDialog } from "./geocoding-loading-dialog";
 
 interface ResultsTableProps {
   results: ParseResult[];
@@ -734,33 +733,35 @@ export function ResultsTable({
                     )}
                   >
                     <TableCell className="text-center w-12">
-                      {/* <TooltipProvider>
+                      <TooltipProvider>
                         <Tooltip>
-                          <TooltipTrigger asChild> */}
-                      <div>
-                        <CopyButton
-                          value={row.fileName}
-                          className="h-8 w-8 hover:bg-muted/80"
-                          showIcon={false}
-                          onCopy={() =>
-                            toast.success("ファイル名をコピーしました")
-                          }
-                        >
-                          <FileText
-                            className={cn(
-                              "size-4",
-                              row.isSuspiciousFile && "text-red-500"
-                            )}
-                          />
-                        </CopyButton>
-                      </div>
-                      {/* </TooltipTrigger>
+                          <TooltipTrigger asChild>
+                            <div>
+                              <CopyButton
+                                value={row.fileName}
+                                className="h-8 w-8 hover:bg-muted/80"
+                                showIcon={false}
+                                onCopy={() =>
+                                  toast.success("ファイル名をコピーしました")
+                                }
+                              >
+                                <FileText
+                                  className={cn(
+                                    "size-4",
+                                    row.isSuspiciousFile && "text-red-500"
+                                  )}
+                                />
+                              </CopyButton>
+                            </div>
+                          </TooltipTrigger>
                           <TooltipContent>
                             <p>{row.fileName}</p>
-                            <p className="text-xs text-muted-foreground">クリックでコピー</p>
+                            <p className="text-xs text-muted-foreground">
+                              クリックでコピー
+                            </p>
                           </TooltipContent>
                         </Tooltip>
-                      </TooltipProvider> */}
+                      </TooltipProvider>
                     </TableCell>
                     <TableCell className="text-center">
                       {row.status === "success" ? (
@@ -931,7 +932,8 @@ export function ResultsTable({
               lng: geocoding?.lng || null,
               streetViewAvailable: geocoding?.streetViewAvailable || false,
               sourceFileName: row.fileName,
-            } as PropertyDataType;
+            };
+            // } as PropertyDataType;
           })}
         onSaveComplete={(response) => {
           if (response.success) {

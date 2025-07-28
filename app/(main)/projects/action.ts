@@ -29,7 +29,7 @@ export async function getProjectsWithProgress() {
     throw new Error('プロジェクトの取得に失敗しました')
   }
 
-  console.log('projectsWithStats', projectsWithStats)
+  // console.log('projectsWithStats', projectsWithStats)
 
   // フロントエンドが期待する形式に変換
   return (projectsWithStats || []).map(project => ({

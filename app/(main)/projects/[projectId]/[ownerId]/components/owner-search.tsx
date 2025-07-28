@@ -1,7 +1,6 @@
 "use client";
 
-import { SearchResults } from "@/app/(main)/search/execute/components/search-results";
-import { useGoogleCustomSearchForm } from "@/components/providers/google-custom-search-form";
+import { useGoogleCustomSearchOwnerForm } from "@/components/providers/google-custom-search-owner-form";
 import { Separator } from "@/components/ui/separator";
 import { GoogleCustomSearchPattern } from "@/lib/types/custom-search";
 import { cn } from "@/lib/utils";
@@ -9,6 +8,7 @@ import { useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 import { PatternCards } from "./pattern-cards";
 import { SearchForm } from "./search-form";
+import { SearchResults } from "./search-results";
 import { SearchSidebar } from "./search-sidebar";
 
 interface OwnerSearchProps {
@@ -17,20 +17,21 @@ interface OwnerSearchProps {
 }
 
 function SearchContent({ initialQuery, initialAddress }: OwnerSearchProps) {
-  const { data, patterns } = useGoogleCustomSearchForm();
+  const { data, patterns, googleCustomSearchPattern } =
+    useGoogleCustomSearchOwnerForm();
   const form = useFormContext<GoogleCustomSearchPattern>();
 
-  // 初期値を設定（初回レンダリング時のみ）
+  // 初期値を設定（初回レンダリング時または initialQuery 変更時）
   useEffect(() => {
     // 現在の値を取得
     const currentName = form.getValues("googleCustomSearchParams.customerName");
     const currentAddress = form.getValues("googleCustomSearchParams.address");
 
-    // 初期値が存在し、現在値が空の場合のみ設定
-    if (initialQuery && !currentName) {
+    // initialQueryが変更された場合、または現在値が空の場合に設定
+    if (initialQuery && currentName !== initialQuery) {
       form.setValue("googleCustomSearchParams.customerName", initialQuery);
     }
-    if (initialAddress && !currentAddress) {
+    if (initialAddress) {
       form.setValue("googleCustomSearchParams.address", initialAddress);
     }
   }, [form, initialAddress, initialQuery]);
@@ -39,8 +40,14 @@ function SearchContent({ initialQuery, initialAddress }: OwnerSearchProps) {
     <div className="space-y-6 w-full">
       <h3 className="text-lg font-semibold">Web検索</h3>
 
-      <div className={data ? "flex gap-4" : "flex justify-center w-full"}>
-        {data && (
+      <div
+        className={
+          data && googleCustomSearchPattern
+            ? "flex gap-4"
+            : "flex justify-center w-full"
+        }
+      >
+        {data && googleCustomSearchPattern && (
           <div className="flex-1 sticky top-10">
             <SearchResults />
           </div>

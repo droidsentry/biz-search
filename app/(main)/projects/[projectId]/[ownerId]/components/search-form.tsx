@@ -1,6 +1,6 @@
 "use client";
 
-import { useGoogleCustomSearchForm } from "@/components/providers/google-custom-search-form";
+import { useGoogleCustomSearchOwnerForm } from "@/components/providers/google-custom-search-owner-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,7 +28,7 @@ import { toast } from "sonner";
 
 export function SearchForm() {
   const { handleSearch, isLoading, isValidating, isNewSearch } =
-    useGoogleCustomSearchForm();
+    useGoogleCustomSearchOwnerForm();
   const form = useFormContext<GoogleCustomSearchPattern>();
   const advancedEnabled = form.watch(
     "googleCustomSearchParams.isAdvancedSearchEnabled"

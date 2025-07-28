@@ -23,29 +23,31 @@ export async function getCustomerInfoFromGoogleCustomSearch(
   if (!user) {
     redirect("/login");
   }
-  
+
   // グローバルAPI利用制限チェック
-  const { data: limitCheck, error: limitCheckError } = await supabase
-    .rpc('check_global_api_limit', {
-      p_api_name: 'google_custom_search'
-    });
-    
+  const { data: limitCheck, error: limitCheckError } = await supabase.rpc(
+    "check_global_api_limit",
+    {
+      p_api_name: "google_custom_search",
+    }
+  );
+
   if (limitCheckError) {
-    console.error('API制限確認エラー:', limitCheckError);
-    throw new Error('API制限の確認中にエラーが発生しました');
+    console.error("API制限確認エラー:", limitCheckError);
+    throw new Error("API制限の確認中にエラーが発生しました");
   }
-  
+
   // RPCの戻り値をキャスト
   interface LimitCheckResult {
-    allowed: boolean
-    daily_used: number
-    daily_limit: number
-    monthly_used: number
-    monthly_limit: number
+    allowed: boolean;
+    daily_used: number;
+    daily_limit: number;
+    monthly_used: number;
+    monthly_limit: number;
   }
-  
-  const limitResult = limitCheck as unknown as LimitCheckResult
-  
+
+  const limitResult = limitCheck as unknown as LimitCheckResult;
+
   if (!limitResult.allowed) {
     interface RateLimitError extends Error {
       rateLimitInfo?: LimitCheckResult;
@@ -56,7 +58,7 @@ export async function getCustomerInfoFromGoogleCustomSearch(
     error.rateLimitInfo = limitResult;
     throw error;
   }
-  
+
   const startTime = Date.now();
   let statusCode = 200;
   let errorMessage: string | null = null;
@@ -64,8 +66,8 @@ export async function getCustomerInfoFromGoogleCustomSearch(
   // バリデーション
   const parsed = googleCustomSearchPatternSchema.safeParse(formData);
   if (!parsed.success) {
-    console.log("Invalid form data", parsed.error);
-    throw new Error("Invalid form data");
+    console.log("フォームバリデーションエラー:", parsed.error);
+    throw new Error("フォームバリデーションエラー");
   }
   const { projectId, patternId } = parsed.data;
 
@@ -99,16 +101,16 @@ export async function getCustomerInfoFromGoogleCustomSearch(
 
     return {
       ...response.data,
-      _rateLimitInfo: limitCheck // レート制限情報を含める
+      _rateLimitInfo: limitCheck, // レート制限情報を含める
     };
   } catch (error) {
     console.error("Search error:", error);
-    
+
     // レート制限エラーの場合はそのまま再スロー
-    if (error instanceof Error && 'rateLimitInfo' in error) {
+    if (error instanceof Error && "rateLimitInfo" in error) {
       throw error;
     }
-    
+
     statusCode = 500;
     errorMessage =
       error instanceof Error ? error.message : "検索中にエラーが発生しました";
