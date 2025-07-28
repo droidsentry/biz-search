@@ -29,7 +29,7 @@ import AwesomeDebouncePromise from "awesome-debounce-promise";
   .max(20, 'ユーザー名は20文字以内で入力してください')
   // .regex(/^[a-zA-Z0-9_-]+$/, 'ユーザー名は英数字、アンダースコア、ハイフンのみ使用できます') // エンドユーザーの操作性向上のため、バリデーションを外す
   .regex(/^[^.@]+$/, 'ユーザー名に「.」と「@」は使用できません')
-  .refine((userName) => isUserNameUnique(userName));
+  .refine(async (userName) => await isUserNameUnique(userName));
 
   export const debouncedUsernameWithUniquenessCheckSchema = z
   .string()

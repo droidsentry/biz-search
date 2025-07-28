@@ -33,20 +33,8 @@
 
 ### 1. コンポーネント設計
 
-```tsx
-// ✅ サーバーコンポーネント（デフォルト）
-export default async function ProductList() {
-  const products = await getProducts()
-  return <ProductGrid products={products} />
-}
-
-// ✅ クライアントコンポーネント（必要時のみ）
-'use client'
-export function InteractiveButton() {
-  const [count, setCount] = useState(0)
-  return <Button onClick={() => setCount(count + 1)}>Count: {count}</Button>
-}
-```
+サーバーコンポーネントとクライアントコンポーネントの使い分けについては以下を参照：
+- [コンポーネント設計パターン](./docs/main/component-patterns.md)
 
 ### 2. ファイル構造とネーミング
 
@@ -83,278 +71,33 @@ app/
 
 ### 3. フォーム実装パターン
 
-```tsx
-// lib/schemas/auth.schema.ts
-import { z } from 'zod'
-
-export const loginSchema = z.object({
-  email: z.string().email('有効なメールアドレスを入力してください'),
-  password: z.string().min(8, 'パスワードは8文字以上で入力してください'),
-})
-
-// lib/types/auth.types.ts
-import { z } from 'zod'
-import { loginSchema } from '@/lib/schemas/auth.schema'
-
-export type LoginFormData = z.infer<typeof loginSchema>
-
-// components/forms/LoginForm.tsx
-'use client'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { loginSchema } from '@/lib/schemas/auth.schema'
-import { LoginFormData } from '@/lib/types/auth.types'
-import { loginAction } from '@/app/actions/auth.actions'
-
-export function LoginForm() {
-  const form = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-    },
-  })
-
-  const onSubmit = async (data: LoginFormData) => {
-    const formData = new FormData()
-    formData.append('email', data.email)
-    formData.append('password', data.password)
-    
-    const result = await loginAction(formData)
-    
-    if (result.error) {
-      // エラーハンドリング
-    }
-  }
-
-  return (
-    <Form {...form}>
-      {/* フォーム実装 */}
-    </Form>
-  )
-}
-```
+React Hook FormとZodを使用したフォーム実装の詳細は以下を参照：
+- [フォーム実装ガイド](./docs/main/form-implementation.md)
 
 ### 4. サーバーアクションパターン
 
-```tsx
-// app/actions/auth.actions.ts
-'use server'
-
-import { loginSchema } from '@/lib/schemas/auth.schema'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-
-export async function loginAction(formData: FormData) {
-  // 1. 必ず認証確認
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  // 認証が必要なアクションの場合
-  if (!user && requiresAuth) {
-    redirect('/login')
-  }
-
-  // 2. 必ずsafeParseでデータ検証
-  const result = loginSchema.safeParse({
-    email: formData.get('email'),
-    password: formData.get('password'),
-  })
-
-  if (!result.success) {
-    return { 
-      error: '入力データが不正です',
-      details: result.error.flatten() 
-    }
-  }
-
-  // 3. 処理実行
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword(result.data)
-    
-    if (error) {
-      return { error: error.message }
-    }
-
-    return { success: true, data }
-  } catch (error) {
-    console.error('ログインエラー:', error)
-    return { error: '予期せぬエラーが発生しました' }
-  }
-}
-```
+Next.js サーバーアクションの実装パターンについては以下を参照：
+- [サーバーアクション実装ガイド](./docs/main/server-actions.md)
 
 ### 5. ルートハンドラーパターン
 
-```tsx
-// app/api/products/route.ts
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { productSchema } from '@/lib/schemas/product.schema'
-
-export async function POST(request: NextRequest) {
-  // 1. 必ず認証確認
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  if (!user) {
-    return NextResponse.json(
-      { error: '認証が必要です' },
-      { status: 401 }
-    )
-  }
-
-  // 2. リクエストボディの検証
-  const body = await request.json()
-  const result = productSchema.safeParse(body)
-
-  if (!result.success) {
-    return NextResponse.json(
-      { error: '入力データが不正です', details: result.error.flatten() },
-      { status: 400 }
-    )
-  }
-
-  // 3. 処理実行
-  try {
-    const { data, error } = await supabase
-      .from('products')
-      .insert(result.data)
-      .select()
-      .single()
-
-    if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      )
-    }
-
-    return NextResponse.json(data)
-  } catch (error) {
-    console.error('製品作成エラー:', error)
-    return NextResponse.json(
-      { error: '予期せぬエラーが発生しました' },
-      { status: 500 }
-    )
-  }
-}
-```
+Next.js API Routes（ルートハンドラー）の実装パターンについては以下を参照：
+- [ルートハンドラー実装ガイド](./docs/main/route-handlers.md)
 
 ### 6. データフェッチングとキャッシュ
 
-```tsx
-// SWRを使用したクライアントサイドフェッチング
-import useSWR from 'swr'
-
-const fetcher = (url: string) => fetch(url).then(res => res.json())
-
-export function useProducts() {
-  const { data, error, isLoading, mutate } = useSWR('/api/products', fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-  })
-
-  return {
-    products: data,
-    isLoading,
-    isError: !!error,
-    mutate,
-  }
-}
-```
+SWRを使用したデータフェッチングパターンについては以下を参照：
+- [データフェッチングガイド](./docs/main/data-fetching.md)
 
 ### 7. Supabase使用パターン
 
-```tsx
-// lib/supabase/client.ts
-import { createBrowserClient } from '@supabase/ssr'
-
-export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
-
-// lib/supabase/server.ts
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
-
-export async function createClient() {
-  const cookieStore = await cookies()
-  
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          )
-        },
-      },
-    }
-  )
-}
-```
+Supabaseクライアントの作成とクエリパターンについては以下を参照：
+- [Supabase実装パターン](./docs/main/supabase-patterns.md)
 
 ## 型定義のベストプラクティス
 
-### Supabaseデータベース型の使用
-
-Supabaseから取得するデータの型は、`@/lib/types/database.ts`から提供される型ヘルパーを使用すること。
-
-```typescript
-import { Tables, TablesInsert, TablesUpdate } from '@/lib/types/database'
-
-// Row型（データ取得時）
-type Owner = Tables<'owners'>
-type Property = Tables<'properties'>
-type Project = Tables<'projects'>
-
-// Insert型（データ挿入時）
-type OwnerInsert = TablesInsert<'owners'>
-type PropertyInsert = TablesInsert<'properties'>
-type ProjectInsert = TablesInsert<'projects'>
-
-// Update型（データ更新時）
-type OwnerUpdate = TablesUpdate<'owners'>
-type PropertyUpdate = TablesUpdate<'properties'>
-type ProjectUpdate = TablesUpdate<'projects'>
-
-// 配列型
-type OwnerArray = Tables<'owners'>[]
-type PropertyArray = Tables<'properties'>[]
-type ProjectArray = Tables<'projects'>[]
-```
-
-### 型定義の配置ルール
-
-1. **データベーステーブルの型**: 直接`Tables<'テーブル名'>`を使用
-2. **カスタム型定義**: `lib/types/`ディレクトリに配置
-3. **Zodスキーマから生成される型**: `z.infer<typeof schema>`を使用
-
-### 実装例
-
-```typescript
-// ❌ 悪い例
-let owners: any[] = [];
-const result: any = await supabase.from('owners').select();
-
-// ✅ 良い例
-import { Tables } from '@/lib/types/database'
-
-let owners: Tables<'owners'>[] = [];
-const { data, error } = await supabase
-  .from('owners')
-  .select()
-  .returns<Tables<'owners'>[]>();
-```
+Supabaseデータベース型の使用方法と型定義のベストプラクティスについては以下を参照：
+- [データベース型定義ガイド](./docs/db/database-types.md)
 
 ## エラーハンドリング
 
@@ -419,107 +162,54 @@ pnpm test
 
 ## Row Level Security (RLS) ベストプラクティス
 
-### Supabase公式推奨のパフォーマンス最適化
+Supabase公式推奨のRLSパフォーマンス最適化とベストプラクティスについては以下を参照：
+- [RLSベストプラクティスガイド](./docs/db/rls-best-practices.md)
 
-#### 1. インデックスの活用
-RLSポリシーで使用するカラムには必ずインデックスを作成する。
+### 型安全性の厳格な遵守
 
-```sql
--- RLSで user_id を使用する場合
-CREATE INDEX idx_table_user_id ON table_name(user_id);
-```
+#### 絶対に使用禁止
+- **`any`型** - 必ず適切な型を指定すること
+- **`unknown`型** - 型ガードやアサーションで具体的な型に変換すること
+- **型アサーション（as）の乱用** - 本当に必要な場合のみ使用
 
-#### 2. 関数呼び出しをselectでラップ
-`auth.uid()`などの関数は`select`でラップすることで、Postgresのオプティマイザがステートメントごとに結果をキャッシュできる。
+#### 必須の型安全実践
+1. **型推論の活用**
+   ```typescript
+   // ❌ 悪い例
+   const data: any = await fetchData()
+   const result: unknown = processData(data)
+   
+   // ✅ 良い例
+   const data = await fetchData() // 戻り値の型から推論
+   const result = processData(data) // 引数と戻り値の型から推論
+   ```
 
-```sql
--- ✅ 推奨パターン
-CREATE POLICY "Enable access" ON table
-  USING (user_id = (select auth.uid()));
-```
+2. **型生成の活用**
+   ```typescript
+   // Supabaseの型生成
+   import { Tables } from '@/lib/types/database'
+   
+   // Zodスキーマからの型生成
+   import { z } from 'zod'
+   const schema = z.object({ name: z.string() })
+   type SchemaType = z.infer<typeof schema>
+   ```
 
-#### 3. 明示的なフィルタの追加
-RLSポリシーに加えて、クエリでも明示的にフィルタを指定することで、より良いクエリプランが生成される。
+3. **ジェネリクスの適切な使用**
+   ```typescript
+   // 汎用的な関数にはジェネリクスを使用
+   function processArray<T>(items: T[]): T[] {
+     return items.filter(Boolean)
+   }
+   ```
 
-```typescript
-// ❌ 避けるべきパターン（RLSのみに依存）
-const { data } = await supabase
-  .from('table_name')
-  .select('*');
+4. **厳格なnullチェック**
+   ```typescript
+   // オプショナルチェイニングとnullish coalescing
+   const name = user?.profile?.name ?? 'デフォルト名'
+   ```
 
-// ✅ 推奨パターン（明示的なフィルタを追加）
-const { data } = await supabase
-  .from('table_name')
-  .select('*')
-  .eq('user_id', userId);
-```
-
-#### 4. 結合の最小化
-JOINを避け、配列とIN/ANY演算子を使用する。
-
-```sql
--- ❌ 避けるべきパターン（JOINを使用）
-CREATE POLICY "Check membership" ON posts
-  USING (EXISTS (
-    SELECT 1 FROM memberships 
-    WHERE memberships.user_id = auth.uid() 
-    AND memberships.group_id = posts.group_id
-  ));
-
--- ✅ 推奨パターン（配列を使用）
-CREATE POLICY "Check membership" ON posts
-  USING (group_id IN (
-    SELECT group_id FROM memberships 
-    WHERE user_id = (select auth.uid())
-  ));
-```
-
-#### 5. ロールの明示
-`TO`演算子で対象ロールを明示的に指定する。
-
-```sql
-CREATE POLICY "Enable access" ON table
-  FOR ALL 
-  TO authenticated  -- ロールを明示
-  USING (user_id = (select auth.uid()));
-```
-
-### SECURITY DEFINER関数の使用（複雑なロジックの場合のみ）
-複雑なビジネスロジックをカプセル化し、RLSをバイパスしてパフォーマンスを向上させる場合に使用。
-
-```sql
-CREATE FUNCTION get_user_data(p_user_id uuid)
-RETURNS TABLE (...) 
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  -- 複雑なロジック
-$$;
-```
-
-### 実装チェックリスト
-- [ ] RLSポリシーで使用するカラムにインデックスが存在するか
-- [ ] auth.uid()を(select auth.uid())でラップしているか
-- [ ] クエリで明示的なフィルタを追加しているか
-- [ ] JOINの代わりにIN/ANY演算子を使用しているか
-- [ ] ポリシーでTO句を使用してロールを明示しているか
-- [ ] EXPLAIN ANALYZEでクエリプランを確認したか
-
-### パフォーマンステスト
-```sql
--- RLSポリシーのパフォーマンスを確認
-EXPLAIN (ANALYZE, BUFFERS) 
-SELECT * FROM your_table 
-WHERE user_id = (select auth.uid())
-LIMIT 10;
-```
-
-### 参考リンク
-- [Supabase RLS Performance Guide](https://supabase.com/docs/guides/database/postgres/row-level-security#rls-performance-recommendations)
-- [RLS Best Practices Discussion](https://github.com/orgs/supabase/discussions/14576)
-
-### 避けるべきこと
-- **`any`型の使用は厳禁** - 必ず適切な型を指定すること
+### その他の避けるべきこと
 - コメントなしの複雑なロジック
 - 直接的なDOM操作
 - グローバル変数の使用
@@ -540,59 +230,15 @@ LIMIT 10;
 ### JavaScriptクライアントライブラリ
 - **必須**: すべてのDB通信には`@supabase/supabase-js`を使用
 - **ドキュメント参照**: 実装時は必ずMCP経由でSupabase公式ドキュメントを参照
-  ```typescript
-  // ドキュメント取得例
-  mcp__supabase__search_docs({
-    graphql_query: `
-      query {
-        searchDocs(query: "javascript client library", limit: 5) {
-          nodes {
-            title
-            href
-            content
-          }
-        }
-      }
-    `
-  })
-  ```
+- **実装パターン**: [Supabase実装パターン](./docs/main/supabase-patterns.md)を参照
 
 ### トランザクション処理
 - **RPC使用**: 複雑なトランザクションが必要な場合はリモートプロシージャコールを使用
-  ```typescript
-  const { data, error } = await supabase.rpc('function_name', { 
-    param1: value1,
-    param2: value2 
-  })
-  ```
 
 ### 実装前の必須手順
 1. MCPでSupabaseドキュメントから該当機能のベストプラクティスを検索
 2. 最新のAPIとメソッドを確認
 3. エラーハンドリングパターンを確認
-
-### 使用例
-```typescript
-// 基本的なクエリ
-const { data, error } = await supabase
-  .from('search_patterns')
-  .select('*')
-  .eq('project_id', projectId);
-
-// RLSを考慮した明示的なフィルタ
-const { data, error } = await supabase
-  .from('search_patterns')
-  .select('*')
-  .eq('user_id', userId)
-  .eq('project_id', projectId);
-
-// トランザクション処理（RPC経由）
-const { data, error } = await supabase.rpc('create_pattern_with_log', {
-  pattern_name: 'パターン名',
-  pattern_params: { /* ... */ },
-  project_id: projectId
-});
-```
 
 ## 今後の実装予定
 

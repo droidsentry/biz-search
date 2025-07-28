@@ -1,9 +1,9 @@
 "use client";
 
-import { useGoogleCustomSearchForm } from "@/components/providers/google-custom-search-form";
+import { useGoogleCustomSearchOwnerForm } from "@/components/providers/google-custom-search-owner-form";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { SearchPattern } from "@/lib/types/custom-search";
+import { GoogleCustomSearchPattern, SearchPattern } from "@/lib/types/custom-search";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -16,13 +16,15 @@ import {
   Link as LinkIcon,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
+import { useFormContext } from "react-hook-form";
 
 interface PatternCardsProps {
   patterns: SearchPattern[];
 }
 
 export function PatternCards({ patterns }: PatternCardsProps) {
-  const { patternId } = useGoogleCustomSearchForm();
+  const { patternId, handleSearch } = useGoogleCustomSearchOwnerForm();
+  const form = useFormContext<GoogleCustomSearchPattern>();
 
   const currentPatternId = patternId;
 
@@ -32,8 +34,39 @@ export function PatternCards({ patterns }: PatternCardsProps) {
   const handlePatternClick = (e: React.MouseEvent, pattern: SearchPattern) => {
     e.preventDefault();
 
-    // URLを更新（これによりプロバイダーのuseEffectがトリガーされる）
+    // URLを更新
     router.push(`${pathname}?patternId=${pattern.id}`, { scroll: false });
+    
+    // 現在のフォームの値を取得
+    const currentFormValues = form.getValues();
+    
+    // パターンの設定を適用（顧客名と住所は現在の値を保持）
+    const formData: GoogleCustomSearchPattern = {
+      id: pattern.id,
+      searchPatternName: pattern.searchPatternName,
+      searchPatternDescription: pattern.searchPatternDescription || undefined,
+      googleCustomSearchParams: {
+        // 現在の顧客名と住所を保持
+        customerName: currentFormValues.googleCustomSearchParams.customerName,
+        address: currentFormValues.googleCustomSearchParams.address,
+        // 顧客名と住所の完全一致・部分一致設定は現在の値を保持
+        customerNameExactMatch: currentFormValues.googleCustomSearchParams.customerNameExactMatch,
+        addressExactMatch: currentFormValues.googleCustomSearchParams.addressExactMatch,
+        // パターンの設定を適用（日付制限、追加キーワード、サイト設定など）
+        dateRestrict: pattern.googleCustomSearchParams.dateRestrict || "all",
+        isAdvancedSearchEnabled: pattern.googleCustomSearchParams.isAdvancedSearchEnabled || false,
+        additionalKeywords: pattern.googleCustomSearchParams.additionalKeywords || [],
+        searchSites: pattern.googleCustomSearchParams.searchSites || [],
+        siteSearchMode: pattern.googleCustomSearchParams.siteSearchMode || "any",
+      },
+      patternId: pattern.id,
+    };
+    
+    // フォームの値を更新
+    form.reset(formData);
+    
+    // 自動的に検索を実行
+    handleSearch(formData);
   };
 
   if (patterns.length === 0) {

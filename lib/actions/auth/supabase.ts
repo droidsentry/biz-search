@@ -59,22 +59,7 @@ export async function signup(formData: Signup) {
       throw new Error(await getSupabaseAuthErrorMessage(errorCode));
     }
   });
-  // // パスワード更新後、パスワード設定フラグをtrueにし、pending_roleをクリア
-  // const supabaseAdmin = createAdminClient();
-  // await supabaseAdmin.auth.admin.updateUserById(user.id, {
-  //   user_metadata: {
-  //     username: username,
-  //     is_signup_completed: true,
-  //     pending_role: null, // pending_roleをクリア
-  //     added_by: null,
-  //   },
-  // }).then(async (response) => {
-  //   if (response.error) {
-  //     console.error(response.error.message);
-  //     const errorCode = response.error.code as SupabaseAuthErrorCode;
-  //     throw new Error(await getSupabaseAuthErrorMessage(errorCode));
-  //   }
-  // });
+
   // ユーザーのメタデータからpending_roleを取得（デフォルトは'system_owner' 臨時で招待メールを発行した時のため）
   const pendingRole = user.user_metadata?.pending_role || 'system_owner';
   //profilesテーブルを作成
