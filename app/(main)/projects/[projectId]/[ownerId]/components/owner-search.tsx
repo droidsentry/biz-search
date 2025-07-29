@@ -1,38 +1,80 @@
 "use client";
 
-import { useGoogleCustomSearchOwnerForm } from "@/components/providers/google-custom-search-owner-form";
 import { Separator } from "@/components/ui/separator";
-import { GoogleCustomSearchPattern } from "@/lib/types/custom-search";
 import { cn } from "@/lib/utils";
-import { useEffect } from "react";
-import { useFormContext } from "react-hook-form";
-import { PatternCards } from "./pattern-cards";
-import { SearchForm } from "./search-form";
-import { SearchResults } from "./search-results";
+import { useState, useEffect, useCallback } from "react";
+import SearchForm from "./forms/SearchForm";
+import SearchResults from "./forms/SearchResults";
 import { SearchSidebar } from "./search-sidebar";
+import { searchWithParams } from "../action-form";
+import type { SerpstackResponse } from "@/lib/types/serpstack";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 
 interface OwnerSearchProps {
   initialQuery: string;
   initialAddress?: string;
+  projectId: string;
+  ownerId: string;
 }
 
-function SearchContent({ initialQuery, initialAddress }: OwnerSearchProps) {
-  const { data, patterns, googleCustomSearchPattern } =
-    useGoogleCustomSearchOwnerForm();
-  const form = useFormContext<GoogleCustomSearchPattern>();
+export function OwnerSearch({
+  initialQuery,
+  initialAddress,
+  projectId,
+  ownerId,
+}: OwnerSearchProps) {
+  const [searchData, setSearchData] = useState<SerpstackResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
 
-  // ownerIdの変更を追跡して初期値を設定
-  const { currentOwnerId } = useGoogleCustomSearchOwnerForm();
-  
+  // URLパラメータから検索を実行
+  const performSearch = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const params: Record<string, string | string[] | undefined> = {};
+      searchParams.forEach((value, key) => {
+        if (params[key]) {
+          // 既に値がある場合は配列にする
+          if (Array.isArray(params[key])) {
+            (params[key] as string[]).push(value);
+          } else {
+            params[key] = [params[key] as string, value];
+          }
+        } else {
+          params[key] = value;
+        }
+      });
+      
+      const result = await searchWithParams(params);
+      setSearchData(result);
+    } catch (err) {
+      setError(err as Error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // URLパラメータが変更されたら検索を実行
   useEffect(() => {
-    // ownerIdが変更された時に初期値を設定
-    if (currentOwnerId && initialQuery) {
-      form.setValue("googleCustomSearchParams.customerName", initialQuery);
+    const hasSearchParams = searchParams.has('ownerName') || 
+                          searchParams.has('ownerAddress') || 
+                          searchParams.has('additionalKeywords[0][value]');
+    
+    if (hasSearchParams) {
+      performSearch();
     }
-    if (currentOwnerId && initialAddress) {
-      form.setValue("googleCustomSearchParams.address", initialAddress);
-    }
-  }, [currentOwnerId]); // ownerIdが変更された時のみ実行
+  }, [searchParams]);
+
+  // 検索開始を早めに通知するためのコールバック
+  const handleSearchStart = useCallback(() => {
+    setIsLoading(true);
+    setError(null);
+  }, []);
 
   return (
     <div className="space-y-6 w-full">
@@ -40,21 +82,31 @@ function SearchContent({ initialQuery, initialAddress }: OwnerSearchProps) {
 
       <div
         className={
-          data && googleCustomSearchPattern
+          searchData
             ? "flex gap-4"
             : "flex justify-center w-full"
         }
       >
-        {data && googleCustomSearchPattern && (
+        {searchData && (
           <div className="flex-1 sticky top-10">
-            <SearchResults />
+            <SearchResults 
+              data={searchData}
+              isLoading={isLoading}
+              error={error}
+            />
           </div>
         )}
         {/* サイドバー */}
         <SearchSidebar className={cn("z-40")}>
-          {/* <div className="space-y-4 w-[320px] border rounded-lg p-4 sticky top-10 h-fit"> */}
           <div className="space-y-4 ">
-            <SearchForm />
+            <SearchForm 
+              projectId={projectId} 
+              ownerId={ownerId}
+              initialOwnerName={initialQuery}
+              initialOwnerAddress={initialAddress}
+              isSearching={isLoading}
+              onSearchStart={handleSearchStart}
+            />
 
             <Separator />
 
@@ -63,28 +115,11 @@ function SearchContent({ initialQuery, initialAddress }: OwnerSearchProps) {
               <div className="flex items-center justify-between">
                 <h3 className="font-medium text-sm">保存された検索パターン</h3>
               </div>
-              <PatternCards patterns={patterns} />
+              {/* パターンカードは後で実装 */}
             </div>
           </div>
         </SearchSidebar>
       </div>
     </div>
-  );
-}
-
-export function OwnerSearch({
-  initialQuery,
-  initialAddress,
-}: OwnerSearchProps) {
-  return (
-    // <GoogleCustomSearchFormProvider
-    //   patterns={[]}
-    //   selectedSearchPattern={undefined}
-    // >
-    <SearchContent
-      initialQuery={initialQuery}
-      initialAddress={initialAddress}
-    />
-    // </GoogleCustomSearchFormProvider>
   );
 }

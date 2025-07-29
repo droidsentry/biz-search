@@ -122,6 +122,8 @@ export default async function OwnerDetailPage({
               <OwnerSearch
                 initialQuery={owner.name}
                 initialAddress={formatAddressToCityLevel(owner.address)}
+                projectId={projectId}
+                ownerId={ownerId}
               />
             </div>
           </div>
