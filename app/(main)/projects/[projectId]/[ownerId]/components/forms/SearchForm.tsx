@@ -17,10 +17,12 @@ import { Switch } from "@/components/ui/switch";
 import { DEFAULT_SEARCH_FORM_VALUES } from "@/lib/constants/search-form-defaults";
 import { searchFormSchema, type SearchFormData } from "@/lib/schemas/serpstack";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, RotateCcw } from "lucide-react";
+import { ExternalLink, Loader2, RotateCcw } from "lucide-react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 interface SearchFormProps {
   projectId: string;
@@ -31,7 +33,14 @@ interface SearchFormProps {
   onSearchStart?: () => void;
 }
 
-export default function SearchForm({ projectId, ownerId, initialOwnerName, initialOwnerAddress, isSearching = false, onSearchStart }: SearchFormProps) {
+export default function SearchForm({
+  projectId,
+  ownerId,
+  initialOwnerName,
+  initialOwnerAddress,
+  isSearching = false,
+  onSearchStart,
+}: SearchFormProps) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -40,12 +49,15 @@ export default function SearchForm({ projectId, ownerId, initialOwnerName, initi
   const defaultValues: SearchFormData = {
     ...DEFAULT_SEARCH_FORM_VALUES,
     ownerName:
-      searchParams.get("ownerName") || initialOwnerName || DEFAULT_SEARCH_FORM_VALUES.ownerName,
+      searchParams.get("ownerName") ||
+      initialOwnerName ||
+      DEFAULT_SEARCH_FORM_VALUES.ownerName,
     ownerNameMatchType:
       (searchParams.get("ownerNameMatchType") as "exact" | "partial") ||
       DEFAULT_SEARCH_FORM_VALUES.ownerNameMatchType,
     ownerAddress:
-      searchParams.get("ownerAddress") || initialOwnerAddress ||
+      searchParams.get("ownerAddress") ||
+      initialOwnerAddress ||
       DEFAULT_SEARCH_FORM_VALUES.ownerAddress,
     ownerAddressMatchType:
       (searchParams.get("ownerAddressMatchType") as "exact" | "partial") ||
@@ -130,7 +142,7 @@ export default function SearchForm({ projectId, ownerId, initialOwnerName, initi
       if (onSearchStart) {
         onSearchStart();
       }
-      
+
       startTransition(() => {
         const params = new URLSearchParams();
 
@@ -581,6 +593,84 @@ export default function SearchForm({ projectId, ownerId, initialOwnerName, initi
               "検索"
             )}
           </Button>
+
+          {/* 外部リンクボタン */}
+          {form.watch("ownerName")?.trim() && (
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                type="button"
+                size="sm"
+                className="bg-[#1877F2] hover:bg-[#1864C9] text-white w-full"
+                asChild
+              >
+                <Link
+                  href={`https://www.facebook.com/search/top?q=${encodeURIComponent(
+                    form.watch("ownerName")
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <span className="flex items-center justify-center gap-1">
+                    Facebook
+                    <ExternalLink className="w-3 h-3" />
+                  </span>
+                </Link>
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="bg-[#0A66C2] hover:bg-[#0952A5] text-white w-full"
+                asChild
+              >
+                <Link
+                  href={`https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(
+                    form.watch("ownerName")
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <span className="flex items-center justify-center gap-1">
+                    LinkedIn
+                    <ExternalLink className="w-3 h-3" />
+                  </span>
+                </Link>
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="bg-gray-800 hover:bg-gray-700 text-white w-full"
+                asChild
+              >
+                <Link
+                  href="https://8card.net/myhome?page=1&sort=exchangeDate&tab=network"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onMouseDown={(e) => {
+                    if (e.button === 1) {
+                      e.preventDefault();
+                      const ownerName = form.watch("ownerName");
+                      if (ownerName) {
+                        navigator.clipboard.writeText(ownerName);
+                        toast.success("名前をクリップボードにコピーしました");
+                      }
+                    }
+                  }}
+                  onClick={() => {
+                    const ownerName = form.watch("ownerName");
+                    if (ownerName) {
+                      navigator.clipboard.writeText(ownerName);
+                      toast.success("名前をクリップボードにコピーしました");
+                    }
+                  }}
+                >
+                  <span className="flex items-center justify-center gap-1">
+                    Eight
+                    <ExternalLink className="w-3 h-3" />
+                  </span>
+                </Link>
+              </Button>
+            </div>
+          )}
         </div>
       </form>
     </Form>
