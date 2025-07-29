@@ -4,6 +4,7 @@ import type { SerpstackResponse } from "@/lib/types/serpstack";
 import Pagination from "./Pagination";
 import { ExternalLink } from "lucide-react";
 import { useParams } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 interface SearchResultsProps {
   data: SerpstackResponse | null;
@@ -53,9 +54,7 @@ export default function SearchResults({
   if (!data || !data.organic_results || data.organic_results.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted-foreground">
-          検索結果が見つかりませんでした
-        </p>
+        <p className="text-muted-foreground">検索結果が見つかりませんでした</p>
       </div>
     );
   }
@@ -86,13 +85,25 @@ export default function SearchResults({
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div
+        className={cn(
+          "space-y-3",
+          `
+        
+        `
+        )}
+      >
         {results.map((result, index) => (
           <Card
             key={`${result.url}-${index}`}
-            className="hover:shadow-md transition-shadow duration-200 border-border/50"
+            className={cn(
+              "hover:shadow-md transition-shadow duration-200 border-border",
+              `
+              
+              `
+            )}
           >
-            <CardContent className="p-6">
+            <CardContent className="p-6 py-1">
               <div className="space-y-2">
                 <div className="flex items-start justify-between gap-4">
                   <h3 className="text-lg font-medium line-clamp-2 flex-1">
