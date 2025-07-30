@@ -10,7 +10,7 @@ export type OwnerWithCompaniesAndProperties = {
   lat: number | null
   lng: number | null
   street_view_available: boolean | null
-  investigation_completed: boolean | null
+  investigation_status: 'pending' | 'completed' | 'unknown' | null
   created_at: string
   updated_at: string
   companies: Tables<'owner_companies'>[]
@@ -133,7 +133,7 @@ export async function updateOwnerCompanyAction(
   companyData: {
     companyName: string
     companyNumber?: string
-    sourceUrl: string
+    sourceUrl?: string
     rank: 1 | 2 | 3
   }
 ) {
@@ -148,7 +148,7 @@ export async function updateOwnerCompanyAction(
       owner_id: ownerId,
       company_name: companyData.companyName,
       company_number: companyData.companyNumber || null,
-      source_url: companyData.sourceUrl,
+      source_url: companyData.sourceUrl || null,
       rank: companyData.rank,
       researched_by: user.id
     }

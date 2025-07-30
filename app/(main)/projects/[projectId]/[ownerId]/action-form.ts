@@ -68,17 +68,23 @@ function parseArrayParams(params: Record<string, string | string[] | undefined>)
 
 export async function searchWithParams(params: Record<string, string | string[] | undefined>): Promise<SerpstackResponse> {
   const parsedParams = parseArrayParams(params)
+  // console.log("parsedParams", parsedParams)
   const result = searchParamsSchema.safeParse(parsedParams)
 
   if (!result.success) {
     throw new Error('検索パラメータが不正です')
   }
 
+  // console.log("result", result.data)
+
   // フォームデータからパラメータを生成
   const { searchQuery, apiParams } = generateSearchParams(result.data)
 
+  // console.log("searchQuery", searchQuery)
+  // console.log("apiParams", apiParams)
+
   const serpstack = getSerpstackClient()
   const searchResult = await serpstack.search(searchQuery, apiParams)
-  console.log("total_results", searchResult.search_information?.total_results)
+  // console.log("total_results", searchResult.search_information?.total_results)
   return searchResult
 }
