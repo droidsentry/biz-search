@@ -135,13 +135,13 @@ export async function loginWithEmailOrUsername(formData: LoginWithEmailOrUsernam
     console.error(parsedFormData.error);
     throw new Error("ログインに失敗しました"); 
   }
-// メールアドレスかユーザー名かを判断
-const isEmail = formData.emailOrUsername.includes("@");
-if (isEmail) {
-  await loginWithEmail(parsedFormData.data);
-} else {
-  await loginWithUsername(parsedFormData.data);
-}
+  // メールアドレスかユーザー名かを判断
+  const isEmail = formData.emailOrUsername.includes("@");
+  if (isEmail) {
+    await loginWithEmail(parsedFormData.data);
+  } else {
+    await loginWithUsername(parsedFormData.data);
+  }
 };
 
 /**
