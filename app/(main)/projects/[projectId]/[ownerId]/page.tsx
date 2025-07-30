@@ -13,6 +13,7 @@ import { OwnerSearch } from "./components/owner-search";
 import { StreetView } from "./components/street-view";
 import { InvestigationStatusButtons } from "./components/investigation-status-buttons";
 import { getDefaultSearchFormValues } from "@/lib/helpers/server-constants";
+import { getSearchFormDefaults } from "@/lib/server-constants";
 
 export async function generateMetadata({
   params,
@@ -49,7 +50,7 @@ export default async function OwnerDetailPage({
   }
 
   // 検索フォームのデフォルト値を取得
-  const searchFormDefaults = await getDefaultSearchFormValues();
+  const searchFormDefaults = await getSearchFormDefaults();
 
   return (
     <div className="mx-auto max-w-[1400px] px-2 md:px-4">

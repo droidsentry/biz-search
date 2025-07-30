@@ -2,14 +2,14 @@
 
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { useState, useEffect, useCallback, useTransition } from "react";
-import SearchForm from "./forms/SearchForm";
-import SearchResults from "./forms/SearchResults";
+import { useState, useEffect } from "react";
+import SearchForm from "./serpapi-forms/SearchForm";
+import SearchResults from "./serpapi-forms/SearchResults";
 import { SearchSidebar } from "./search-sidebar";
-import { searchWithParams } from "../action-form";
-import type { SerpstackResponse } from "@/lib/types/serpstack";
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import type { SearchFormData } from "@/lib/schemas/serpstack";
+import type { SerpapiResponse } from "@/lib/types/serpapi";
+import type { SearchFormData, SearchParams } from "@/lib/schemas/serpapi";
+import { useSearchParams } from "next/navigation";
+import { searchWithParams } from "./action-serpapi-form";
 
 interface OwnerSearchProps {
   initialQuery: string;
@@ -26,47 +26,112 @@ export function OwnerSearch({
   ownerId,
   searchFormDefaults,
 }: OwnerSearchProps) {
-  const [searchData, setSearchData] = useState<SerpstackResponse | null>(null);
+  const [searchData, setSearchData] = useState<SerpapiResponse | null>(null);
   const [error, setError] = useState<Error | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
-  const [isPending, startTransition] = useTransition();
-
-  // URLパラメータから検索を実行
-  const performSearch = async () => {
-    startTransition(async () => {
-      const params: Record<string, string | string[] | undefined> = {};
-      searchParams.forEach((value, key) => {
-        // 既に値がある場合は配列にする
-        if (params[key]) {
-          (params[key] as string[]).push(value);
-        } else {
-          params[key] = value;
-        }
-      });
-      const result = await searchWithParams(params).catch((err) => {
-        setError(err as Error);
-      });
-      if (result) {
-        setSearchData(result);
-      }
-    });
-  };
-
-  console.log("searchData", searchData);
 
   // URLパラメータが変更されたら検索を実行
   useEffect(() => {
-    const hasSearchParams =
-      searchParams.has("ownerName") ||
-      searchParams.has("ownerAddress") ||
-      searchParams.has("additionalKeywords[0][value]");
+    const performSearch = async () => {
+      // URLパラメータから検索パラメータを構築
+      const hasSearchParams =
+        searchParams.get("ownerName") ||
+        searchParams.get("ownerAddress") ||
+        searchParams.get("additionalKeywords[0][value]");
 
-    if (hasSearchParams) {
-      performSearch();
-    }
+      if (!hasSearchParams) {
+        setSearchData(null);
+        setError(null);
+        return;
+      }
+
+      setIsSearching(true);
+      setError(null);
+
+      try {
+        // URLパラメータからSearchParamsオブジェクトを構築
+        const searchFormData = {
+          ownerName: searchParams.get("ownerName") || "",
+          ownerNameMatchType:
+            (searchParams.get("ownerNameMatchType") as "exact" | "partial") ||
+            "partial",
+          ownerAddress: searchParams.get("ownerAddress") || "",
+          ownerAddressMatchType:
+            (searchParams.get("ownerAddressMatchType") as
+              | "exact"
+              | "partial") || "partial",
+          additionalKeywords: [] as {
+            value: string;
+            matchType: "exact" | "partial";
+          }[],
+          searchSites: [] as string[],
+          siteSearchMode:
+            (searchParams.get("siteSearchMode") as
+              | "any"
+              | "specific"
+              | "exclude") || "any",
+          isAdvancedSearchEnabled:
+            searchParams.get("isAdvancedSearchEnabled") === "true",
+          period:
+            (searchParams.get("period") as
+              | "all"
+              | "last_6_months"
+              | "last_year"
+              | "last_3_years"
+              | "last_5_years"
+              | "last_10_years") || "all",
+        };
+
+        // additionalKeywordsの復元
+        let index = 0;
+        while (searchParams.get(`additionalKeywords[${index}][value]`)) {
+          const value = searchParams.get(
+            `additionalKeywords[${index}][value]`
+          ) as string;
+          const matchType =
+            (searchParams.get(`additionalKeywords[${index}][matchType]`) as
+              | "exact"
+              | "partial") || "partial";
+          searchFormData.additionalKeywords.push({ value, matchType });
+          index++;
+        }
+
+        // searchSitesの復元
+        let siteIndex = 0;
+        while (searchParams.get(`searchSites[${siteIndex}]`)) {
+          searchFormData.searchSites.push(
+            searchParams.get(`searchSites[${siteIndex}]`) as string
+          );
+          siteIndex++;
+        }
+
+        // ページ番号の取得
+        const page = searchParams.get("page")
+          ? parseInt(searchParams.get("page") as string, 10)
+          : 1;
+
+        // 検索パラメータの構築
+        const searchParameters: SearchParams = {
+          searchForm: searchFormData,
+          page,
+        };
+
+        // 検索を実行
+        const result = await searchWithParams(searchParameters);
+        setSearchData(result);
+      } catch (err) {
+        console.error("Search error:", err);
+        setError(err as Error);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    performSearch();
   }, [searchParams]);
+
+  console.log("searchData", searchData);
 
   return (
     <div id="search-results" className="space-y-6 w-full">
@@ -77,7 +142,7 @@ export function OwnerSearch({
           <div className="flex-1 sticky top-10">
             <SearchResults
               data={searchData}
-              isSearching={isPending}
+              isSearching={isSearching}
               error={error}
             />
           </div>
@@ -90,7 +155,7 @@ export function OwnerSearch({
               ownerId={ownerId}
               initialOwnerName={initialQuery}
               initialOwnerAddress={initialAddress}
-              isSearching={isPending}
+              isSearching={isSearching}
               searchFormDefaults={searchFormDefaults}
             />
 
