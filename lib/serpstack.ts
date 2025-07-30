@@ -191,6 +191,8 @@ export class SerpstackClient {
       ...options
     }
 
+    console.log("params", params)
+
     // Filter out undefined values and convert to string
     const queryString = new URLSearchParams(
       Object.entries(params)
@@ -209,47 +211,12 @@ export class SerpstackClient {
         },
       })
       const data = await response.json() as SerpstackResponse | SerpstackErrorResponse
-      // console.log("data", data)
-      //５秒待つ
-      // await new Promise(resolve => setTimeout(resolve, 5000))
-      // const data: SerpstackResponse = {
-      //   request: {
-      //     success: true,
-      //     processed_timestamp: 1722336000,
-      //     search_url: "https://serpstack.com/search",
-      //     total_time_taken: 0.5,
-      //   },
-      //   search_parameters: {
-      //     engine: "google",
-      //     type: "web",
-      //     device: "desktop",
-      //     query: "test",
-      //     location: "Tokyo, Japan",
-      //     google_domain: "google.com",
-      //     gl: "jp",
-      //     hl: "ja",
-      //     safe: 0,
-      //     page: 1,
-      //     num: 10,
-      //     output: "json",
-      //   },
-      //   search_information: {
-      //     query: "test",
-      //     showing_results_for: "test",
-      //     total_results: 10,
-      //     time_taken_displayed: 0.5,
-      //   },
-      //   organic_results: [
-      //     {
-      //       position: 1,
-      //       title: "test",
-      //       url: "https://serpstack.com/search",
-      //       domain: "serpstack.com",
-      //       displayed_url: "https://serpstack.com/search",
-      //       snippet: "test",
-      //     },
-      //   ],
-      // }
+      console.log("data", data)
+      // ダミーデータを使用（開発環境用）
+      // 本番環境では実際のAPIを使用してください
+      // const { getDummySerpstackData } = await import('@/lib/data/test/serpstack-dummy-data')
+      // await new Promise(resolve => setTimeout(resolve, 6000)) // 1秒の遅延でAPI呼び出しをシミュレート
+      // const data = getDummySerpstackData(query, params.page || 1)
 
 
 
@@ -258,11 +225,11 @@ export class SerpstackClient {
         throw new Error(formatSerpstackError(data.error))
       }
 
-      // if (!response.ok) {
-      //   throw new Error(
-      //     `HTTP Error: ${response.status} ${response.statusText}`
-      //   )
-      // }
+      if (!response.ok) {
+        throw new Error(
+          `HTTP Error: ${response.status} ${response.statusText}`
+        )
+      }
 
       return data
     } catch (error) {

@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-export async function toggleInvestigationStatusAction(ownerId: string) {
+export async function toggleInvestigationStatusAction(ownerId: string, currentStatus?: 'pending' | 'completed' | 'unknown') {
   const supabase = await createClient()
   
   // 認証確認
@@ -15,7 +15,7 @@ export async function toggleInvestigationStatusAction(ownerId: string) {
   // 現在の調査状態を取得
   const { data: owner, error: ownerError } = await supabase
     .from('owners')
-    .select('investigation_completed')
+    .select('investigation_status')
     .eq('id', ownerId)
     .single()
 
@@ -23,10 +23,17 @@ export async function toggleInvestigationStatusAction(ownerId: string) {
     return { success: false, error: '所有者情報の取得に失敗しました' }
   }
 
-  const newStatus = !owner.investigation_completed
+  // 新しいステータスを決定
+  let newStatus: 'pending' | 'completed' | 'unknown'
+  if (currentStatus) {
+    newStatus = currentStatus
+  } else {
+    // トグル動作: pending <-> completed
+    newStatus = owner.investigation_status === 'completed' ? 'pending' : 'completed'
+  }
 
   // 調査完了に変更する場合は、owner_companiesのデータ存在を確認
-  if (newStatus === true) {
+  if (newStatus === 'completed') {
     const { count, error: countError } = await supabase
       .from('owner_companies')
       .select('*', { count: 'exact', head: true })
@@ -48,7 +55,7 @@ export async function toggleInvestigationStatusAction(ownerId: string) {
   const { error: updateError } = await supabase
     .from('owners')
     .update({ 
-      investigation_completed: newStatus,
+      investigation_status: newStatus,
       updated_at: new Date().toISOString()
     })
     .eq('id', ownerId)
@@ -61,9 +68,15 @@ export async function toggleInvestigationStatusAction(ownerId: string) {
   revalidatePath(`/projects/[projectId]/[ownerId]`, 'page')
   revalidatePath(`/projects/[projectId]`, 'page')
 
+  const statusMessages = {
+    pending: `調査未完了に設定しました。`,
+    completed: `調査完了に設定しました。 物件一覧に戻ります。`,
+    unknown: `不明に設定しました。 物件一覧に戻ります。`
+  }
+
   return { 
     success: true, 
     newStatus,
-    message: newStatus ? '調査完了に設定しました' : '調査未完了に設定しました'
+    message: statusMessages[newStatus]
   }
 }

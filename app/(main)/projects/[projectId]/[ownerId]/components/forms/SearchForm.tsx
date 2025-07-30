@@ -17,7 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { DEFAULT_SEARCH_FORM_VALUES } from "@/lib/constants/search-form-defaults";
 import { searchFormSchema, type SearchFormData } from "@/lib/schemas/serpstack";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ExternalLink, Loader2, RotateCcw } from "lucide-react";
+import { ExternalLink, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
@@ -30,7 +30,6 @@ interface SearchFormProps {
   initialOwnerName?: string;
   initialOwnerAddress?: string;
   isSearching?: boolean;
-  onSearchStart?: () => void;
 }
 
 export default function SearchForm({
@@ -39,7 +38,6 @@ export default function SearchForm({
   initialOwnerName,
   initialOwnerAddress,
   isSearching = false,
-  onSearchStart,
 }: SearchFormProps) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -138,11 +136,6 @@ export default function SearchForm({
       ownerAddress.trim() ||
       (isAdvancedSearchEnabled && additionalKeywords.length > 0)
     ) {
-      // 検索開始を即座に通知
-      if (onSearchStart) {
-        onSearchStart();
-      }
-
       startTransition(() => {
         const params = new URLSearchParams();
 
@@ -192,6 +185,9 @@ export default function SearchForm({
   };
 
   const watchedIsAdvancedSearchEnabled = form.watch("isAdvancedSearchEnabled");
+  const ownerName = form.watch("ownerName");
+  const ownerAddress = form.watch("ownerAddress");
+  const additionalKeywords = form.watch("additionalKeywords");
 
   return (
     <Form {...form}>
@@ -439,31 +435,16 @@ export default function SearchForm({
                   name="additionalKeywords"
                   render={({ field }) => (
                     <FormItem>
-                      <div className="flex items-center justify-between mb-2">
-                        <FormLabel className="text-sm text-muted-foreground">
-                          追加キーワード
-                        </FormLabel>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            field.onChange(
-                              DEFAULT_SEARCH_FORM_VALUES.additionalKeywords
-                            )
-                          }
-                          className="h-7 px-2 text-xs"
-                        >
-                          <RotateCcw className="h-3 w-3 mr-1" />
-                          デフォルトに戻す
-                        </Button>
-                      </div>
+                      <FormLabel className="text-sm text-muted-foreground">
+                        追加キーワード
+                      </FormLabel>
                       <FormControl>
                         <TagInputElegant
                           keywords={field.value}
                           onChange={field.onChange}
                           placeholder="追加キーワードを入力してEnter"
                           className=""
+                          defaultKeywords={DEFAULT_SEARCH_FORM_VALUES.additionalKeywords}
                         />
                       </FormControl>
                     </FormItem>
@@ -471,30 +452,9 @@ export default function SearchForm({
                 />
 
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between mb-2">
-                    <FormLabel className="text-sm text-muted-foreground">
-                      検索対象サイト
-                    </FormLabel>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        form.setValue(
-                          "searchSites",
-                          DEFAULT_SEARCH_FORM_VALUES.searchSites
-                        );
-                        form.setValue(
-                          "siteSearchMode",
-                          DEFAULT_SEARCH_FORM_VALUES.siteSearchMode
-                        );
-                      }}
-                      className="h-7 px-2 text-xs"
-                    >
-                      <RotateCcw className="h-3 w-3 mr-1" />
-                      デフォルトに戻す
-                    </Button>
-                  </div>
+                  <FormLabel className="text-sm text-muted-foreground">
+                    検索対象サイト
+                  </FormLabel>
                   <FormField
                     control={form.control}
                     name="siteSearchMode"
@@ -561,6 +521,7 @@ export default function SearchForm({
                                 : "除外したいドメインを入力"
                             }
                             className=""
+                            defaultTags={DEFAULT_SEARCH_FORM_VALUES.searchSites}
                           />
                         </FormControl>
                       </FormItem>
@@ -578,10 +539,10 @@ export default function SearchForm({
             disabled={
               isPending ||
               isSearching ||
-              (!form.watch("ownerName")?.trim() &&
-                !form.watch("ownerAddress")?.trim() &&
+              (!ownerName?.trim() &&
+                !ownerAddress?.trim() &&
                 (!form.watch("isAdvancedSearchEnabled") ||
-                  form.watch("additionalKeywords").length === 0))
+                  additionalKeywords.length === 0))
             }
           >
             {isPending || isSearching ? (
@@ -595,7 +556,7 @@ export default function SearchForm({
           </Button>
 
           {/* 外部リンクボタン */}
-          {form.watch("ownerName")?.trim() && (
+          {ownerName?.trim() && (
             <div className="grid grid-cols-3 gap-2">
               <Button
                 type="button"
@@ -605,7 +566,7 @@ export default function SearchForm({
               >
                 <Link
                   href={`https://www.facebook.com/search/top?q=${encodeURIComponent(
-                    form.watch("ownerName")
+                    ownerName
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -624,7 +585,7 @@ export default function SearchForm({
               >
                 <Link
                   href={`https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(
-                    form.watch("ownerName")
+                    ownerName
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -648,7 +609,6 @@ export default function SearchForm({
                   onMouseDown={(e) => {
                     if (e.button === 1) {
                       e.preventDefault();
-                      const ownerName = form.watch("ownerName");
                       if (ownerName) {
                         navigator.clipboard.writeText(ownerName);
                         toast.success("名前をクリップボードにコピーしました");
@@ -656,7 +616,6 @@ export default function SearchForm({
                     }
                   }}
                   onClick={() => {
-                    const ownerName = form.watch("ownerName");
                     if (ownerName) {
                       navigator.clipboard.writeText(ownerName);
                       toast.success("名前をクリップボードにコピーしました");

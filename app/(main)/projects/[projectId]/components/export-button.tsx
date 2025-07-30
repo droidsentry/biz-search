@@ -6,6 +6,7 @@ import { Download } from "lucide-react";
 import { exportProjectProperties } from "../action";
 import { toast } from "sonner";
 import ExcelJS from "exceljs";
+import { extractRoomNumber } from "@/lib/utils/property-address";
 
 interface ExportButtonProps {
   projectId: string;
@@ -52,63 +53,7 @@ export function ExportButton({ projectId, projectName }: ExportButtonProps) {
         // データを追加
         exportedData.forEach((row) => {
           // 物件住所から号室と地番を抽出
-          let roomNumber = "";
-          let landNumber = "";
-          
-          if (row.property_address) {
-            // 全角数字を半角に変換する関数
-            const toHalfWidth = (str: string) => {
-              return str.replace(/[０-９]/g, (s) => {
-                return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
-              });
-            };
-            
-            // 住所を正規表現でパース（最後の数字部分を探す）
-            // パターン1: 「数字-数字」形式（例：１２－３８、12-38）
-            // パターン2: 「数字－数字」形式（例：１５－１９－２）
-            const patterns = [
-              /^(.+?)([０-９\d]+[-－][０-９\d]+(?:[-－][０-９\d]+)*)$/,  // 末尾が「数字-数字」形式
-              /^(.+?)([０-９\d]{3,})$/  // 末尾が3桁以上の数字のみ
-            ];
-            
-            let matched = false;
-            for (const pattern of patterns) {
-              const match = row.property_address.match(pattern);
-              if (match) {
-                const basePart = match[1];
-                const numberPart = match[2];
-                
-                // 全角数字を半角に変換
-                const numberPartHalf = toHalfWidth(numberPart);
-                
-                // 「-」で始まる場合は取り除く
-                const cleanedNumber = numberPartHalf.replace(/^[-－]+/, '');
-                
-                // 数字とハイフンのみで構成されているか確認
-                if (/^[\d-]+$/.test(cleanedNumber)) {
-                  // 最後のハイフン以降を号室番号とする
-                  const lastDashMatch = cleanedNumber.match(/[-](\d+)$/);
-                  if (lastDashMatch && lastDashMatch[1].length >= 1) {
-                    roomNumber = lastDashMatch[1];
-                    landNumber = basePart + cleanedNumber.substring(0, cleanedNumber.lastIndexOf('-'));
-                  } else if (/^\d{3,}$/.test(cleanedNumber)) {
-                    // ハイフンがなく3桁以上の数字の場合
-                    roomNumber = cleanedNumber;
-                    landNumber = basePart.trim();
-                  } else {
-                    landNumber = row.property_address;
-                  }
-                  matched = true;
-                  break;
-                }
-              }
-            }
-            
-            if (!matched) {
-              // パターンにマッチしない場合は全体を地番とする
-              landNumber = row.property_address;
-            }
-          }
+          const { roomNumber, landNumber } = extractRoomNumber(row.property_address || "");
 
           // 勤務先の情報を整形（①②③形式）
           const workplaces: string[] = [];

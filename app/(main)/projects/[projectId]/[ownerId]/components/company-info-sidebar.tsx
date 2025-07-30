@@ -65,8 +65,8 @@ export function CompanyInfoSidebar({
 
   const handleSave = async (rank: 1 | 2 | 3) => {
     const data = editingData[rank];
-    if (!data.companyName || !data.sourceUrl) {
-      toast.error("会社名と出典URLは必須です");
+    if (!data.companyName) {
+      toast.error("会社名を入力してください");
       return;
     }
 
@@ -74,7 +74,7 @@ export function CompanyInfoSidebar({
       const result = await updateOwnerCompanyAction(ownerId, {
         companyName: data.companyName,
         companyNumber: data.companyNumber || undefined,
-        sourceUrl: data.sourceUrl,
+        sourceUrl: data.sourceUrl || undefined,
         rank,
       }).catch((error) => {
         toast.error("会社情報の更新に失敗しました エラー:" + error.message);
@@ -197,11 +197,7 @@ export function CompanyInfoSidebar({
 
               <Button
                 onClick={() => handleSave(rank as 1 | 2 | 3)}
-                disabled={
-                  isPending ||
-                  !editingData[rank].companyName ||
-                  !editingData[rank].sourceUrl
-                }
+                disabled={isPending || !editingData[rank].companyName}
                 size="sm"
                 className="w-full"
               >

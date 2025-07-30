@@ -2,7 +2,7 @@
 
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useTransition } from "react";
 import SearchForm from "./forms/SearchForm";
 import SearchResults from "./forms/SearchResults";
 import { SearchSidebar } from "./search-sidebar";
@@ -24,74 +24,57 @@ export function OwnerSearch({
   ownerId,
 }: OwnerSearchProps) {
   const [searchData, setSearchData] = useState<SerpstackResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const [isPending, startTransition] = useTransition();
 
   // URLパラメータから検索を実行
   const performSearch = async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
+    startTransition(async () => {
       const params: Record<string, string | string[] | undefined> = {};
       searchParams.forEach((value, key) => {
+        // 既に値がある場合は配列にする
         if (params[key]) {
-          // 既に値がある場合は配列にする
-          if (Array.isArray(params[key])) {
-            (params[key] as string[]).push(value);
-          } else {
-            params[key] = [params[key] as string, value];
-          }
+          (params[key] as string[]).push(value);
         } else {
           params[key] = value;
         }
       });
-      
-      const result = await searchWithParams(params);
-      setSearchData(result);
-    } catch (err) {
-      setError(err as Error);
-    } finally {
-      setIsLoading(false);
-    }
+      const result = await searchWithParams(params).catch((err) => {
+        setError(err as Error);
+      });
+      if (result) {
+        setSearchData(result);
+      }
+    });
   };
+
+  console.log("searchData", searchData);
 
   // URLパラメータが変更されたら検索を実行
   useEffect(() => {
-    const hasSearchParams = searchParams.has('ownerName') || 
-                          searchParams.has('ownerAddress') || 
-                          searchParams.has('additionalKeywords[0][value]');
-    
+    const hasSearchParams =
+      searchParams.has("ownerName") ||
+      searchParams.has("ownerAddress") ||
+      searchParams.has("additionalKeywords[0][value]");
+
     if (hasSearchParams) {
       performSearch();
     }
   }, [searchParams]);
 
-  // 検索開始を早めに通知するためのコールバック
-  const handleSearchStart = useCallback(() => {
-    setIsLoading(true);
-    setError(null);
-  }, []);
-
   return (
-    <div className="space-y-6 w-full">
+    <div id="search-results" className="space-y-6 w-full">
       <h3 className="text-lg font-semibold">Web検索</h3>
 
-      <div
-        className={
-          searchData
-            ? "flex gap-4"
-            : "flex justify-center w-full"
-        }
-      >
+      <div className={searchData ? "flex gap-4" : "flex justify-center w-full"}>
         {searchData && (
           <div className="flex-1 sticky top-10">
-            <SearchResults 
+            <SearchResults
               data={searchData}
-              isLoading={isLoading}
+              isSearching={isPending}
               error={error}
             />
           </div>
@@ -99,13 +82,12 @@ export function OwnerSearch({
         {/* サイドバー */}
         <SearchSidebar className={cn("z-40")}>
           <div className="space-y-4 ">
-            <SearchForm 
-              projectId={projectId} 
+            <SearchForm
+              projectId={projectId}
               ownerId={ownerId}
               initialOwnerName={initialQuery}
               initialOwnerAddress={initialAddress}
-              isSearching={isLoading}
-              onSearchStart={handleSearchStart}
+              isSearching={isPending}
             />
 
             <Separator />

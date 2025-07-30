@@ -18,7 +18,7 @@ export type PropertyWithPrimaryOwner = {
     lat: number | null
     lng: number | null
     street_view_available: boolean | null
-    investigation_completed: boolean | null
+    investigation_status: 'pending' | 'completed' | 'unknown' | null
     company: {
       id: string | null
       name: string | null
@@ -43,7 +43,7 @@ export type PropertyWithOwnerAndCompany = {
     lat: number | null
     lng: number | null
     street_view_available: boolean | null
-    investigation_completed: boolean | null
+    investigation_status: 'pending' | 'completed' | 'unknown' | null
     created_at: string
     updated_at: string
     company: {
@@ -103,7 +103,7 @@ export async function getProjectPropertiesAction(
         lat: item.primary_owner_lat,
         lng: item.primary_owner_lng,
         street_view_available: item.primary_owner_street_view_available,
-        investigation_completed: item.primary_owner_investigation_completed,
+        investigation_status: item.primary_owner_investigation_status,
         company: item.primary_company_id ? {
           id: item.primary_company_id,
           name: item.primary_company_name
@@ -160,7 +160,7 @@ export async function getProjectOwnersAction(
         lat: item.owner_lat,
         lng: item.owner_lng,
         street_view_available: item.owner_street_view_available,
-        investigation_completed: item.owner_investigation_completed,
+        investigation_status: item.owner_investigation_status,
         created_at: item.owner_created_at,
         updated_at: item.owner_updated_at,
         company: item.company_id ? {

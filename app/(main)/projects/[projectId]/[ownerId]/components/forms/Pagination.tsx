@@ -1,51 +1,105 @@
-'use client'
+"use client";
 
-import { Button } from '@/components/ui/button'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useState, useTransition } from "react";
+
+import type { SerpstackResponse } from "@/lib/types/serpstack";
 
 interface PaginationProps {
-  currentPage: number
-  hasMoreResults?: boolean
-  totalPages?: number
-  totalResults?: number
-  resultsPerPage?: number
-  projectId: string
-  ownerId: string
+  data: SerpstackResponse;
+  isSearching: boolean;
 }
 
-export default function Pagination({ 
-  currentPage, 
-  hasMoreResults = true,
-  totalPages,
-  totalResults,
-  resultsPerPage = 10,
-  projectId,
-  ownerId
-}: PaginationProps) {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const pathname = usePathname()
+export default function Pagination({ data, isSearching }: PaginationProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const [isPending, startTransition] = useTransition();
+  const [clickedPage, setClickedPage] = useState<number | null>(null);
+  const [clickedNav, setClickedNav] = useState<"prev" | "next" | null>(null);
+
+  // データから必要な値を抽出
+  const currentPage = Number(data.search_parameters?.page) || 1;
+  const totalResults = Number(data.search_information?.total_results) || 0;
+  const resultsPerPage = Number(data.search_parameters?.num) || 10;
+
+  // プロジェクトIDとオーナーIDをパスから取得
+  const pathSegments = pathname.split("/");
+  const projectId = pathSegments[2];
+  const ownerId = pathSegments[3];
+
+  const handlePageChange = (
+    newPage: number,
+    buttonType: "page" | "prev" | "next" = "page"
+  ) => {
+    if (buttonType === "page") {
+      setClickedPage(newPage);
+      setClickedNav(null);
+    } else {
+      setClickedNav(buttonType);
+      setClickedPage(null);
+    }
+    startTransition(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("page", newPage.toString());
+      router.push(`/projects/${projectId}/${ownerId}?${params.toString()}`, {
+        scroll: false,
+      });
+
+      // ページ遷移後に任意の位置にスクロール
+      // 例: 検索結果の上部にスクロール
+      setTimeout(() => {
+        const searchResultsElement = document.getElementById("search-results");
+        if (searchResultsElement) {
+          searchResultsElement.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }
+      }, 300);
+    });
+  };
+  // paginationから利用可能なページ番号を取得
+  const availablePages = data.pagination?.pages?.map((p) => p.page) || [];
   
-  const handlePageChange = (newPage: number) => {
-    const params = new URLSearchParams(searchParams.toString())
-    params.set('page', newPage.toString())
-    router.push(`/projects/${projectId}/${ownerId}?${params.toString()}`, { scroll: false })
+  // 現在のページを含むすべての既知のページ
+  const allKnownPages = new Set([...availablePages, currentPage]);
+  
+  // 最大ページ番号を取得
+  const maxKnownPage = availablePages.length > 0 
+    ? Math.max(...availablePages)
+    : currentPage;
+  
+  // 総ページ数を計算（既知の最大ページ番号を使用）
+  const totalPages = maxKnownPage;
+  
+  // 前へ・次へボタンの表示判定
+  const showPrevious = currentPage > 1;
+  
+  // 次へボタンは以下の条件で表示:
+  // 1. paginationにnextフィールドがある
+  // 2. availablePagesに現在のページより大きいページがある
+  const hasNextInPages = availablePages.some(page => page > currentPage);
+  const showNext = !!data.pagination?.next || hasNextInPages;
+  // デバッグ情報
+  console.log("Pagination Debug:", {
+    currentPage,
+    availablePages,
+    allKnownPages: Array.from(allKnownPages).sort((a, b) => a - b),
+    maxKnownPage,
+    showPrevious,
+    showNext,
+    hasNextInPages,
+    paginationData: data.pagination,
+  });
+  
+  const shouldShowPagination = showPrevious || showNext || availablePages.length > 1;
+
+  if (!shouldShowPagination) {
+    return null;
   }
-
-  const maxPage = 10 // offsetの最大値が9なので、最大10ページ
-  // totalPagesが指定されている場合はそれを使用、そうでなければmaxPageを使用
-  const effectiveTotalPages = totalPages || maxPage
-  const showPrevious = currentPage > 1
-  const showNext = currentPage < effectiveTotalPages && hasMoreResults
-
-  if (!showPrevious && !showNext) {
-    return null
-  }
-
-  // 結果の開始位置と終了位置を計算
-  const startResult = totalResults ? (currentPage - 1) * resultsPerPage + 1 : undefined
-  const endResult = totalResults ? Math.min(currentPage * resultsPerPage, totalResults) : undefined
 
   return (
     <div className="space-y-4 mt-8">
@@ -53,62 +107,37 @@ export default function Pagination({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => handlePageChange(currentPage - 1)}
-          disabled={!showPrevious}
-          className="flex items-center gap-1"
+          onClick={() => handlePageChange(currentPage - 1, "prev")}
+          disabled={!showPrevious || isSearching || isPending}
+          className="flex items-center gap-1 cursor-pointer"
         >
-          <ChevronLeft className="h-4 w-4" />
+          {isPending && clickedNav === "prev" ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <ChevronLeft className="h-4 w-4" />
+          )}
           前へ
         </Button>
 
-        <div className="flex items-center gap-2">
-          {Array.from({ length: Math.min(5, effectiveTotalPages) }, (_, i) => {
-            let pageNum: number
-            if (currentPage <= 3) {
-              pageNum = i + 1
-            } else if (currentPage >= effectiveTotalPages - 2) {
-              pageNum = effectiveTotalPages - 4 + i
-            } else {
-              pageNum = currentPage - 2 + i
-            }
-
-            if (pageNum < 1 || pageNum > effectiveTotalPages) return null
-
-            return (
-              <Button
-                key={pageNum}
-                variant={pageNum === currentPage ? "default" : "outline"}
-                size="sm"
-                onClick={() => handlePageChange(pageNum)}
-                className="min-w-[40px]"
-              >
-                {pageNum}
-              </Button>
-            )
-          })}
-        </div>
+        <span className="text-sm text-muted-foreground">
+          ページ {currentPage}
+        </span>
 
         <Button
           variant="outline"
           size="sm"
-          onClick={() => handlePageChange(currentPage + 1)}
-          disabled={!showNext}
+          onClick={() => handlePageChange(currentPage + 1, "next")}
+          disabled={!showNext || isSearching || isPending}
           className="flex items-center gap-1"
         >
           次へ
-          <ChevronRight className="h-4 w-4" />
+          {isPending && clickedNav === "next" ? (
+            <Loader2 className="h-4 w-4 animate-spin cursor-pointer" />
+          ) : (
+            <ChevronRight className="h-4 w-4" />
+          )}
         </Button>
       </div>
-
-      {/* 結果数の表示 */}
-      {totalResults && startResult && endResult && (
-        <div className="text-center text-sm text-muted-foreground">
-          <p>
-            {startResult}件目～{endResult}件目
-            （全{totalResults.toLocaleString()}件中）
-          </p>
-        </div>
-      )}
     </div>
-  )
+  );
 }

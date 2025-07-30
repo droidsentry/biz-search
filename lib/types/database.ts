@@ -232,7 +232,7 @@ export type Database = {
           rank: number
           researched_at: string
           researched_by: string | null
-          source_url: string
+          source_url: string | null
           updated_at: string
         }
         Insert: {
@@ -244,7 +244,7 @@ export type Database = {
           rank: number
           researched_at?: string
           researched_by?: string | null
-          source_url: string
+          source_url?: string | null
           updated_at?: string
         }
         Update: {
@@ -256,7 +256,7 @@ export type Database = {
           rank?: number
           researched_at?: string
           researched_by?: string | null
-          source_url?: string
+          source_url?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -281,7 +281,7 @@ export type Database = {
           address: string
           created_at: string
           id: string
-          investigation_completed: boolean | null
+          investigation_status: Database["public"]["Enums"]["investigation_status"]
           lat: number | null
           lng: number | null
           name: string
@@ -292,7 +292,7 @@ export type Database = {
           address: string
           created_at?: string
           id?: string
-          investigation_completed?: boolean | null
+          investigation_status?: Database["public"]["Enums"]["investigation_status"]
           lat?: number | null
           lng?: number | null
           name: string
@@ -303,7 +303,7 @@ export type Database = {
           address?: string
           created_at?: string
           id?: string
-          investigation_completed?: boolean | null
+          investigation_status?: Database["public"]["Enums"]["investigation_status"]
           lat?: number | null
           lng?: number | null
           name?: string
@@ -805,7 +805,7 @@ export type Database = {
           owner_lat: number
           owner_lng: number
           owner_street_view_available: boolean
-          owner_investigation_completed: boolean
+          owner_investigation_status: Database["public"]["Enums"]["investigation_status"]
           owner_created_at: string
           owner_updated_at: string
           company_id: string
@@ -830,7 +830,7 @@ export type Database = {
           primary_owner_lat: number
           primary_owner_lng: number
           primary_owner_street_view_available: boolean
-          primary_owner_investigation_completed: boolean
+          primary_owner_investigation_status: Database["public"]["Enums"]["investigation_status"]
           primary_company_id: string
           primary_company_name: string
           primary_company_position: string
@@ -903,7 +903,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      investigation_status: "pending" | "completed" | "unknown"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1030,6 +1030,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      investigation_status: ["pending", "completed", "unknown"],
+    },
   },
 } as const

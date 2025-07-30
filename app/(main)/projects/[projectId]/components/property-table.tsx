@@ -13,11 +13,14 @@ import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useRouter } from "next/navigation";
 import { PropertyWithPrimaryOwner } from "../action";
-import { Users } from "lucide-react";
+import { toast } from "sonner";
+import { extractRoomNumber } from "@/lib/utils/property-address";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface PropertyTableProps {
   properties: PropertyWithPrimaryOwner[];
   projectId: string;
+  projectName?: string;
 }
 
 export function PropertyTable({ properties, projectId }: PropertyTableProps) {
@@ -28,15 +31,12 @@ export function PropertyTable({ properties, projectId }: PropertyTableProps) {
       className="rounded-lg border border-muted-foreground/20 bg-muted-foreground/5 overflow-hidden"
       style={{ height: "calc(100vh - 50px)" }}
     >
-      <div className="h-full overflow-auto relative">
+      <ScrollArea className="h-full overflow-auto relative">
         <Table className="min-w-[1200px]">
           <TableHeader className="sticky top-0 z-10">
             <TableRow className="bg-muted-foreground/5 hover:bg-muted-foreground/10 border-b">
-              <TableHead className="min-w-[300px] font-medium text-foreground bg-muted-foreground/5">
-                不動産住所
-              </TableHead>
-              <TableHead className="min-w-[100px] font-medium text-foreground bg-muted-foreground/5">
-                所有者数
+              <TableHead className="min-w-[80px] text-center font-medium text-foreground bg-muted-foreground/5">
+                号室
               </TableHead>
               <TableHead className="min-w-[150px] font-medium text-foreground bg-muted-foreground/5">
                 代表所有者
@@ -46,9 +46,6 @@ export function PropertyTable({ properties, projectId }: PropertyTableProps) {
               </TableHead>
               <TableHead className="min-w-[200px] font-medium text-foreground bg-muted-foreground/5">
                 会社名
-              </TableHead>
-              <TableHead className="min-w-[100px] font-medium text-foreground bg-muted-foreground/5">
-                役職
               </TableHead>
               <TableHead className="min-w-[100px] font-medium text-foreground bg-muted-foreground/5">
                 ステータス
@@ -74,20 +71,21 @@ export function PropertyTable({ properties, projectId }: PropertyTableProps) {
                   key={property.project_property_id}
                   className="hover:bg-muted-foreground/10 transition-colors cursor-pointer"
                   onClick={() => {
-                    if (property.primary_owner?.id) {
-                      router.push(
-                        `/projects/${projectId}/${property.primary_owner.id}`
-                      );
+                    const owner = property.primary_owner;
+                    if (owner && owner.id) {
+                      navigator.clipboard.writeText(owner.name);
+                      toast.success("所有者名をクリップボードにコピーしました");
+                      router.push(`/projects/${projectId}/${owner.id}`);
                     }
                   }}
                 >
-                  <TableCell className="font-medium">
-                    {property.property_address}
+                  <TableCell className="font-medium text-center">
+                    {extractRoomNumber(property.property_address || "")
+                      .roomNumber || "-"}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Users className="size-4 text-muted-foreground" />
-                      <span>{property.owner_count}</span>
+                      <span>{property.primary_owner?.name || "-"}</span>
                       {property.owner_count > 1 && (
                         <Badge variant="outline" className="text-xs">
                           共有
@@ -95,7 +93,6 @@ export function PropertyTable({ properties, projectId }: PropertyTableProps) {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>{property.primary_owner?.name || "-"}</TableCell>
                   <TableCell className="text-sm">
                     {property.primary_owner?.address || "-"}
                   </TableCell>
@@ -116,11 +113,19 @@ export function PropertyTable({ properties, projectId }: PropertyTableProps) {
                         );
                       }
 
-                      // 調査完了フラグが立っている場合
-                      if (owner.investigation_completed) {
+                      // 調査ステータスによって表示を切り替え
+                      if (owner.investigation_status === "completed") {
                         return (
                           <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/20">
                             調査済み
+                          </Badge>
+                        );
+                      }
+
+                      if (owner.investigation_status === "unknown") {
+                        return (
+                          <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/20">
+                            調査したが不明
                           </Badge>
                         );
                       }
@@ -155,7 +160,7 @@ export function PropertyTable({ properties, projectId }: PropertyTableProps) {
             )}
           </TableBody>
         </Table>
-      </div>
+      </ScrollArea>
     </div>
   );
 }

@@ -122,9 +122,11 @@ export function generateSearchParams(params: SearchParams) {
   // 期間フィルターの設定
   const periodParams = generatePeriodParams(period)
 
+  console.log("count", count)
+
   // Serpstack API用のパラメータ
   const apiParams = {
-    num: count || 20, // 検索結果の最大件数
+    num: count || 10, // 検索結果の最大件数
     page: page || 1,  // 検索結果のページ番号
     safe: (safeSearch === 'strict' ? 1 : 0) ,
     ...periodParams,

@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { getBaseURL } from "@/lib/base-url";
 import { Button } from "@/components/ui/button";
 import { formatAddressToCityLevel } from "@/lib/utils/address";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, PencilIcon } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getOwnerDetailsAction } from "./action";
@@ -11,7 +11,7 @@ import { MapView } from "./components/map-view";
 import { OwnerInfo } from "./components/owner-info";
 import { OwnerSearch } from "./components/owner-search";
 import { StreetView } from "./components/street-view";
-import { InvestigationStatusButton } from "./components/investigation-status-button";
+import { InvestigationStatusButtons } from "./components/investigation-status-buttons";
 
 export async function generateMetadata({
   params,
@@ -60,8 +60,8 @@ export default async function OwnerDetailPage({
           </Link>
         </div>
 
-        <div className="flex items-start justify-between">
-          <div>
+        <div className="flex justify-between items-start gap-4">
+          <div className="flex-1 min-w-0">
             <h1 className="text-3xl font-bold text-foreground">{owner.name}</h1>
             <div className="mt-2 space-y-1">
               {owner.properties.length > 0 && (
@@ -71,9 +71,9 @@ export default async function OwnerDetailPage({
               )}
             </div>
           </div>
-          <InvestigationStatusButton
+          <InvestigationStatusButtons
             ownerId={owner.id}
-            initialStatus={owner.investigation_completed || false}
+            initialStatus={owner.investigation_status || "pending"}
           />
         </div>
       </div>
