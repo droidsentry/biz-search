@@ -1,5 +1,6 @@
 import { GoogleCustomSearchPattern } from "../types/custom-search";
 
+// DBから取得できない場合のフォールバック値
 export const DEFAULT_GOOGLE_CUSTOM_SEARCH_PATTERN: GoogleCustomSearchPattern = {
   id: undefined,
   userId: undefined,

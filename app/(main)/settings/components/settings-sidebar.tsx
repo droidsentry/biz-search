@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { ChartBarIcon, UsersIcon, ShieldIcon } from 'lucide-react'
+import { ChartBarIcon, UsersIcon, ShieldIcon, Settings2Icon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -33,7 +33,10 @@ export function SettingsSidebar() {
   const navigation = [
     { name: 'API使用状況', href: '/settings', icon: ChartBarIcon },
     { name: 'メンバー管理', href: '/settings/members', icon: UsersIcon },
-    ...(isSystemOwner ? [{ name: 'API制限管理', href: '/settings/api-limits', icon: ShieldIcon }] : []),
+    ...(isSystemOwner ? [
+      { name: 'API制限管理', href: '/settings/api-limits', icon: ShieldIcon },
+      { name: '定数設定', href: '/settings/constants', icon: Settings2Icon }
+    ] : []),
   ]
 
   return (

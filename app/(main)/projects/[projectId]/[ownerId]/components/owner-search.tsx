@@ -9,12 +9,14 @@ import { SearchSidebar } from "./search-sidebar";
 import { searchWithParams } from "../action-form";
 import type { SerpstackResponse } from "@/lib/types/serpstack";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import type { SearchFormData } from "@/lib/schemas/serpstack";
 
 interface OwnerSearchProps {
   initialQuery: string;
   initialAddress?: string;
   projectId: string;
   ownerId: string;
+  searchFormDefaults: SearchFormData;
 }
 
 export function OwnerSearch({
@@ -22,6 +24,7 @@ export function OwnerSearch({
   initialAddress,
   projectId,
   ownerId,
+  searchFormDefaults,
 }: OwnerSearchProps) {
   const [searchData, setSearchData] = useState<SerpstackResponse | null>(null);
   const [error, setError] = useState<Error | null>(null);
@@ -88,6 +91,7 @@ export function OwnerSearch({
               initialOwnerName={initialQuery}
               initialOwnerAddress={initialAddress}
               isSearching={isPending}
+              searchFormDefaults={searchFormDefaults}
             />
 
             <Separator />

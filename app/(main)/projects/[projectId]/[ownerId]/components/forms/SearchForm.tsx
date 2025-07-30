@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
-import { DEFAULT_SEARCH_FORM_VALUES } from "@/lib/constants/search-form-defaults";
 import { searchFormSchema, type SearchFormData } from "@/lib/schemas/serpstack";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ExternalLink, Loader2 } from "lucide-react";
@@ -30,6 +29,7 @@ interface SearchFormProps {
   initialOwnerName?: string;
   initialOwnerAddress?: string;
   isSearching?: boolean;
+  searchFormDefaults: SearchFormData;
 }
 
 export default function SearchForm({
@@ -38,6 +38,7 @@ export default function SearchForm({
   initialOwnerName,
   initialOwnerAddress,
   isSearching = false,
+  searchFormDefaults,
 }: SearchFormProps) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -45,27 +46,27 @@ export default function SearchForm({
 
   // 初期値の設定
   const defaultValues: SearchFormData = {
-    ...DEFAULT_SEARCH_FORM_VALUES,
+    ...searchFormDefaults,
     ownerName:
       searchParams.get("ownerName") ||
       initialOwnerName ||
-      DEFAULT_SEARCH_FORM_VALUES.ownerName,
+      searchFormDefaults.ownerName,
     ownerNameMatchType:
       (searchParams.get("ownerNameMatchType") as "exact" | "partial") ||
-      DEFAULT_SEARCH_FORM_VALUES.ownerNameMatchType,
+      searchFormDefaults.ownerNameMatchType,
     ownerAddress:
       searchParams.get("ownerAddress") ||
       initialOwnerAddress ||
-      DEFAULT_SEARCH_FORM_VALUES.ownerAddress,
+      searchFormDefaults.ownerAddress,
     ownerAddressMatchType:
       (searchParams.get("ownerAddressMatchType") as "exact" | "partial") ||
-      DEFAULT_SEARCH_FORM_VALUES.ownerAddressMatchType,
+      searchFormDefaults.ownerAddressMatchType,
     siteSearchMode:
       (searchParams.get("siteSearchMode") as "any" | "specific" | "exclude") ||
-      DEFAULT_SEARCH_FORM_VALUES.siteSearchMode,
+      searchFormDefaults.siteSearchMode,
     isAdvancedSearchEnabled:
       searchParams.get("isAdvancedSearchEnabled") === "true" ||
-      DEFAULT_SEARCH_FORM_VALUES.isAdvancedSearchEnabled,
+      searchFormDefaults.isAdvancedSearchEnabled,
     period:
       (searchParams.get("period") as
         | "all"
@@ -73,11 +74,11 @@ export default function SearchForm({
         | "last_year"
         | "last_3_years"
         | "last_5_years"
-        | "last_10_years") || DEFAULT_SEARCH_FORM_VALUES.period,
+        | "last_10_years") || searchFormDefaults.period,
   };
 
   // additionalKeywordsの初期化
-  const urlKeywords: typeof DEFAULT_SEARCH_FORM_VALUES.additionalKeywords = [];
+  const urlKeywords: typeof searchFormDefaults.additionalKeywords = [];
   let index = 0;
   while (true) {
     const value = searchParams.get(`additionalKeywords[${index}][value]`);
@@ -444,7 +445,7 @@ export default function SearchForm({
                           onChange={field.onChange}
                           placeholder="追加キーワードを入力してEnter"
                           className=""
-                          defaultKeywords={DEFAULT_SEARCH_FORM_VALUES.additionalKeywords}
+                          defaultKeywords={searchFormDefaults.additionalKeywords}
                         />
                       </FormControl>
                     </FormItem>
@@ -521,7 +522,7 @@ export default function SearchForm({
                                 : "除外したいドメインを入力"
                             }
                             className=""
-                            defaultTags={DEFAULT_SEARCH_FORM_VALUES.searchSites}
+                            defaultTags={searchFormDefaults.searchSites}
                           />
                         </FormControl>
                       </FormItem>
