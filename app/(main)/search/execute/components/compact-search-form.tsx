@@ -15,7 +15,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { DEFAULT_GOOGLE_CUSTOM_SEARCH_PATTERN } from "@/lib/constants/google-custom-search";
 import type { GoogleCustomSearchPattern } from "@/lib/types/custom-search";
 import { ExternalLink, RefreshCcw, Search, Settings2 } from "lucide-react";
 import Link from "next/link";
@@ -30,7 +29,7 @@ interface CompactSearchFormProps {
 }
 
 export function CompactSearchForm({ onSave }: CompactSearchFormProps) {
-  const { handleSearch, isLoading, isValidating, isNewSearch, data } =
+  const { handleSearch, isLoading, isValidating, isNewSearch, data, defaultPattern } =
     useGoogleCustomSearchForm();
   const form = useFormContext<GoogleCustomSearchPattern>();
   const advancedEnabled = form.watch(
@@ -39,10 +38,9 @@ export function CompactSearchForm({ onSave }: CompactSearchFormProps) {
   const [expandedAdvanced, setExpandedAdvanced] = useState(false);
 
   const defaultAdditionalKeywords =
-    DEFAULT_GOOGLE_CUSTOM_SEARCH_PATTERN.googleCustomSearchParams
-      .additionalKeywords;
+    defaultPattern.googleCustomSearchParams.additionalKeywords;
   const defaultSites =
-    DEFAULT_GOOGLE_CUSTOM_SEARCH_PATTERN.googleCustomSearchParams.searchSites;
+    defaultPattern.googleCustomSearchParams.searchSites;
 
   // 詳細オプションを有効にしたときに自動的に開く
   useEffect(() => {
@@ -95,7 +93,7 @@ export function CompactSearchForm({ onSave }: CompactSearchFormProps) {
               size="icon"
               onClick={() => {
                 // フォームをリセット
-                form.reset(DEFAULT_GOOGLE_CUSTOM_SEARCH_PATTERN);
+                form.reset(defaultPattern);
                 // 新規検索ページへ遷移（検索結果もリセットされる）
                 window.location.href = "/search/execute?patternId=new";
               }}

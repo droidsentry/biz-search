@@ -1,6 +1,5 @@
 "use client";
 
-import { DEFAULT_GOOGLE_CUSTOM_SEARCH_PATTERN } from "@/lib/constants/google-custom-search";
 import { googleCustomSearchPatternSchema } from "@/lib/schemas/custom-search";
 import { useGoogleCustomSearch } from "@/lib/swr/google-custom-search";
 import {
@@ -32,6 +31,7 @@ type ContextType = {
   isValidating: boolean;
   error: Error | undefined;
   patterns: SearchPattern[];
+  defaultPattern: GoogleCustomSearchPattern;
 };
 
 const Context = createContext<ContextType>({} as ContextType);
@@ -40,10 +40,12 @@ export function GoogleCustomSearchFormProvider({
   children,
   selectedSearchPattern,
   patterns,
+  defaultPattern,
 }: {
   children: ReactNode;
   selectedSearchPattern?: SearchPattern;
   patterns: SearchPattern[];
+  defaultPattern: GoogleCustomSearchPattern;
 }) {
   const searchParams = useSearchParams();
   const urlPatternId = searchParams.get("patternId") || "new";
@@ -65,9 +67,9 @@ export function GoogleCustomSearchFormProvider({
     selectedSearchPattern;
 
   const defaultValues = isNewSearch
-    ? DEFAULT_GOOGLE_CUSTOM_SEARCH_PATTERN
+    ? defaultPattern
     : {
-        ...DEFAULT_GOOGLE_CUSTOM_SEARCH_PATTERN,
+        ...defaultPattern,
         patternId: isNewSearch ? undefined : urlPatternId,
       };
 
@@ -172,7 +174,7 @@ export function GoogleCustomSearchFormProvider({
       setCurrentSelectedPattern(undefined);
       // 前回のパターンIDと異なる場合のみリセット
       if (lastLoadedPatternId !== "new") {
-        form.reset(DEFAULT_GOOGLE_CUSTOM_SEARCH_PATTERN);
+        form.reset(defaultPattern);
         setLastLoadedPatternId("new");
         setGoogleCustomSearchPattern(undefined);
       }
@@ -252,6 +254,7 @@ export function GoogleCustomSearchFormProvider({
         isValidating,
         error,
         patterns,
+        defaultPattern,
       }}
     >
       <Form {...form}>{children}</Form>

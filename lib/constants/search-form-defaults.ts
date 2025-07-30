@@ -1,5 +1,6 @@
 import { SearchFormData } from "../schemas/serpstack";
 
+// デフォルト値
 export const DEFAULT_SEARCH_FORM_VALUES: SearchFormData = {
   ownerName: "",
   ownerNameMatchType: "exact",

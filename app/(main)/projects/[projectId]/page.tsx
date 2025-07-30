@@ -1,18 +1,16 @@
-import { Metadata } from "next";
+import { Progress } from "@/components/ui/progress";
 import { getBaseURL } from "@/lib/base-url";
+import { extractRoomNumber } from "@/lib/utils/property-address";
+import { FileText, Users } from "lucide-react";
+import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
   getProjectAction,
   getProjectPropertiesAction,
   getProjectStatsAction,
 } from "./action";
-import { PropertyTable } from "./components/property-table";
 import { ExportButton } from "./components/export-button";
-import { ArrowLeft, FileText, Users } from "lucide-react";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { extractRoomNumber } from "@/lib/utils/property-address";
+import { PropertyTable } from "./components/property-table";
 
 export async function generateMetadata({
   params,
