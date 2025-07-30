@@ -74,13 +74,13 @@ export default function GoogleSearchPatternEditor({ value, onChange }: GoogleSea
   };
   
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* パターン基本情報 */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-medium">パターン基本情報</h3>
+      <div className="space-y-6">
+        <h3 className="text-sm font-medium mb-4">パターン基本情報</h3>
         
         <div className="grid gap-4">
-          <div>
+          <div className="space-y-2">
             <Label>パターン名</Label>
             <Input
               value={value.searchPatternName || ''}
@@ -89,7 +89,7 @@ export default function GoogleSearchPatternEditor({ value, onChange }: GoogleSea
             />
           </div>
           
-          <div>
+          <div className="space-y-2">
             <Label>パターン説明</Label>
             <Textarea
               value={value.searchPatternDescription || ''}
@@ -102,40 +102,42 @@ export default function GoogleSearchPatternEditor({ value, onChange }: GoogleSea
       </div>
       
       {/* 検索パラメータ */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-medium">検索パラメータ</h3>
+      <div className="space-y-6">
+        <h3 className="text-sm font-medium mb-4">検索パラメータ</h3>
         
         <div className="grid gap-4">
-          <div>
+          <div className="space-y-2">
             <Label>顧客名マッチタイプ</Label>
             <RadioGroup
               value={value.googleCustomSearchParams?.customerNameExactMatch || 'exact'}
               onValueChange={(val) => updateParams('customerNameExactMatch', val as 'exact' | 'partial')}
+              className="flex space-x-6"
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="exact" id="customer-exact" />
-                <Label htmlFor="customer-exact">完全一致</Label>
+                <Label htmlFor="customer-exact" className="font-normal">完全一致</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="partial" id="customer-partial" />
-                <Label htmlFor="customer-partial">部分一致</Label>
+                <Label htmlFor="customer-partial" className="font-normal">部分一致</Label>
               </div>
             </RadioGroup>
           </div>
           
-          <div>
+          <div className="space-y-2">
             <Label>住所マッチタイプ</Label>
             <RadioGroup
               value={value.googleCustomSearchParams?.addressExactMatch || 'partial'}
               onValueChange={(val) => updateParams('addressExactMatch', val as 'exact' | 'partial')}
+              className="flex space-x-6"
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="exact" id="google-address-exact" />
-                <Label htmlFor="google-address-exact">完全一致</Label>
+                <Label htmlFor="google-address-exact" className="font-normal">完全一致</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="partial" id="google-address-partial" />
-                <Label htmlFor="google-address-partial">部分一致</Label>
+                <Label htmlFor="google-address-partial" className="font-normal">部分一致</Label>
               </div>
             </RadioGroup>
           </div>
@@ -152,8 +154,8 @@ export default function GoogleSearchPatternEditor({ value, onChange }: GoogleSea
       </div>
       
       {/* 追加キーワード */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
+      <div>
+        <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-medium">追加キーワード</h3>
           <Button size="sm" variant="outline" onClick={addKeyword}>
             <Plus className="h-4 w-4 mr-1" />
@@ -197,8 +199,8 @@ export default function GoogleSearchPatternEditor({ value, onChange }: GoogleSea
       </div>
       
       {/* 検索対象サイト */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
+      <div>
+        <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-medium">検索対象サイト</h3>
           <Button size="sm" variant="outline" onClick={addSite}>
             <Plus className="h-4 w-4 mr-1" />
@@ -206,28 +208,30 @@ export default function GoogleSearchPatternEditor({ value, onChange }: GoogleSea
           </Button>
         </div>
         
-        <div>
-          <Label>サイト検索モード</Label>
-          <RadioGroup
-            value={value.googleCustomSearchParams?.siteSearchMode || 'any'}
-            onValueChange={(val) => updateParams('siteSearchMode', val as 'any' | 'specific' | 'exclude')}
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="any" id="google-site-any" />
-              <Label htmlFor="google-site-any">すべて検索</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="specific" id="google-site-specific" />
-              <Label htmlFor="google-site-specific">指定サイトのみ</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="exclude" id="google-site-exclude" />
-              <Label htmlFor="google-site-exclude">指定サイト除外</Label>
-            </div>
-          </RadioGroup>
-        </div>
-        
-        <div className="space-y-2">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>サイト検索モード</Label>
+            <RadioGroup
+              value={value.googleCustomSearchParams?.siteSearchMode || 'any'}
+              onValueChange={(val) => updateParams('siteSearchMode', val as 'any' | 'specific' | 'exclude')}
+              className="flex space-x-6"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="any" id="google-site-any" />
+                <Label htmlFor="google-site-any" className="font-normal">すべて検索</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="specific" id="google-site-specific" />
+                <Label htmlFor="google-site-specific" className="font-normal">指定サイトのみ</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="exclude" id="google-site-exclude" />
+                <Label htmlFor="google-site-exclude" className="font-normal">指定サイト除外</Label>
+              </div>
+            </RadioGroup>
+          </div>
+          
+          <div className="space-y-2">
           {(value.googleCustomSearchParams?.searchSites || []).map((site: string, index: number) => (
             <div key={index} className="flex items-center gap-2">
               <Input
@@ -245,6 +249,7 @@ export default function GoogleSearchPatternEditor({ value, onChange }: GoogleSea
               </Button>
             </div>
           ))}
+          </div>
         </div>
       </div>
     </div>
