@@ -9,34 +9,39 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
 import Link from "next/link";
 import { ProjectWithProgress } from "@/lib/types/project";
+import { Badge } from "@/components/ui/badge";
+import { UpdateUser } from "@/components/shared/update-user";
+import { UpdateDate } from "@/components/shared/update-date";
+import { useRouter } from "next/navigation";
 
 export function ProjectTable({
   projects,
 }: {
   projects: ProjectWithProgress[];
 }) {
+  const router = useRouter();
+
   return (
     <div className="rounded-lg border border-muted-foreground/20 bg-muted-foreground/5 overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow className="bg-muted-foreground/5 hover:bg-muted-foreground/10">
             <TableHead className="w-[25%] ">プロジェクト名</TableHead>
-            <TableHead className="w-[25%]">メモ</TableHead>
-            <TableHead className="w-[12%]">作成日時</TableHead>
+            <TableHead className="w-[20%]">概要</TableHead>
             <TableHead className="w-[10%] text-center">物件数</TableHead>
             <TableHead className="w-[10%] text-center">所有者数</TableHead>
-            <TableHead className="w-[18%]">所有者調査進捗</TableHead>
+            <TableHead className="w-[15%]">調査状況</TableHead>
+            <TableHead className="w-[10%]">進捗</TableHead>
+            <TableHead className="w-[10%]">最終更新</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {projects.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={6}
+                colSpan={7}
                 className="text-center text-muted-foreground py-8"
               >
                 プロジェクトがありません
@@ -44,8 +49,14 @@ export function ProjectTable({
             </TableRow>
           ) : (
             projects.map((project) => (
-              <TableRow key={project.id} className="hover:bg-accent">
-                <TableCell className="font-medium">
+              <TableRow
+                key={project.id}
+                className="font-medium cursor-pointer"
+                onClick={() => {
+                  router.push(`/projects/${project.id}`);
+                }}
+              >
+                <TableCell className="font-medium cursor-pointer">
                   <Link
                     href={`/projects/${project.id}`}
                     className="text-foreground hover:underline"
@@ -53,16 +64,9 @@ export function ProjectTable({
                     {project.name}
                   </Link>
                 </TableCell>
-                <TableCell>
-                  <span className="text-muted-foreground text-sm line-clamp-1">
+                <TableCell className="max-w-[250px]">
+                  <span className="text-muted-foreground text-sm line-clamp-2">
                     {project.description || "-"}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <span className="text-muted-foreground text-sm">
-                    {format(new Date(project.created_at), "yyyy/MM/dd", {
-                      locale: ja,
-                    })}
                   </span>
                 </TableCell>
                 <TableCell className="text-center">
@@ -76,11 +80,30 @@ export function ProjectTable({
                   </span>
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-3">
+                  <div className="flex gap-1">
+                    <Badge variant="secondary" className="text-xs">
+                      前:{project.pendingOwners ?? 0}
+                    </Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      済:{project.completedOwners ?? 0}
+                    </Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      不明:{project.unknownOwners ?? 0}
+                    </Badge>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
                     <Progress value={project.progress} className="h-2 flex-1" />
-                    <span className="text-sm font-medium text-foreground min-w-[3rem] text-right">
+                    <span className="text-sm font-medium text-foreground min-w-[2.5rem] text-right">
                       {project.progress}%
                     </span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-col gap-1">
+                    <UpdateDate updatedAt={project.lastUpdatedAt} />
+                    <UpdateUser username={project.lastUpdatedByUsername} />
                   </div>
                 </TableCell>
               </TableRow>

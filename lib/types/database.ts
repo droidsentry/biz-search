@@ -314,6 +314,7 @@ export type Database = {
           name: string
           street_view_available: boolean | null
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
           address: string
@@ -325,6 +326,7 @@ export type Database = {
           name: string
           street_view_available?: boolean | null
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           address?: string
@@ -336,8 +338,17 @@ export type Database = {
           name?: string
           street_view_available?: boolean | null
           updated_at?: string
+          updated_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "owners_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pdf_processing_logs: {
         Row: {
@@ -858,9 +869,12 @@ export type Database = {
           primary_owner_lng: number
           primary_owner_street_view_available: boolean
           primary_owner_investigation_status: Database["public"]["Enums"]["investigation_status"]
+          primary_owner_updated_at: string
+          primary_owner_updated_by_username: string
           primary_company_id: string
           primary_company_name: string
-          primary_company_position: string
+          primary_company_updated_at: string
+          primary_company_researched_by_username: string
           primary_owner_companies_count: number
         }[]
       }
@@ -869,7 +883,9 @@ export type Database = {
         Returns: {
           total_properties: number
           total_owners: number
+          pending_owners: number
           completed_owners: number
+          unknown_owners: number
           owner_progress: number
         }[]
       }

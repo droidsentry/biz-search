@@ -1,7 +1,6 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { revalidatePath } from 'next/cache'
 
 export async function toggleInvestigationStatusAction(ownerId: string, currentStatus?: 'pending' | 'completed' | 'unknown') {
   const supabase = await createClient()
@@ -56,17 +55,13 @@ export async function toggleInvestigationStatusAction(ownerId: string, currentSt
     .from('owners')
     .update({ 
       investigation_status: newStatus,
-      updated_at: new Date().toISOString()
+      updated_by: user.id
     })
     .eq('id', ownerId)
 
   if (updateError) {
     return { success: false, error: '調査状態の更新に失敗しました' }
   }
-
-  // キャッシュを再検証
-  revalidatePath(`/projects/[projectId]/[ownerId]`, 'page')
-  revalidatePath(`/projects/[projectId]`, 'page')
 
   const statusMessages = {
     pending: `調査未完了に設定しました。`,

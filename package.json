@@ -12,6 +12,7 @@
     "supabase-start": "pnpm dlx supabase start",
     "supabase-link": "pnpm dlx supabase link",
     "supabase-get-types": "pnpm dlx supabase gen types typescript --linked --schema public > lib/types/database.ts",
+    "generate-types": "pnpm supabase-get-types && echo '✅ 型生成が完了しました'",
     "supabase-dump": "pnpm dlx supabase db dump --data-only -f supabase/seed.sql",
     "supabase-generate-seed": "pnpm dlx supabase db dump --data-only -f supabase/seed.sql",
     "supabase-setup": "pnpm dlx supabase logout && pnpm dlx supabase login && pnpm dlx supabase link",
