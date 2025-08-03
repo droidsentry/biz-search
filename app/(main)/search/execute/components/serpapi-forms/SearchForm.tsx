@@ -12,10 +12,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
-import { searchFormSchema, type SearchFormData, type DefaultSearchFormData } from "@/lib/schemas/serpapi";
+import {
+  searchFormSchema,
+  type SearchFormData,
+  type DefaultSearchFormData,
+} from "@/lib/schemas/serpapi";
 import { SearchPattern, SerpapiResponse } from "@/lib/types/serpapi";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ExternalLink, Loader2, PencilIcon, SaveIcon } from "lucide-react";
+import { ExternalLink, Loader2, PencilIcon, SaveIcon, Plus } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition, useEffect } from "react";
@@ -24,16 +28,13 @@ import { toast } from "sonner";
 import { SearchPatternFormModal } from "../search-pattern-form-modal";
 import { TagInput } from "./tag-input";
 import { TagInputElegant } from "./tag-input-elegant";
+import { useSearchPattern } from "@/lib/contexts/search-pattern-context";
 
 interface SearchFormProps {
   searchData: SerpapiResponse | null;
   isSearching?: boolean;
   searchFormDefaults: DefaultSearchFormData;
   setPatterns?: React.Dispatch<React.SetStateAction<SearchPattern[]>>;
-  currentPattern?: SearchPattern;
-  setCurrentPattern?: React.Dispatch<
-    React.SetStateAction<SearchPattern | undefined>
-  >;
 }
 
 export default function SearchForm({
@@ -41,14 +42,14 @@ export default function SearchForm({
   isSearching = false,
   searchFormDefaults,
   setPatterns,
-  currentPattern,
-  setCurrentPattern,
 }: SearchFormProps) {
+  const { currentPattern, setCurrentPattern } = useSearchPattern();
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const searchParams = useSearchParams();
+  console.log("currentPattern", currentPattern);
 
   // URLパラメータから値を取得する関数
   const getFormValuesFromURL = (): SearchFormData => {
@@ -78,7 +79,7 @@ export default function SearchForm({
           | "last_year"
           | "last_3_years"
           | "last_5_years"
-          | "last_10_years") || searchFormDefaults.period,
+          | "last_10_years") || "all",
     };
 
     // additionalKeywordsの初期化
@@ -217,8 +218,8 @@ export default function SearchForm({
 
   const watchedIsAdvancedSearchEnabled = form.watch("isAdvancedSearchEnabled");
   const ownerName = form.watch("ownerName");
-  const ownerAddress = form.watch("ownerAddress");
-  const additionalKeywords = form.watch("additionalKeywords");
+  // const ownerAddress = form.watch("ownerAddress");
+  // const additionalKeywords = form.watch("additionalKeywords");
 
   return (
     <Form {...form}>
@@ -250,15 +251,31 @@ export default function SearchForm({
                   検索パターン: {currentPattern.searchPatternName}
                 </p>
               </div>
-              <Button
-                type="button"
-                size="icon"
-                onClick={() => setShowEditModal(true)}
-                variant="outline"
-                className="size-10"
-              >
-                <PencilIcon className="size-5" />
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="icon"
+                  onClick={() => setShowEditModal(true)}
+                  variant="outline"
+                  className="size-10"
+                  title="パターンを編集"
+                >
+                  <PencilIcon className="size-5" />
+                </Button>
+                <Button
+                  type="button"
+                  size="icon"
+                  onClick={() => {
+                    setCurrentPattern(undefined);
+                    router.push('/search/execute');
+                  }}
+                  variant="outline"
+                  className="size-10"
+                  title="新規検索"
+                >
+                  <Plus className="size-5" />
+                </Button>
+              </div>
             </div>
           )}
           <div className="space-y-2">

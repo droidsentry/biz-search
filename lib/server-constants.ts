@@ -7,7 +7,7 @@ import { createClient } from './supabase/server';
 /**
  * 検索フォームのデフォルト値を取得
  */
-export async function getSearchFormDefaults(): Promise<DefaultSearchFormData> {
+export async function getSearchFormDefaults() {
   // デフォルト値を定義
   const fallbackDefaults: DefaultSearchFormData = {
     ownerName: "",
@@ -42,7 +42,7 @@ export async function getSearchFormDefaults(): Promise<DefaultSearchFormData> {
       return fallbackDefaults;
     }
     
-    console.log('Raw app_settings value:', JSON.stringify(data.value, null, 2));
+    // console.log('Raw app_settings value:', JSON.stringify(data.value, null, 2));
     
     try {
       const parsed = defaultSearchFormSchema.parse(data.value);

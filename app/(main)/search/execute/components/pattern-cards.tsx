@@ -20,22 +20,20 @@ import {
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { SearchPatternDeleteModal } from "./search-pattern-delete-modal";
+import { useSearchPattern } from "@/lib/contexts/search-pattern-context";
 
 interface PatternCardsProps {
   patterns: SearchPattern[];
   patternId: string;
   setPatterns: React.Dispatch<React.SetStateAction<SearchPattern[]>>;
-  setCurrentPattern: React.Dispatch<
-    React.SetStateAction<SearchPattern | undefined>
-  >;
 }
 
 export function PatternCards({
   patterns,
   patternId,
   setPatterns,
-  setCurrentPattern,
 }: PatternCardsProps) {
+  const { setCurrentPattern } = useSearchPattern();
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedPatternId, setSelectedPatternId] = useState<string>("");
   const searchParams = useSearchParams();
@@ -290,8 +288,8 @@ export function PatternCards({
           setPatterns((prev) =>
             prev.filter((pattern) => pattern.id !== deletedPatternId)
           );
-          console.log(`patternId`, patternId);
-          console.log(`deletedPatternId`, deletedPatternId);
+          // console.log(`patternId`, patternId);
+          // console.log(`deletedPatternId`, deletedPatternId);
 
           // 削除されたパターンが現在選択中のパターンの場合、初期画面に遷移
           if (patternId === deletedPatternId) {
