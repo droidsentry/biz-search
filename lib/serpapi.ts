@@ -3,7 +3,7 @@ import 'server-only';
 import { getJson } from "serpapi";
 import { isSuccessfulResponse, parseSerpApiError, type SerpApiErrorResponse } from './serpapi-errors';
 import { type SerpapiResponse } from './types/serpapi';
-import { checkLimit } from './check-limit';
+// import { checkLimit } from './check-limit';
 
 interface SerpApiSearchParams {
   q: string;
@@ -40,7 +40,7 @@ export const SerpApiSearch = async (params: string | SerpApiSearchParams): Promi
 
   try {
 
-    await checkLimit();
+    // await checkLimit();
     const response = await getJson(searchParams);
     // const response = serpapiResponse;
     
