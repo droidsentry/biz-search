@@ -1,7 +1,8 @@
 import z from "zod";
 import { keywordsSchema } from "../schemas/serpapi";
+import { getSearchPatterns } from "@/app/(main)/search/execute/components/action";
 
-const serpapiResponse = {
+export const serpapiResponse = {
   "search_metadata": {
     "id": "688a43d7a89e0249c1e76d04",
     "status": "Success",
@@ -185,3 +186,8 @@ const serpapiResponse = {
 export type SerpapiResponse = typeof serpapiResponse;
 
 export type Keywords = z.infer<typeof keywordsSchema>;
+
+
+export type SearchPattern = Awaited<
+  ReturnType<typeof getSearchPatterns>
+>[number];

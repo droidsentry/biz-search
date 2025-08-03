@@ -22,7 +22,10 @@ export function ExportButton({ projectId, projectName }: ExportButtonProps) {
       const exportedData = await exportProjectProperties(projectId).catch(
         (error) => {
           toast.error("エクスポートエラー", {
-            description: error instanceof Error ? error.message : "エクスポートに失敗しました",
+            description:
+              error instanceof Error
+                ? error.message
+                : "エクスポートに失敗しました",
           });
           return null;
         }
@@ -53,7 +56,9 @@ export function ExportButton({ projectId, projectName }: ExportButtonProps) {
         // データを追加
         exportedData.forEach((row) => {
           // 物件住所から号室と地番を抽出
-          const { roomNumber, landNumber } = extractRoomNumber(row.property_address || "");
+          const { roomNumber, landNumber } = extractRoomNumber(
+            row.property_address || ""
+          );
 
           // 勤務先の情報を整形（①②③形式）
           const workplaces: string[] = [];

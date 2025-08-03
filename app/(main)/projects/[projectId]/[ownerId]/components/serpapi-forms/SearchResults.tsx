@@ -8,6 +8,7 @@ import {
 } from "@/lib/utils/search-query-parser";
 import { ExternalLink, Search } from "lucide-react";
 import Pagination from "./Pagination";
+import Link from "next/link";
 
 interface SearchResultsProps {
   data: SerpapiResponse | null;
@@ -41,6 +42,7 @@ export default function SearchResults({
   const results = data.organic_results;
   const totalResults = data.search_information?.total_results;
   const currentPage = data.pagination?.current || 1;
+  const timeTaken = data.search_metadata?.total_time_taken;
 
   // 検索パラメータの解析
   const searchQuery =
@@ -60,6 +62,11 @@ export default function SearchResults({
           <span>
             検索結果{" "}
             {totalResults ? `約${totalResults.toLocaleString()}件` : ""}
+            {timeTaken !== undefined && (
+              <span className="text-sm font-normal text-muted-foreground ml-2">
+                ({timeTaken}秒)
+              </span>
+            )}
           </span>
         </h2>
         <div className="flex items-center gap-2">
@@ -85,7 +92,7 @@ export default function SearchResults({
         >
           {/* 検索パラメータの表示（控えめに） */}
           {searchQuery && (
-            <div className="mb-4 px-3 py-2 text-xs text-muted-foreground bg-muted/20 rounded-lg">
+            <div className="mb-4 px-3 py-2 text-xs text-foreground/90 bg-muted/20 rounded-lg border border-border">
               <div className="flex items-center gap-2">
                 <Search className="h-3 w-3" />
                 <span>検索クエリ:</span>
@@ -102,11 +109,9 @@ export default function SearchResults({
                 <div className="flex flex-wrap gap-1.5 mt-1.5">
                   {parsedQuery.exactMatches.length > 0 && (
                     <>
-                      <span className="text-muted-foreground/70">
-                        完全一致:
-                      </span>
+                      <span className="text-foreground/90">完全一致:</span>
                       {parsedQuery.exactMatches.map((match, index) => (
-                        <span key={index} className="text-muted-foreground/90">
+                        <span key={index} className="text-foreground/90">
                           &quot;{match}&quot;
                         </span>
                       ))}
@@ -118,11 +123,9 @@ export default function SearchResults({
                       {parsedQuery.exactMatches.length > 0 && (
                         <span className="text-muted-foreground/50">•</span>
                       )}
-                      <span className="text-muted-foreground/70">
-                        キーワード:
-                      </span>
+                      <span className="text-foreground/90">キーワード:</span>
                       {parsedQuery.keywords.map((keyword, index) => (
-                        <span key={index} className="text-muted-foreground/90">
+                        <span key={index} className="text-foreground/90">
                           {keyword}
                         </span>
                       ))}
@@ -135,12 +138,10 @@ export default function SearchResults({
                         parsedQuery.keywords.length > 0) && (
                         <span className="text-muted-foreground/50">•</span>
                       )}
-                      <span className="text-muted-foreground/70">サイト:</span>
-                      {parsedQuery.siteFilters.include.map((site, index) => (
-                        <span key={index} className="text-muted-foreground/90">
-                          {site}
-                        </span>
-                      ))}
+                      <span className="text-foreground/90">サイト:</span>
+                      <span className="text-muted-foreground/90">
+                        {parsedQuery.siteFilters.include.join(", ")}
+                      </span>
                     </>
                   )}
 
@@ -149,22 +150,20 @@ export default function SearchResults({
                       {(parsedQuery.exactMatches.length > 0 ||
                         parsedQuery.keywords.length > 0 ||
                         parsedQuery.siteFilters.include.length > 0) && (
-                        <span className="text-muted-foreground/50">•</span>
+                        <span className="text-foreground/90">•</span>
                       )}
-                      <span className="text-muted-foreground/70">除外:</span>
-                      {parsedQuery.siteFilters.exclude.map((site, index) => (
-                        <span key={index} className="text-muted-foreground/90">
-                          -{site}
-                        </span>
-                      ))}
+                      <span className="text-foreground/90">除外:</span>
+                      <span className="text-foreground/90">
+                        {parsedQuery.siteFilters.exclude.join(", ")}
+                      </span>
                     </>
                   )}
 
                   {period && (
                     <>
                       <span className="text-muted-foreground/50">•</span>
-                      <span className="text-muted-foreground/70">期間:</span>
-                      <span className="text-muted-foreground/90">{period}</span>
+                      <span className="text-foreground/90">期間:</span>
+                      <span className="text-foreground/90">{period}</span>
                     </>
                   )}
                 </div>
@@ -178,7 +177,7 @@ export default function SearchResults({
               className={cn(
                 "hover:shadow-md transition-shadow duration-200 border-border min-h-[164px]",
                 `
-              
+              bg-muted/20
               `
               )}
             >
@@ -186,14 +185,14 @@ export default function SearchResults({
                 <div className="space-y-2">
                   <div className="flex items-start justify-between gap-4">
                     <h3 className="text-lg font-medium line-clamp-2 flex-1">
-                      <a
+                      <Link
                         href={result.link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="hover:text-primary transition-colors"
+                        className="hover:text-primary transition-colors hover:underline"
                       >
                         {result.title}
-                      </a>
+                      </Link>
                     </h3>
                     <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-1" />
                   </div>

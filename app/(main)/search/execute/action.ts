@@ -1,8 +1,8 @@
 'use server'
 
 import { googleCustomSearchParamsSchema } from '@/lib/schemas/custom-search'
+import { SearchFormData, searchFormSchema } from '@/lib/schemas/serpapi'
 import { createClient } from '@/lib/supabase/server'
-import { GoogleCustomSearchParams } from '@/lib/types/custom-search'
 import { TablesInsert, TablesUpdate } from '@/lib/types/database'
 import { redirect } from 'next/navigation'
 
@@ -10,7 +10,7 @@ import { redirect } from 'next/navigation'
 export async function createSearchPattern(
   name: string,
   description: string | null,
-  googleCustomSearchParams: GoogleCustomSearchParams
+  SearchFormData: SearchFormData
 ) {
   const supabase = await createClient()
   
@@ -21,7 +21,7 @@ export async function createSearchPattern(
   }
 
   // パラメータのバリデーション
-  const paramsResult = googleCustomSearchParamsSchema.safeParse(googleCustomSearchParams)
+  const paramsResult = searchFormSchema.safeParse(SearchFormData)
   if (!paramsResult.success) {
     console.error('Invalid search parameters', paramsResult.error)
     throw new Error('Invalid search parameters')
@@ -43,8 +43,10 @@ export async function createSearchPattern(
     console.error('パターン作成エラー:', error)
     throw new Error(error.message)
   }
-
-  return data
+  return {
+    ...data,
+    googleCustomSearchParams: searchFormSchema.parse(data.google_custom_search_params),
+  }
 }
 
 // 検索パターンの更新
@@ -66,10 +68,11 @@ export async function updateSearchPattern(
 
   // パラメータのバリデーション（更新時のみ）
   if (updates.google_custom_search_params) {
-    const paramsResult = googleCustomSearchParamsSchema.safeParse(updates.google_custom_search_params)
+    // console.log('updates.google_custom_search_params', updates.google_custom_search_params)
+    const paramsResult = searchFormSchema.safeParse(updates.google_custom_search_params)
     if (!paramsResult.success) {
       console.error('Invalid search parameters', paramsResult.error)
-      return { error: 'Invalid search parameters', details: paramsResult.error.flatten() }
+      throw new Error('Invalid search parameters')
     }
     updates.google_custom_search_params = paramsResult.data
   }
@@ -85,10 +88,13 @@ export async function updateSearchPattern(
 
   if (error) {
     console.error('パターン更新エラー:', error)
-    return { error: error.message }
+    throw new Error(error.message)
   }
 
-  return { success: true, data }
+  return {
+    ...data,
+    googleCustomSearchParams: searchFormSchema.parse(data.google_custom_search_params),
+  }
 }
 
 // 検索パターンの削除

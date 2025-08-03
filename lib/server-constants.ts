@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { searchFormSchema } from '@/lib/schemas/serpapi';
+import { defaultSearchFormSchema } from '@/lib/schemas/serpapi';
 import { createClient } from './supabase/server';
 
 
@@ -20,7 +20,7 @@ export async function getSearchFormDefaults() {
     console.error(`Failed to fetch app setting for key: search_form_defaults`, error);
     throw new Error("Failed to fetch app setting for key: search_form_defaults");
   }
-  const parsed = searchFormSchema.parse(data.value);
+  const parsed = defaultSearchFormSchema.parse(data.value);
   
   return parsed;
 }

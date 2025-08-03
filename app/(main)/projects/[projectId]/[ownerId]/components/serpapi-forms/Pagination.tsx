@@ -45,17 +45,12 @@ export default function Pagination({ data, isSearching }: PaginationProps) {
   const currentPage = data.pagination?.current || 1;
   const otherPages = data.pagination?.other_pages || {};
 
-  // プロジェクトIDとオーナーIDをパスから取得
-  const pathSegments = pathname.split("/");
-  const projectId = pathSegments[2];
-  const ownerId = pathSegments[3];
-
   const handlePageChange = (newPage: number) => {
     setClickedPage(newPage);
     startTransition(() => {
       const params = new URLSearchParams(searchParams.toString());
       params.set("page", newPage.toString());
-      router.push(`/projects/${projectId}/${ownerId}?${params.toString()}`, {
+      router.push(`${pathname}?${params.toString()}`, {
         scroll: false,
       });
 

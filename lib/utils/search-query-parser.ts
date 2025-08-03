@@ -30,15 +30,22 @@ export function parseSearchQuery(query: string | undefined): {
     result.exactMatches.push(match[1]);
   }
 
-  // サイトフィルタの抽出
-  const siteIncludeRegex = /site:(\S+)/g;
+  // サイトフィルタの抽出（括弧や空白文字で区切られる）
+  const siteIncludeRegex = /site:([^\s)]+)/g;
   while ((match = siteIncludeRegex.exec(query)) !== null) {
-    result.siteFilters.include.push(match[1]);
+    const site = match[1];
+    // 重複を避ける
+    if (!result.siteFilters.include.includes(site)) {
+      result.siteFilters.include.push(site);
+    }
   }
 
-  const siteExcludeRegex = /-site:(\S+)/g;
+  const siteExcludeRegex = /-site:([^\s)]+)/g;
   while ((match = siteExcludeRegex.exec(query)) !== null) {
-    result.siteFilters.exclude.push(match[1]);
+    const site = match[1];
+    if (!result.siteFilters.exclude.includes(site)) {
+      result.siteFilters.exclude.push(site);
+    }
   }
 
   // OR検索でまとめられたサイトフィルタの抽出

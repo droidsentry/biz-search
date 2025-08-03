@@ -1,11 +1,10 @@
 import { Metadata } from "next";
 import { getBaseURL } from "@/lib/base-url";
 import { Button } from "@/components/ui/button";
-import { Plus, Search } from "lucide-react";
+import { Plus } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import SearchPatternList from "./list";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // ローディングコンポーネント
@@ -24,7 +23,8 @@ function PatternListSkeleton() {
 export const metadata: Metadata = {
   metadataBase: new URL(getBaseURL()),
   title: "検索パターン - BizSearch",
-  description: "よく使用する検索条件をパターンとして保存・管理できます。保存したパターンを使って効率的にビジネス情報を検索します。",
+  description:
+    "よく使用する検索条件をパターンとして保存・管理できます。保存したパターンを使って効率的にビジネス情報を検索します。",
 };
 
 export default function SearchPage() {
@@ -38,7 +38,7 @@ export default function SearchPage() {
               保存した検索パターンで効率的に情報を収集
             </p>
           </div>
-          <Link href="/search/execute?patternId=new">
+          <Link href="/search/execute">
             <Button>
               <Plus className="mr-2 h-4 w-4" />
               新規検索
@@ -47,30 +47,9 @@ export default function SearchPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="recent" className="space-y-6">
-        <TabsList className="w-full justify-start">
-          <TabsTrigger value="recent" className="flex items-center gap-2">
-            <Search className="h-4 w-4" />
-            最近使用した順
-          </TabsTrigger>
-          <TabsTrigger value="usage" className="flex items-center gap-2">
-            <Search className="h-4 w-4" />
-            使用回数順
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="recent" className="space-y-4">
-          <Suspense fallback={<PatternListSkeleton />}>
-            <SearchPatternList sortBy="recent" />
-          </Suspense>
-        </TabsContent>
-
-        <TabsContent value="usage" className="space-y-4">
-          <Suspense fallback={<PatternListSkeleton />}>
-            <SearchPatternList sortBy="usage" />
-          </Suspense>
-        </TabsContent>
-      </Tabs>
+      <Suspense fallback={<PatternListSkeleton />}>
+        <SearchPatternList sortBy="recent" />
+      </Suspense>
     </div>
   );
 }

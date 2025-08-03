@@ -220,7 +220,7 @@ export function ApiUsage() {
                       </p>
                     )}
                   </div>
-                  {((metric.name === "Google Custom Search API" &&
+                  {/* {((metric.name === "Google Custom Search API" &&
                     realtimeStatus.search) ||
                     (metric.name === "PDF解析処理" && realtimeStatus.pdf) ||
                     (metric.name === "Google Maps Geocoding API" &&
@@ -232,7 +232,7 @@ export function ApiUsage() {
                       </span>
                       <span>Live</span>
                     </div>
-                  )}
+                  )} */}
                 </div>
               </CardHeader>
               <CardContent className="pt-2 pb-4">
@@ -489,69 +489,6 @@ export function ApiUsage() {
           )}
         </CardContent>
       </Card>
-
-      {/* API制限情報 */}
-      {/* <Card>
-        <CardHeader>
-          <CardTitle>料金情報</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  種別
-                </h4>
-                <div className='gap-3'>
-                  <div>
-                    <p className="mt-1 text-2xl font-semibold">
-                    Google Custom Search API
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      推定：月額 ¥9,800
-                    </p>
-                  </div>
-                  <div>
-                    <p className="mt-1 text-2xl font-semibold">
-                      プロフェッショナル
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      推定：月額 ¥9,800
-                    </p>
-                  </div>
-                  <div>
-                    <p className="mt-1 text-2xl font-semibold">
-                      プロフェッショナル
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      推定：月額 ¥9,800
-                    </p>
-                  </div>
-                  <div>
-                    <p className="mt-1 text-2xl font-semibold">
-                      プロフェッショナル
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      推定：月額 ¥9,800
-                    </p>
-                  </div>
-                </div>
-
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  次回請求日
-                </h4>
-                <p className="mt-1 text-2xl font-semibold">
-                  2024年6月1日
-                </p>
-        
-              </div>
-            </div>
-
-          </div>
-        </CardContent>
-      </Card> */}
     </div>
   );
 }

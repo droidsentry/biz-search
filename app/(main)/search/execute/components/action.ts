@@ -1,6 +1,6 @@
 'use server'
 
-import { googleCustomSearchParamsSchema } from '@/lib/schemas/custom-search';
+import { searchFormSchema } from '@/lib/schemas/serpapi';
 import { createClient } from '@/lib/supabase/server';
 
 export async function getSearchPatterns() {
@@ -10,19 +10,6 @@ export async function getSearchPatterns() {
   if (!user) {
     return [];
   }
-/**
- * const data: {
-    created_at: string;
-    description: string | null;
-    google_custom_search_params: Json;
-    id: string;
-    last_used_at: string | null;
-    name: string;
-    updated_at: string;
-    usage_count: number | null;
-    user_id: string;
-}[] | null
- */
   const { data, error } = await supabase
     .from('search_patterns')
     .select(`
@@ -46,7 +33,7 @@ export async function getSearchPatterns() {
   const parsedData = data.map((pattern) => {
     return {
       ...pattern,
-      googleCustomSearchParams: googleCustomSearchParamsSchema.parse(pattern.googleCustomSearchParams),
+      googleCustomSearchParams: searchFormSchema.parse(pattern.googleCustomSearchParams),
     };
   });
 

@@ -12,15 +12,16 @@ import {
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useRouter } from "next/navigation";
-import { PropertyWithPrimaryOwner } from "../action";
+import { ProjectPropertyView } from "@/lib/types/rpc";
 import { toast } from "sonner";
 import { extractRoomNumber } from "@/lib/utils/property-address";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { UpdateUser } from "@/components/shared/update-user";
+import { UpdateDate } from "@/components/shared/update-date";
 
 interface PropertyTableProps {
-  properties: PropertyWithPrimaryOwner[];
+  properties: ProjectPropertyView[];
   projectId: string;
-  projectName?: string;
 }
 
 export function PropertyTable({ properties, projectId }: PropertyTableProps) {
@@ -29,29 +30,29 @@ export function PropertyTable({ properties, projectId }: PropertyTableProps) {
   return (
     <div
       className="rounded-lg border border-muted-foreground/20 bg-muted-foreground/5 overflow-hidden"
-      style={{ height: "calc(100vh - 50px)" }}
+      // style={{ height: "calc(100vh - 50px)" }}
     >
       <ScrollArea className="h-full overflow-auto relative">
         <Table className="min-w-[1200px]">
           <TableHeader className="sticky top-0 z-10">
             <TableRow className="bg-muted-foreground/5 hover:bg-muted-foreground/10 border-b">
-              <TableHead className="min-w-[80px] text-center font-medium text-foreground bg-muted-foreground/5">
+              <TableHead className="min-w-[50px] text-center font-medium text-foreground bg-muted-foreground/5">
                 号室
               </TableHead>
-              <TableHead className="min-w-[150px] font-medium text-foreground bg-muted-foreground/5">
+              <TableHead className="font-medium text-foreground bg-muted-foreground/5">
                 代表所有者
               </TableHead>
-              <TableHead className="min-w-[300px] font-medium text-foreground bg-muted-foreground/5">
+              <TableHead className="font-medium text-foreground bg-muted-foreground/5">
                 所有者住所
               </TableHead>
-              <TableHead className="min-w-[200px] font-medium text-foreground bg-muted-foreground/5">
-                会社名
-              </TableHead>
-              <TableHead className="min-w-[100px] font-medium text-foreground bg-muted-foreground/5">
+              <TableHead className="min-w-[80px] font-medium text-foreground bg-muted-foreground/5">
                 ステータス
               </TableHead>
               <TableHead className="min-w-[80px] font-medium text-foreground bg-muted-foreground/5">
-                追加日
+                更新者
+              </TableHead>
+              <TableHead className="min-w-[80px] font-medium text-foreground bg-muted-foreground/5">
+                更新日
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -59,7 +60,7 @@ export function PropertyTable({ properties, projectId }: PropertyTableProps) {
             {properties.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={8}
                   className="h-24 text-center text-muted-foreground"
                 >
                   物件データがありません
@@ -68,10 +69,10 @@ export function PropertyTable({ properties, projectId }: PropertyTableProps) {
             ) : (
               properties.map((property) => (
                 <TableRow
-                  key={property.project_property_id}
+                  key={property.projectPropertyId}
                   className="hover:bg-muted-foreground/10 transition-colors cursor-pointer"
                   onClick={() => {
-                    const owner = property.primary_owner;
+                    const owner = property.primaryOwner;
                     if (owner && owner.id) {
                       navigator.clipboard.writeText(owner.name);
                       toast.success("所有者名をクリップボードにコピーしました");
@@ -80,13 +81,15 @@ export function PropertyTable({ properties, projectId }: PropertyTableProps) {
                   }}
                 >
                   <TableCell className="font-medium text-center">
-                    {extractRoomNumber(property.property_address || "")
+                    {extractRoomNumber(property.propertyAddress || "")
                       .roomNumber || "-"}
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <span>{property.primary_owner?.name || "-"}</span>
-                      {property.owner_count > 1 && (
+                    <div className="flex items-center gap-2  max-w-[70px] lg:max-w-[90px] xl:max-w-[180px] min-w-[40px]">
+                      <span className="truncate break-all">
+                        {property.primaryOwner?.name || "-"}
+                      </span>
+                      {property.ownerCount > 1 && (
                         <Badge variant="outline" className="text-xs">
                           共有
                         </Badge>
@@ -94,14 +97,18 @@ export function PropertyTable({ properties, projectId }: PropertyTableProps) {
                     </div>
                   </TableCell>
                   <TableCell className="text-sm">
-                    {property.primary_owner?.address || "-"}
+                    <div className="flex">
+                      <p className="truncate break-all">
+                        {property.primaryOwner?.address || "-"}
+                      </p>
+                    </div>
                   </TableCell>
-                  <TableCell>
-                    {property.primary_owner?.company?.name || "-"}
-                  </TableCell>
+                  {/* <TableCell>
+                    {property.primaryOwner?.company?.name || "-"}
+                  </TableCell> */}
                   <TableCell>
                     {(() => {
-                      const owner = property.primary_owner;
+                      const owner = property.primaryOwner;
                       if (!owner) {
                         return (
                           <Badge
@@ -114,7 +121,7 @@ export function PropertyTable({ properties, projectId }: PropertyTableProps) {
                       }
 
                       // 調査ステータスによって表示を切り替え
-                      if (owner.investigation_status === "completed") {
+                      if (owner.investigationStatus === "completed") {
                         return (
                           <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/20">
                             調査済み
@@ -122,7 +129,7 @@ export function PropertyTable({ properties, projectId }: PropertyTableProps) {
                         );
                       }
 
-                      if (owner.investigation_status === "unknown") {
+                      if (owner.investigationStatus === "unknown") {
                         return (
                           <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/20">
                             調査したが不明
@@ -131,7 +138,7 @@ export function PropertyTable({ properties, projectId }: PropertyTableProps) {
                       }
 
                       // 会社情報がある場合は調査中
-                      if (owner.companies_count && owner.companies_count > 0) {
+                      if (owner.companiesCount && owner.companiesCount > 0) {
                         return (
                           <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-900/20">
                             調査中
@@ -150,10 +157,59 @@ export function PropertyTable({ properties, projectId }: PropertyTableProps) {
                       );
                     })()}
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {format(new Date(property.added_at), "MM/dd", {
-                      locale: ja,
-                    })}
+                  <TableCell>
+                    {(() => {
+                      const ownerUpdate = property.primaryOwner?.updatedAt;
+                      const companyUpdate =
+                        property.primaryOwner?.company?.updatedAt;
+
+                      // 最新の更新情報を取得
+                      if (!ownerUpdate && !companyUpdate) {
+                        return <UpdateUser username={null} />;
+                      }
+
+                      if (
+                        !companyUpdate ||
+                        (ownerUpdate &&
+                          new Date(ownerUpdate) > new Date(companyUpdate))
+                      ) {
+                        return (
+                          <UpdateUser
+                            username={property.primaryOwner?.updatedByUsername}
+                          />
+                        );
+                      }
+
+                      return (
+                        <UpdateUser
+                          username={
+                            property.primaryOwner?.company?.researchedByUsername
+                          }
+                        />
+                      );
+                    })()}
+                  </TableCell>
+                  <TableCell>
+                    {(() => {
+                      const ownerUpdate = property.primaryOwner?.updatedAt;
+                      const companyUpdate =
+                        property.primaryOwner?.company?.updatedAt;
+
+                      // 最新の更新情報を取得
+                      if (!ownerUpdate && !companyUpdate) {
+                        return <UpdateDate updatedAt={null} />;
+                      }
+
+                      if (
+                        !companyUpdate ||
+                        (ownerUpdate &&
+                          new Date(ownerUpdate) > new Date(companyUpdate))
+                      ) {
+                        return <UpdateDate updatedAt={ownerUpdate} />;
+                      }
+
+                      return <UpdateDate updatedAt={companyUpdate} />;
+                    })()}
                   </TableCell>
                 </TableRow>
               ))

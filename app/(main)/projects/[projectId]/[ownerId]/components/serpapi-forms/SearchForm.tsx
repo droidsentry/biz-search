@@ -134,7 +134,7 @@ export default function SearchForm({
 
     if (
       ownerName.trim() ||
-      ownerAddress.trim() ||
+      ownerAddress?.trim() ||
       (isAdvancedSearchEnabled && additionalKeywords.length > 0)
     ) {
       startTransition(() => {
@@ -156,7 +156,7 @@ export default function SearchForm({
           params.set("ownerNameMatchType", data.ownerNameMatchType);
         }
 
-        if (ownerAddress.trim()) {
+        if (ownerAddress?.trim()) {
           params.set("ownerAddress", ownerAddress.trim());
           params.set("ownerAddressMatchType", data.ownerAddressMatchType);
         }
@@ -194,7 +194,7 @@ export default function SearchForm({
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className="w-full max-w-3xl mx-auto"
+        className="w-full max-w-3xl mx-auto "
       >
         <div className="space-y-4">
           <div className="space-y-2">

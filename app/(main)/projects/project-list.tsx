@@ -9,7 +9,7 @@ export function ProjectList({ projects }: { projects: ProjectWithProgress[] }) {
   const { viewMode } = useProject();
 
   return (
-    <div className="mt-10">
+    <div className="my-10">
       {viewMode === "grid" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {projects.map((project) => (
