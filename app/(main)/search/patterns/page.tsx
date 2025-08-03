@@ -6,6 +6,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 import SearchPatternList from "./list";
 import { Skeleton } from "@/components/ui/skeleton";
+import { createClient } from "@/lib/supabase/server";
+import { Tables } from "@/lib/types/database";
 
 // ローディングコンポーネント
 function PatternListSkeleton() {
@@ -27,7 +29,47 @@ export const metadata: Metadata = {
     "よく使用する検索条件をパターンとして保存・管理できます。保存したパターンを使って効率的にビジネス情報を検索します。",
 };
 
-export default function SearchPage() {
+async function getSearchPatterns(
+  sortBy: "usage" | "recent" = "recent"
+): Promise<Tables<"search_patterns">[]> {
+  const supabase = await createClient();
+
+  // 認証確認
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return [];
+  }
+
+  // パターンの取得
+  let query = supabase
+    .from("search_patterns")
+    .select("*")
+    .eq("user_id", user.id);
+
+  // ソート条件
+  if (sortBy === "usage") {
+    query = query.order("usage_count", { ascending: false });
+  } else {
+    query = query.order("last_used_at", {
+      ascending: false,
+      nullsFirst: false,
+    });
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("パターン取得エラー:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
+export default async function SearchPage() {
+  const patterns = await getSearchPatterns("recent");
   return (
     <div className="mx-auto max-w-[1400px] px-2 md:px-4">
       <div className="border-0 border-b border-solid mb-8">
@@ -48,7 +90,7 @@ export default function SearchPage() {
       </div>
 
       <Suspense fallback={<PatternListSkeleton />}>
-        <SearchPatternList sortBy="recent" />
+        <SearchPatternList patterns={patterns} />
       </Suspense>
     </div>
   );

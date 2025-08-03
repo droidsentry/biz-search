@@ -5,9 +5,10 @@ import { useEffect, useState } from "react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { SearchFormData, SearchParams, DefaultSearchFormData } from "@/lib/schemas/serpapi";
+import { SearchFormData, SearchParams, DefaultSearchFormData, searchFormSchema } from "@/lib/schemas/serpapi";
 import { SearchPattern, SerpapiResponse } from "@/lib/types/serpapi";
 import { cn } from "@/lib/utils";
+import { useSearchPattern } from "@/lib/contexts/search-pattern-context";
 
 import { searchWithParams } from "../action-serpapi-form";
 
@@ -33,7 +34,12 @@ export function SearchLayout({
   const [searchData, setSearchData] = useState<SerpapiResponse | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [isSearching, setIsSearching] = useState(false);
-  const [currentPattern, setCurrentPattern] = useState<SearchPattern>();
+  const { currentPattern, setCurrentPattern } = useSearchPattern();
+
+  // パターンが変更されたらコンソールに出力（デバッグ用）
+  useEffect(() => {
+    console.log("Current pattern:", currentPattern);
+  }, [currentPattern]);
 
   // URLパラメータが変更されたら検索を実行
   useEffect(() => {
@@ -154,8 +160,6 @@ export function SearchLayout({
                 searchData={searchData}
                 searchFormDefaults={searchFormDefaults}
                 isSearching={isSearching}
-                currentPattern={currentPattern}
-                setCurrentPattern={setCurrentPattern}
               />
             </CardContent>
           </Card>
@@ -189,8 +193,6 @@ export function SearchLayout({
               searchFormDefaults={searchFormDefaults}
               isSearching={isSearching}
               setPatterns={setPatterns}
-              currentPattern={currentPattern}
-              setCurrentPattern={setCurrentPattern}
             />
           </div>
 
@@ -205,7 +207,6 @@ export function SearchLayout({
               patterns={patterns}
               patternId={currentPattern?.id || ""}
               setPatterns={setPatterns}
-              setCurrentPattern={setCurrentPattern}
             />
           </div>
         </SearchSidebar>
