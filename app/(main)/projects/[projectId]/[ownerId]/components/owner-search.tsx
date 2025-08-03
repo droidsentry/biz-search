@@ -7,7 +7,7 @@ import SearchForm from "./serpapi-forms/SearchForm";
 import SearchResults from "./serpapi-forms/SearchResults";
 import { SearchSidebar } from "./search-sidebar";
 import type { SerpapiResponse } from "@/lib/types/serpapi";
-import type { SearchFormData, SearchParams } from "@/lib/schemas/serpapi";
+import type { DefaultSearchFormData, SearchParams } from "@/lib/schemas/serpapi";
 import { useSearchParams } from "next/navigation";
 import { searchWithParams } from "./action-serpapi-form";
 
@@ -16,7 +16,7 @@ interface OwnerSearchProps {
   initialAddress?: string;
   projectId: string;
   ownerId: string;
-  searchFormDefaults: SearchFormData;
+  searchFormDefaults: DefaultSearchFormData;
 }
 
 export function OwnerSearch({

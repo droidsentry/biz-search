@@ -1,13 +1,13 @@
 import 'server-only';
 
-import { defaultSearchFormSchema } from '@/lib/schemas/serpapi';
+import { defaultSearchFormSchema, type DefaultSearchFormData } from '@/lib/schemas/serpapi';
 import { createClient } from './supabase/server';
 
 
 /**
  * 検索フォームのデフォルト値を取得
  */
-export async function getSearchFormDefaults() {
+export async function getSearchFormDefaults(): Promise<DefaultSearchFormData> {
   const supabase = await createClient();
   
   const { data, error } = await supabase
