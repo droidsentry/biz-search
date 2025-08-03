@@ -1,7 +1,5 @@
 "use client";
 
-import { TagInput } from "./tag-input";
-import { TagInputElegant } from "./tag-input-elegant";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -15,114 +13,148 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { searchFormSchema, type SearchFormData } from "@/lib/schemas/serpapi";
+import { SearchPattern, SerpapiResponse } from "@/lib/types/serpapi";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ExternalLink, Loader2 } from "lucide-react";
+import { ExternalLink, Loader2, PencilIcon, SaveIcon } from "lucide-react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useTransition } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useState, useTransition, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { SearchPatternFormModal } from "../search-pattern-form-modal";
+import { TagInput } from "./tag-input";
+import { TagInputElegant } from "./tag-input-elegant";
 
 interface SearchFormProps {
-  projectId: string;
-  ownerId: string;
-  initialOwnerName?: string;
-  initialOwnerAddress?: string;
+  searchData: SerpapiResponse | null;
   isSearching?: boolean;
   searchFormDefaults: SearchFormData;
+  setPatterns?: React.Dispatch<React.SetStateAction<SearchPattern[]>>;
+  currentPattern?: SearchPattern;
+  setCurrentPattern?: React.Dispatch<
+    React.SetStateAction<SearchPattern | undefined>
+  >;
 }
 
 export default function SearchForm({
-  projectId,
-  ownerId,
-  initialOwnerName,
-  initialOwnerAddress,
+  searchData,
   isSearching = false,
   searchFormDefaults,
+  setPatterns,
+  currentPattern,
+  setCurrentPattern,
 }: SearchFormProps) {
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // 初期値の設定
-  const defaultValues: SearchFormData = {
-    ...searchFormDefaults,
-    ownerName:
-      searchParams.get("ownerName") ||
-      initialOwnerName ||
-      searchFormDefaults.ownerName,
-    ownerNameMatchType:
-      (searchParams.get("ownerNameMatchType") as "exact" | "partial") ||
-      searchFormDefaults.ownerNameMatchType,
-    ownerAddress:
-      searchParams.get("ownerAddress") ||
-      initialOwnerAddress ||
-      searchFormDefaults.ownerAddress,
-    ownerAddressMatchType:
-      (searchParams.get("ownerAddressMatchType") as "exact" | "partial") ||
-      searchFormDefaults.ownerAddressMatchType,
-    siteSearchMode:
-      (searchParams.get("siteSearchMode") as "any" | "specific" | "exclude") ||
-      searchFormDefaults.siteSearchMode,
-    isAdvancedSearchEnabled:
-      searchParams.get("isAdvancedSearchEnabled") === "true" ||
-      searchFormDefaults.isAdvancedSearchEnabled,
-    period:
-      (searchParams.get("period") as
-        | "all"
-        | "last_6_months"
-        | "last_year"
-        | "last_3_years"
-        | "last_5_years"
-        | "last_10_years") || searchFormDefaults.period,
+  // URLパラメータから値を取得する関数
+  const getFormValuesFromURL = (): SearchFormData => {
+    const values: SearchFormData = {
+      ...searchFormDefaults,
+      ownerName: searchParams.get("ownerName") || searchFormDefaults.ownerName,
+      ownerNameMatchType:
+        (searchParams.get("ownerNameMatchType") as "exact" | "partial") ||
+        searchFormDefaults.ownerNameMatchType,
+      ownerAddress:
+        searchParams.get("ownerAddress") || searchFormDefaults.ownerAddress,
+      ownerAddressMatchType:
+        (searchParams.get("ownerAddressMatchType") as "exact" | "partial") ||
+        searchFormDefaults.ownerAddressMatchType,
+      siteSearchMode:
+        (searchParams.get("siteSearchMode") as
+          | "any"
+          | "specific"
+          | "exclude") || searchFormDefaults.siteSearchMode,
+      isAdvancedSearchEnabled: searchParams.has("isAdvancedSearchEnabled")
+        ? searchParams.get("isAdvancedSearchEnabled") === "true"
+        : searchFormDefaults.isAdvancedSearchEnabled,
+      period:
+        (searchParams.get("period") as
+          | "all"
+          | "last_6_months"
+          | "last_year"
+          | "last_3_years"
+          | "last_5_years"
+          | "last_10_years") || searchFormDefaults.period,
+    };
+
+    // additionalKeywordsの初期化
+    const urlKeywords: typeof searchFormDefaults.additionalKeywords = [];
+    let index = 0;
+    while (true) {
+      const value = searchParams.get(`additionalKeywords[${index}][value]`);
+      const matchType = searchParams.get(
+        `additionalKeywords[${index}][matchType]`
+      ) as "exact" | "partial";
+      if (!value) break;
+      urlKeywords.push({ value, matchType: matchType || "partial" });
+      index++;
+    }
+
+    // URLに検索パラメータがある場合はURLの値を使用、初期画面ではデフォルト値を使用
+    const hasSearchParams =
+      searchParams.has("ownerName") ||
+      searchParams.has("ownerAddress") ||
+      searchParams.has("additionalKeywords[0][value]");
+
+    if (hasSearchParams) {
+      // 検索実行後：URLパラメータの値のみを使用
+      values.additionalKeywords = urlKeywords;
+    } else if (urlKeywords.length > 0) {
+      // パターンクリックなどでURLに値がある場合
+      values.additionalKeywords = urlKeywords;
+    }
+    // else: 初期画面ではデフォルト値を保持
+
+    // searchSitesの初期化
+    const urlSites: string[] = [];
+    let siteIndex = 0;
+    while (true) {
+      const site = searchParams.get(`searchSites[${siteIndex}]`);
+      if (!site) break;
+      urlSites.push(site);
+      siteIndex++;
+    }
+
+    // 検索サイトも同様の処理
+    if (hasSearchParams) {
+      // 検索実行後：URLパラメータの値のみを使用
+      values.searchSites = urlSites;
+    } else if (urlSites.length > 0) {
+      // パターンクリックなどでURLに値がある場合
+      values.searchSites = urlSites;
+    }
+    // else: 初期画面ではデフォルト値を保持
+
+    // URLパラメータに明示的に設定されていない場合のみ、自動展開のロジックを適用
+    if (
+      !searchParams.has("isAdvancedSearchEnabled") &&
+      (urlKeywords.length > 0 || urlSites.length > 0)
+    ) {
+      values.isAdvancedSearchEnabled = true;
+    }
+
+    return values;
   };
 
-  // additionalKeywordsの初期化
-  const urlKeywords: typeof searchFormDefaults.additionalKeywords = [];
-  let index = 0;
-  while (true) {
-    const value = searchParams.get(`additionalKeywords[${index}][value]`);
-    const matchType = searchParams.get(
-      `additionalKeywords[${index}][matchType]`
-    ) as "exact" | "partial";
-    if (!value) break;
-    urlKeywords.push({ value, matchType: matchType || "partial" });
-    index++;
-  }
-
-  // URLにキーワードがある場合はそれを使用、なければデフォルト値を使用
-  if (urlKeywords.length > 0) {
-    defaultValues.additionalKeywords = urlKeywords;
-  }
-
-  // searchSitesの初期化
-  const urlSites: string[] = [];
-  let siteIndex = 0;
-  while (true) {
-    const site = searchParams.get(`searchSites[${siteIndex}]`);
-    if (!site) break;
-    urlSites.push(site);
-    siteIndex++;
-  }
-
-  // URLにサイトがある場合はそれを使用
-  if (urlSites.length > 0) {
-    defaultValues.searchSites = urlSites;
-  }
-
-  // URLパラメータから読み込んだ場合のみ詳細オプションを自動展開
-  if (
-    (urlKeywords.length > 0 || urlSites.length > 0) &&
-    searchParams.get("isAdvancedSearchEnabled") !== "false"
-  ) {
-    defaultValues.isAdvancedSearchEnabled = true;
-  }
+  // 初期値の設定
+  const defaultValues = getFormValuesFromURL();
 
   const form = useForm<SearchFormData>({
     resolver: zodResolver(searchFormSchema),
     mode: "onChange",
     defaultValues,
   });
+
+  // URLパラメータの変更を監視してフォームを更新
+  useEffect(() => {
+    const newValues = getFormValuesFromURL();
+    form.reset(newValues);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, searchFormDefaults]); // searchParamsが変更されたら実行
 
   const onSubmit = (data: SearchFormData) => {
     const {
@@ -178,9 +210,7 @@ export default function SearchForm({
           params.set("period", data.period);
         }
 
-        router.push(`/projects/${projectId}/${ownerId}?${params.toString()}`, {
-          scroll: false,
-        });
+        router.push(`/search/execute?${params.toString()}`);
       });
     }
   };
@@ -194,9 +224,43 @@ export default function SearchForm({
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className="w-full max-w-3xl mx-auto "
+        className="w-full max-w-3xl mx-auto"
       >
         <div className="space-y-4">
+          {!currentPattern && searchData && (
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="">検索パターンを保存してください</p>
+              </div>
+              <Button
+                type="button"
+                size="icon"
+                onClick={() => setShowSaveModal(true)}
+                variant="outline"
+                className="size-10"
+              >
+                <SaveIcon className="size-5" />
+              </Button>
+            </div>
+          )}
+          {currentPattern && searchData && (
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="">
+                  検索パターン: {currentPattern.searchPatternName}
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="icon"
+                onClick={() => setShowEditModal(true)}
+                variant="outline"
+                className="size-10"
+              >
+                <PencilIcon className="size-5" />
+              </Button>
+            </div>
+          )}
           <div className="space-y-2">
             <FormField
               control={form.control}
@@ -540,12 +604,11 @@ export default function SearchForm({
             size="lg"
             className="w-full h-12"
             disabled={
-              isPending ||
-              isSearching ||
-              (!ownerName?.trim() &&
-                !ownerAddress?.trim() &&
-                (!form.watch("isAdvancedSearchEnabled") ||
-                  additionalKeywords.length === 0))
+              isPending || isSearching
+              // (!ownerName?.trim() &&
+              //   !ownerAddress?.trim() &&
+              //   (!form.watch("isAdvancedSearchEnabled") ||
+              //     additionalKeywords.length === 0))
             }
           >
             {isPending || isSearching ? (
@@ -635,6 +698,41 @@ export default function SearchForm({
           )}
         </div>
       </form>
+      {/* 保存モーダル */}
+      <SearchPatternFormModal
+        isOpen={showSaveModal}
+        onClose={() => setShowSaveModal(false)}
+        mode="create"
+        onSaveSuccess={(newPattern: SearchPattern) => {
+          // 新しいパターンを即座にリストに追加
+          if (setPatterns) {
+            setCurrentPattern?.(newPattern);
+            setPatterns((prev) => [newPattern, ...prev]);
+          }
+        }}
+      />
+      {/* 編集モーダル */}
+      <SearchPatternFormModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        mode="edit"
+        patternId={currentPattern?.id}
+        currentName={currentPattern?.searchPatternName}
+        currentDescription={
+          currentPattern?.searchPatternDescription || undefined
+        }
+        onSaveSuccess={(updatedPattern: SearchPattern) => {
+          // 新しいパターンを即座にリストに追加
+          if (setPatterns) {
+            setCurrentPattern?.(updatedPattern);
+            setPatterns((prev) =>
+              prev.map((pattern) =>
+                pattern.id === updatedPattern.id ? updatedPattern : pattern
+              )
+            );
+          }
+        }}
+      />
     </Form>
   );
 }

@@ -9,7 +9,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Keywords } from "@/lib/types/custom-search";
+import { Keywords } from "@/lib/types/serpapi";
 
 interface TagInputElegantProps {
   keywords: Keywords[];

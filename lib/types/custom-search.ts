@@ -20,8 +20,6 @@ export type GoogleCustomSearchParams = z.infer<typeof googleCustomSearchParamsSc
 
 export type Keywords = z.infer<typeof keywordsSchema>;
 
-export type SearchPattern = Awaited<
-  ReturnType<typeof getSearchPatterns>
->[number];
+
 
 

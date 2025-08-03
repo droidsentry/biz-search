@@ -1,10 +1,10 @@
 "use client";
 
-import { useGoogleCustomSearchForm } from "@/components/providers/google-custom-search-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { SearchPattern } from "@/lib/types/custom-search";
+
+import { SearchPattern } from "@/lib/types/serpapi";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -17,18 +17,29 @@ import {
   Link as LinkIcon,
   Trash2,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { SearchPatternDeleteModal } from "./search-pattern-delete-modal";
 
 interface PatternCardsProps {
   patterns: SearchPattern[];
+  patternId: string;
+  setPatterns: React.Dispatch<React.SetStateAction<SearchPattern[]>>;
+  setCurrentPattern: React.Dispatch<
+    React.SetStateAction<SearchPattern | undefined>
+  >;
 }
 
-export function PatternCards({ patterns }: PatternCardsProps) {
+export function PatternCards({
+  patterns,
+  patternId,
+  setPatterns,
+  setCurrentPattern,
+}: PatternCardsProps) {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedPatternId, setSelectedPatternId] = useState<string>("");
-  const { patternId } = useGoogleCustomSearchForm();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
 
   const currentPatternId = patternId;
   const router = useRouter();
@@ -42,9 +53,53 @@ export function PatternCards({ patterns }: PatternCardsProps) {
 
   const handlePatternClick = (e: React.MouseEvent, pattern: SearchPattern) => {
     e.preventDefault();
+    const params = new URLSearchParams();
 
-    // URLを更新（これによりプロバイダーのuseEffectがトリガーされる）
-    router.push(`/search/execute?patternId=${pattern.id}`);
+    // 既存の所有者名と住所のパラメータを保持
+    if (searchParams.get("ownerName")) {
+      params.set("ownerName", searchParams.get("ownerName")!);
+      params.set(
+        "ownerNameMatchType",
+        searchParams.get("ownerNameMatchType") || "partial"
+      );
+    }
+    if (searchParams.get("ownerAddress")) {
+      params.set("ownerAddress", searchParams.get("ownerAddress")!);
+      params.set(
+        "ownerAddressMatchType",
+        searchParams.get("ownerAddressMatchType") || "partial"
+      );
+    }
+
+    // 追加キーワードを配列形式で設定
+    pattern.googleCustomSearchParams.additionalKeywords.forEach(
+      (keyword, index) => {
+        params.set(`additionalKeywords[${index}][value]`, keyword.value);
+        params.set(
+          `additionalKeywords[${index}][matchType]`,
+          keyword.matchType
+        );
+      }
+    );
+
+    // 検索対象サイトを配列形式で設定
+    pattern.googleCustomSearchParams.searchSites.forEach((site, index) => {
+      params.set(`searchSites[${index}]`, site);
+    });
+
+    params.set(
+      "siteSearchMode",
+      pattern.googleCustomSearchParams.siteSearchMode
+    );
+    params.set("period", pattern.googleCustomSearchParams.period);
+    params.set(
+      "isAdvancedSearchEnabled",
+      pattern.googleCustomSearchParams.isAdvancedSearchEnabled.toString()
+    );
+
+    const newUrl = `${pathname}?${params.toString()}`;
+    router.push(newUrl);
+    setCurrentPattern(pattern);
   };
 
   if (patterns.length === 0) {
@@ -96,25 +151,25 @@ export function PatternCards({ patterns }: PatternCardsProps) {
                 {/* 検索パラメータの表示 */}
                 <div className="space-y-1.5 mt-2">
                   {/* 検索期間 */}
-                  {pattern.googleCustomSearchParams.dateRestrict &&
-                    pattern.googleCustomSearchParams.dateRestrict !== "all" && (
+                  {pattern.googleCustomSearchParams.period &&
+                    pattern.googleCustomSearchParams.period !== "all" && (
                       <div className="flex items-center gap-2">
                         <Calendar className="h-3 w-3 text-muted-foreground" />
                         <Badge variant="secondary" className="text-xs">
-                          {pattern.googleCustomSearchParams.dateRestrict ===
-                          "m6"
+                          {pattern.googleCustomSearchParams.period ===
+                          "last_6_months"
                             ? "過去6ヶ月"
-                            : pattern.googleCustomSearchParams.dateRestrict ===
-                              "y1"
+                            : pattern.googleCustomSearchParams.period ===
+                              "last_year"
                             ? "過去1年"
-                            : pattern.googleCustomSearchParams.dateRestrict ===
-                              "y3"
+                            : pattern.googleCustomSearchParams.period ===
+                              "last_3_years"
                             ? "過去3年"
-                            : pattern.googleCustomSearchParams.dateRestrict ===
-                              "y5"
+                            : pattern.googleCustomSearchParams.period ===
+                              "last_5_years"
                             ? "過去5年"
-                            : pattern.googleCustomSearchParams.dateRestrict ===
-                              "y10"
+                            : pattern.googleCustomSearchParams.period ===
+                              "last_10_years"
                             ? "過去10年"
                             : "指定なし"}
                         </Badge>
@@ -230,6 +285,19 @@ export function PatternCards({ patterns }: PatternCardsProps) {
         onClose={() => {
           setDeleteModalOpen(false);
           setSelectedPatternId("");
+        }}
+        onDeleteSuccess={(deletedPatternId) => {
+          setPatterns((prev) =>
+            prev.filter((pattern) => pattern.id !== deletedPatternId)
+          );
+          console.log(`patternId`, patternId);
+          console.log(`deletedPatternId`, deletedPatternId);
+
+          // 削除されたパターンが現在選択中のパターンの場合、初期画面に遷移
+          if (patternId === deletedPatternId) {
+            router.push("/search/execute");
+            setCurrentPattern(undefined);
+          }
         }}
       />
     </>

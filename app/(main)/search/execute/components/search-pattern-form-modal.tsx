@@ -19,10 +19,10 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { GoogleCustomSearchPattern } from "@/lib/types/custom-search";
+import { SearchFormData } from "@/lib/schemas/serpapi";
+import { SearchPattern } from "@/lib/types/serpapi";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useEffect, useTransition } from "react";
 import { useForm, useFormContext } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -42,9 +42,8 @@ interface SearchPatternFormModalProps {
   currentName?: string;
   currentDescription?: string;
   mode: "create" | "edit";
-  patternId?: string;
-  projectId: string;
-  onSaveSuccess?: (patternId: string) => void;
+  patternId?: string | null;
+  onSaveSuccess: (data: SearchPattern) => void;
 }
 
 export function SearchPatternFormModal({
@@ -56,28 +55,48 @@ export function SearchPatternFormModal({
   patternId,
   onSaveSuccess,
 }: SearchPatternFormModalProps) {
-  const router = useRouter();
-  const formContext = useFormContext<GoogleCustomSearchPattern>();
+  const formContext = useFormContext<SearchFormData>();
   const [isPending, startTransition] = useTransition();
+  // 現在のフォームデータから検索パラメータを取得
+  const currentFormData = formContext.getValues();
 
   const form = useForm<PatternFormData>({
     resolver: zodResolver(patternFormSchema),
+    mode: "onChange",
     defaultValues: {
       name: currentName,
       description: currentDescription,
     },
   });
 
+  // モーダルが開かれた時、またはcurrentName/currentDescriptionが変更された時にフォームをリセット
+  useEffect(() => {
+    if (isOpen) {
+      form.reset({
+        name: currentName,
+        description: currentDescription,
+      });
+    }
+  }, [isOpen, currentName, currentDescription, form]);
+
   const handleSubmit = async (data: PatternFormData) => {
     startTransition(async () => {
       if (mode === "create") {
-        // 現在のフォームデータから検索パラメータを取得
-        const currentFormData = formContext.getValues();
-
+        // 詳細オプションがオフの場合、追加キーワードと検索サイトを除外
+        const formDataToSave = {
+          ...currentFormData,
+          additionalKeywords: currentFormData.isAdvancedSearchEnabled 
+            ? currentFormData.additionalKeywords 
+            : [],
+          searchSites: currentFormData.isAdvancedSearchEnabled 
+            ? currentFormData.searchSites 
+            : [],
+        };
+        
         const result = await createSearchPattern(
           data.name,
           data.description || null,
-          currentFormData.googleCustomSearchParams
+          formDataToSave
         ).catch((error) => {
           toast.error(error.message);
         });
@@ -85,28 +104,55 @@ export function SearchPatternFormModal({
         if (result) {
           toast.success("検索パターンを保存しました");
           // URLを更新せずにモーダルを閉じるだけにする
-          onClose();
           // 保存成功を親コンポーネントに通知
           if (onSaveSuccess) {
-            onSaveSuccess(result.id);
+            // createSearchPatternの戻り値をSearchPattern型に変換
+            const newPattern: SearchPattern = {
+              id: result.id,
+              searchPatternName: result.name,
+              searchPatternDescription: result.description || "",
+              googleCustomSearchParams: result.googleCustomSearchParams,
+              usageCount: 0,
+              createdAt: result.created_at,
+              updatedAt: result.updated_at,
+              lastUsedAt: result.last_used_at,
+            };
+            onSaveSuccess(newPattern);
+            form.reset();
+            onClose();
           }
         }
       } else if (mode === "edit" && patternId) {
+        // 詳細オプションがオフの場合、追加キーワードと検索サイトを除外
+        const formDataToSave = {
+          ...currentFormData,
+          additionalKeywords: currentFormData.isAdvancedSearchEnabled 
+            ? currentFormData.additionalKeywords 
+            : [],
+          searchSites: currentFormData.isAdvancedSearchEnabled 
+            ? currentFormData.searchSites 
+            : [],
+        };
+        
         const result = await updateSearchPattern(patternId, {
           name: data.name,
           description: data.description || null,
+          google_custom_search_params: formDataToSave,
         });
 
-        if (result.error) {
-          toast.error(result.error);
-          return;
-        }
-
-        if (result.success) {
-          toast.success("検索パターンを更新しました");
-          router.refresh();
-          onClose();
-        }
+        toast.success("検索パターンを更新しました");
+        const updatedPattern: SearchPattern = {
+          id: result.id,
+          searchPatternName: result.name,
+          searchPatternDescription: result.description,
+          googleCustomSearchParams: result.googleCustomSearchParams,
+          usageCount: result.usage_count,
+          createdAt: result.created_at,
+          updatedAt: result.updated_at,
+          lastUsedAt: result.last_used_at,
+        };
+        onSaveSuccess(updatedPattern);
+        onClose();
       }
     });
   };

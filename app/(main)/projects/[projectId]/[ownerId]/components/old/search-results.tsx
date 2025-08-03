@@ -1,6 +1,6 @@
 // "use client";
 
-// // import { useGoogleCustomSearchForm } from "@/components/providers/google-custom-search-form";
+// import { useGoogleCustomSearchOwnerForm } from "@/components/providers/google-custom-search-owner-form";
 // import { Card, CardContent } from "@/components/ui/card";
 // import {
 //   Pagination,
@@ -19,8 +19,8 @@
 // import { useCallback } from "react";
 
 // export function SearchResults() {
-//   // const { data, isLoading, error, googleCustomSearchPattern } =
-//   //   useGoogleCustomSearchForm();
+//   const { data, isLoading, error, googleCustomSearchPattern } =
+//     useGoogleCustomSearchOwnerForm();
 
 //   const searchParams = useSearchParams();
 //   // URLパラメータからstart値を取得（デフォルト1）

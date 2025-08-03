@@ -19,16 +19,16 @@ export default function Pagination({ data, isSearching }: PaginationProps) {
   const [isPending, startTransition] = useTransition();
   const [clickedPage, setClickedPage] = useState<number | null>(null);
 
-  // デバッグ用のログ
-  useEffect(() => {
-    if (data?.pagination) {
-      console.log("Pagination data:", {
-        current: data.pagination.current,
-        other_pages: data.pagination.other_pages,
-        total_results: data.search_information?.total_results,
-      });
-    }
-  }, [data]);
+  // // デバッグ用のログ
+  // useEffect(() => {
+  //   if (data?.pagination) {
+  //     console.log("Pagination data:", {
+  //       current: data.pagination.current,
+  //       other_pages: data.pagination.other_pages,
+  //       total_results: data.search_information?.total_results,
+  //     });
+  //   }
+  // }, [data]);
 
   // データがない場合は表示しない
   if (!data || !data.organic_results || data.organic_results.length === 0) {
@@ -50,20 +50,20 @@ export default function Pagination({ data, isSearching }: PaginationProps) {
     startTransition(() => {
       const params = new URLSearchParams(searchParams.toString());
       params.set("page", newPage.toString());
-      router.push(`${pathname}?${params.toString()}`, {
-        scroll: false,
-      });
+      router.push(`${pathname}?${params.toString()}`);
 
       // ページ遷移後に検索結果の上部にスクロール
-      setTimeout(() => {
-        const searchResultsElement = document.getElementById("search-results");
-        if (searchResultsElement) {
-          searchResultsElement.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
-        }
-      }, 300);
+      // setTimeout(() => {
+      //   const searchResultsElement = document.getElementById(
+      //     "search-results-execute"
+      //   );
+      //   if (searchResultsElement) {
+      //     searchResultsElement.scrollIntoView({
+      //       behavior: "smooth",
+      //       block: "start",
+      //     });
+      //   }
+      // }, 300);
     });
   };
 

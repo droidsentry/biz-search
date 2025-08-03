@@ -1,8 +1,9 @@
-import 'server-only'
+import 'server-only';
 
 import { getJson } from "serpapi";
-import { parseSerpApiError, isSuccessfulResponse, type SerpApiErrorResponse } from './serpapi-errors';
-import type { SerpapiResponse } from './types/serpapi';
+import { isSuccessfulResponse, parseSerpApiError, type SerpApiErrorResponse } from './serpapi-errors';
+import { type SerpapiResponse } from './types/serpapi';
+import { checkLimit } from './check-limit';
 
 interface SerpApiSearchParams {
   q: string;
@@ -38,7 +39,10 @@ export const SerpApiSearch = async (params: string | SerpApiSearchParams): Promi
   }
 
   try {
+
+    await checkLimit();
     const response = await getJson(searchParams);
+    // const response = serpapiResponse;
     
     
     // エラーチェック
@@ -81,7 +85,7 @@ export const SerpApiSearch = async (params: string | SerpApiSearchParams): Promi
       }
       
       const error = parseSerpApiError(response as SerpApiErrorResponse);
-      throw error;
+      throw new Error(error.message);
     }
 
     return response as SerpapiResponse;

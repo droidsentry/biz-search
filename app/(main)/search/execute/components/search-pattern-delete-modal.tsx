@@ -9,16 +9,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { deleteSearchPattern } from "../action";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
+import { deleteSearchPattern } from "../action";
 
 interface SearchPatternDeleteModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentName?: string;
   patternId: string;
+  onDeleteSuccess: (patternId: string) => void;
 }
 
 export function SearchPatternDeleteModal({
@@ -26,6 +27,7 @@ export function SearchPatternDeleteModal({
   onClose,
   currentName = "この検索パターン",
   patternId,
+  onDeleteSuccess,
 }: SearchPatternDeleteModalProps) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -43,7 +45,8 @@ export function SearchPatternDeleteModal({
 
       if (result.success) {
         toast.success("検索パターンを削除しました");
-        router.push("/search/patterns");
+        onDeleteSuccess(patternId);
+        // router.push("/search/patterns");
       }
     } catch (error) {
       console.error("削除エラー:", error);

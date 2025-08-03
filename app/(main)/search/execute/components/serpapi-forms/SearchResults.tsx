@@ -54,6 +54,8 @@ export default function SearchResults({
     string | undefined
   >;
   const period = formatPeriodFilter(searchParams?.tbs);
+  // console.log(`searchParams`, searchParams);
+  // console.log(`parsedQuery`, parsedQuery);
 
   return (
     <div className="space-y-4">
@@ -121,7 +123,7 @@ export default function SearchResults({
                   {parsedQuery.keywords.length > 0 && (
                     <>
                       {parsedQuery.exactMatches.length > 0 && (
-                        <span className="text-muted-foreground/50">•</span>
+                        <span className="text-foreground/90">•</span>
                       )}
                       <span className="text-foreground/90">キーワード:</span>
                       {parsedQuery.keywords.map((keyword, index) => (
@@ -136,10 +138,10 @@ export default function SearchResults({
                     <>
                       {(parsedQuery.exactMatches.length > 0 ||
                         parsedQuery.keywords.length > 0) && (
-                        <span className="text-muted-foreground/50">•</span>
+                        <span className="text-foreground/90">•</span>
                       )}
                       <span className="text-foreground/90">サイト:</span>
-                      <span className="text-muted-foreground/90">
+                      <span className="text-foreground/90">
                         {parsedQuery.siteFilters.include.join(", ")}
                       </span>
                     </>
@@ -161,7 +163,7 @@ export default function SearchResults({
 
                   {period && (
                     <>
-                      <span className="text-muted-foreground/50">•</span>
+                      <span className="text-foreground/90">•</span>
                       <span className="text-foreground/90">期間:</span>
                       <span className="text-foreground/90">{period}</span>
                     </>

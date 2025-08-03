@@ -131,7 +131,7 @@ export function OwnerSearch({
     performSearch();
   }, [searchParams]);
 
-  console.log("searchData", searchData);
+  // console.log("searchData", searchData);
 
   return (
     <div id="search-results" className="space-y-6 w-full">

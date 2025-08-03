@@ -23,12 +23,12 @@ export default async function AccountSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <SettingsCard
+      {/* <SettingsCard
         title="表示名"
         description="他のユーザーに表示される名前を設定します。"
       >
         <DisplayNameForm currentDisplayName={profile?.displayName} />
-      </SettingsCard>
+      </SettingsCard> */}
 
       <SettingsCard
         title="ユーザー名"
