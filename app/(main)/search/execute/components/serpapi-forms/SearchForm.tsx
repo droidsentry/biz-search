@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
-import { searchFormSchema, type SearchFormData } from "@/lib/schemas/serpapi";
+import { searchFormSchema, type SearchFormData, type DefaultSearchFormData } from "@/lib/schemas/serpapi";
 import { SearchPattern, SerpapiResponse } from "@/lib/types/serpapi";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ExternalLink, Loader2, PencilIcon, SaveIcon } from "lucide-react";
@@ -28,7 +28,7 @@ import { TagInputElegant } from "./tag-input-elegant";
 interface SearchFormProps {
   searchData: SerpapiResponse | null;
   isSearching?: boolean;
-  searchFormDefaults: SearchFormData;
+  searchFormDefaults: DefaultSearchFormData;
   setPatterns?: React.Dispatch<React.SetStateAction<SearchPattern[]>>;
   currentPattern?: SearchPattern;
   setCurrentPattern?: React.Dispatch<

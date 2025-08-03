@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { SearchFormData, SearchParams } from "@/lib/schemas/serpapi";
+import { SearchFormData, SearchParams, DefaultSearchFormData } from "@/lib/schemas/serpapi";
 import { SearchPattern, SerpapiResponse } from "@/lib/types/serpapi";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +18,7 @@ import SearchResults from "./serpapi-forms/SearchResults";
 
 interface SearchLayoutProps {
   patterns: SearchPattern[];
-  searchFormDefaults: SearchFormData;
+  searchFormDefaults: DefaultSearchFormData;
 }
 
 export function SearchLayout({

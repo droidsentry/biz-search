@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
-import { searchFormSchema, type SearchFormData } from "@/lib/schemas/serpapi";
+import { searchFormSchema, type SearchFormData, type DefaultSearchFormData } from "@/lib/schemas/serpapi";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ExternalLink, Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -29,7 +29,7 @@ interface SearchFormProps {
   initialOwnerName?: string;
   initialOwnerAddress?: string;
   isSearching?: boolean;
-  searchFormDefaults: SearchFormData;
+  searchFormDefaults: DefaultSearchFormData;
 }
 
 export default function SearchForm({
