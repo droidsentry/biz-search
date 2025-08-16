@@ -181,30 +181,73 @@ export default function SearchResults({
               `
               )}
             >
-              <CardContent className="p-6 py-1">
-                <div className="space-y-2">
-                  <div className="flex items-start justify-between gap-4">
-                    <h3 className="text-lg font-medium line-clamp-2 flex-1">
-                      <Link
-                        href={result.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:text-primary transition-colors hover:underline"
-                      >
-                        {result.title}
-                      </Link>
-                    </h3>
-                    <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-1" />
+              <CardContent className=" space-y-3">
+                {/* 1行目: ファビコン、ソース、URL */}
+                <div className="flex items-start gap-3">
+                  {/* ファビコン */}
+                  <div className="flex-shrink-0">
+                    <img
+                      src={
+                        result.favicon ||
+                        `https://www.google.com/s2/favicons?domain=${
+                          new URL(result.link).hostname
+                        }&sz=64`
+                      }
+                      alt=""
+                      className="size-10 rounded-full border border-border p-0.5"
+                      onError={(e) => {
+                        // エラー時はGoogleのAPIにフォールバック
+                        const img = e.target as HTMLImageElement;
+                        if (!img.src.includes("google.com/s2/favicons")) {
+                          img.src = `https://www.google.com/s2/favicons?domain=${
+                            new URL(result.link).hostname
+                          }&sz=64`;
+                        } else {
+                          img.style.display = "none";
+                        }
+                      }}
+                    />
                   </div>
 
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span className="truncate max-w-md">
-                      {result.displayed_link || new URL(result.link).hostname}
-                    </span>
+                  {/* ソースとURL */}
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-foreground">
+                      {result.source || new URL(result.link).hostname}
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span>{result.displayed_link || new URL(result.link).hostname}</span>
+                      {result.link.toLowerCase().endsWith('.pdf') && (
+                        <span className="bg-muted px-1.5 py-0.5 rounded text-xs font-medium">
+                          PDF
+                        </span>
+                      )}
+                    </div>
                   </div>
 
+                  {/* 外部リンクアイコン */}
+                  <div className="flex-shrink-0">
+                    <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </div>
+
+                {/* 2行目: タイトルとスニペット */}
+                <div className="space-y-1">
+                  {/* タイトル */}
+                  <h3 className="text-lg font-medium line-clamp-2">
+                    <Link
+                      href={result.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-primary transition-colors hover:underline"
+                    >
+                      {result.title}
+                    </Link>
+                  </h3>
+
+
+                  {/* スニペット */}
                   {result.snippet && (
-                    <p className="text-sm text-muted-foreground line-clamp-2 mt-2">
+                    <p className="text-sm text-muted-foreground line-clamp-2">
                       {result.snippet}
                     </p>
                   )}
